@@ -2,6 +2,8 @@ import { useEffect, useState } from 'preact/hooks';
 import type { Session, SettlementResult } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
+import { initials } from '../initials.js';
+import { ArrowRightIcon } from '../icons.js';
 
 interface Props {
   session: Session;
@@ -44,9 +46,12 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
               const net = settlement.netsCents[p.id] ?? 0;
               return (
                 <li key={p.id} class={p.id === playerId ? 'results__row--me' : ''}>
-                  <span class="results__name">
-                    {p.name}
-                    {p.id === playerId ? ' (you)' : ''}
+                  <span class="results__player">
+                    <span class={`avatar avatar--sm ${p.id === playerId ? 'avatar--me' : ''}`}>{initials(p.name)}</span>
+                    <span class="results__name">
+                      {p.name}
+                      {p.id === playerId ? ' (you)' : ''}
+                    </span>
                   </span>
                   <span class={`results__net ${net > 0 ? 'positive' : net < 0 ? 'negative' : ''}`}>
                     {net > 0 ? '+' : ''}
@@ -64,8 +69,12 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
             <ul class="transfers">
               {settlement.transfers.map((t, i) => (
                 <li key={i}>
-                  <strong>{session.players[t.fromPlayerId]?.name}</strong> pays <strong>{session.players[t.toPlayerId]?.name}</strong>{' '}
-                  {formatCents(t.amountCents)}
+                  <span class="transfers__names">
+                    <strong>{session.players[t.fromPlayerId]?.name}</strong>
+                    <ArrowRightIcon size={14} />
+                    <strong>{session.players[t.toPlayerId]?.name}</strong>
+                  </span>
+                  <span class="transfers__amount">{formatCents(t.amountCents)}</span>
                 </li>
               ))}
             </ul>

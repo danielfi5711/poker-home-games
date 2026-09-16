@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import type { ChipColor, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { parseDollarsToCents } from '../money.js';
+import { initials } from '../initials.js';
+import { LinkIcon, CheckIcon } from '../icons.js';
 
 interface Props {
   session: Session;
@@ -97,15 +99,19 @@ export function ChipSetupScreen({ session, isHost, onChanged, onLeave }: Props) 
           <div class="joincode__label">Game code</div>
           <div class="joincode__value">{session.id}</div>
         </div>
-        <button class="btn" onClick={copyLink}>
-          {copied ? 'Copied!' : 'Copy join link'}
+        <button class={`btn ${copied ? 'btn--copied' : ''}`} onClick={copyLink}>
+          {copied ? <CheckIcon size={14} /> : <LinkIcon size={14} />}
+          {copied ? 'Copied!' : 'Copy link'}
         </button>
       </div>
 
       <h3>Players ({players.length})</h3>
       <ul class="playerlist">
         {players.map((p) => (
-          <li key={p.id}>{p.name}</li>
+          <li key={p.id}>
+            <span class="avatar">{initials(p.name)}</span>
+            <span class="playerlist__name">{p.name}</span>
+          </li>
         ))}
       </ul>
 

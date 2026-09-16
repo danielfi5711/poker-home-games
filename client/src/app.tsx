@@ -6,6 +6,7 @@ import { ChipSetupScreen } from './screens/ChipSetup.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { HistoryScreen } from './screens/History.js';
+import { ChipIcon } from './icons.js';
 
 type View = 'home' | 'session' | 'history';
 
@@ -50,15 +51,22 @@ export function App() {
     <div class="app">
       <header class="topbar">
         <button class="topbar__brand" onClick={() => setView(session ? 'session' : 'home')}>
-          🃏 Poker Home Games
+          <ChipIcon size={22} />
+          <span class="topbar__brand-text">Poker Night</span>
         </button>
         <nav class="topbar__nav">
           {session && (
-            <button class="topbar__link" onClick={() => setView('session')}>
+            <button
+              class={`topbar__link ${view === 'session' ? 'topbar__link--active' : ''}`}
+              onClick={() => setView('session')}
+            >
               {session.name}
             </button>
           )}
-          <button class="topbar__link" onClick={() => setView('history')}>
+          <button
+            class={`topbar__link ${view === 'history' ? 'topbar__link--active' : ''}`}
+            onClick={() => setView('history')}
+          >
             History
           </button>
         </nav>

@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
+import { initials } from '../initials.js';
+import { LinkIcon, CheckIcon } from '../icons.js';
 import { PhotoFlow } from './PhotoFlow.js';
 
 interface Props {
@@ -66,7 +68,8 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
     <div class="card">
       <div class="joincode joincode--compact">
         <span class="joincode__value">{session.id}</span>
-        <button class="btn btn--small" onClick={copyLink}>
+        <button class={`btn btn--small ${copied ? 'btn--copied' : ''}`} onClick={copyLink}>
+          {copied ? <CheckIcon size={13} /> : <LinkIcon size={13} />}
           {copied ? 'Copied!' : 'Share link'}
         </button>
       </div>
@@ -76,12 +79,18 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
           const total = buyInTotal(p.buyIns);
           return (
             <li key={p.id} class={p.id === playerId ? 'playerlist__row--me' : ''}>
-              <span class="playerlist__name">
-                {p.name}
-                {p.id === playerId ? ' (you)' : ''}
-              </span>
-              <span class="playerlist__buyin">bought in {formatCents(total)}</span>
-              <span class="playerlist__status">{p.cashOut ? `cashed out ${formatCents(p.cashOut.totalCents)}` : 'still playing'}</span>
+              <div class="playerlist__head">
+                <span class={`avatar ${p.id === playerId ? 'avatar--me' : ''}`}>{initials(p.name)}</span>
+                <span class="playerlist__name">
+                  {p.name}
+                  {p.id === playerId ? ' (you)' : ''}
+                </span>
+                {p.cashOut ? <span class="badge badge--done">Cashed out</span> : <span class="badge badge--live">Playing</span>}
+              </div>
+              <div class="playerlist__meta">
+                <span class="playerlist__buyin">Bought in {formatCents(total)}</span>
+                {p.cashOut && <span class="playerlist__status">Cashed out {formatCents(p.cashOut.totalCents)}</span>}
+              </div>
             </li>
           );
         })}

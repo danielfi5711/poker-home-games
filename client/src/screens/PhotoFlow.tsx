@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { capturePhoto } from '../cv/photo.js';
 import { countChipStacks, type CountResult } from '../cv/chipCounter.js';
 import { formatCents } from '../money.js';
+import { CameraIcon } from '../icons.js';
 
 interface Props {
   session: Session;
@@ -85,6 +86,7 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
   return (
     <div class="modal">
       <div class="modal__panel">
+        <div class="modal__handle" />
         <h2>{title}</h2>
         {error && <p class="error">{error}</p>}
 
@@ -95,7 +97,8 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
               you'll get to double-check it next.
             </p>
             <label class="btn btn--primary btn--big">
-              📷 Take / upload photo
+              <CameraIcon size={18} />
+              Take / upload photo
               <input type="file" accept="image/*" capture="environment" class="visually-hidden" onChange={onFile} />
             </label>
             <button class="btn btn--ghost" onClick={startManual}>
@@ -108,7 +111,8 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
         )}
 
         {step === 'analyzing' && (
-          <div class="center">
+          <div class="center analyzing">
+            <div class="spinner" />
             <p>Counting chips…</p>
           </div>
         )}

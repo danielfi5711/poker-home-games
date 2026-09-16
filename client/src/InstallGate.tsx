@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { ShareIcon } from './icons.js';
 
 function isStandalone(): boolean {
   const displayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -81,8 +82,11 @@ export function InstallGate({ children }: { children: ComponentChildren }) {
         {!deferredPrompt && ios && (
           <ol class="installgate__steps">
             <li>
-              Tap the <strong>Share</strong> button <span class="installgate__shareicon">⬆️</span> in Safari's
-              toolbar
+              Tap the <strong>Share</strong> button{' '}
+              <span class="installgate__shareicon">
+                <ShareIcon size={14} />
+              </span>{' '}
+              in Safari's toolbar
             </li>
             <li>
               Scroll down and tap <strong>Add to Home Screen</strong>
