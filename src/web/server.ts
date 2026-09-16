@@ -2,7 +2,24 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
-import { SessionError, addBuyIn, activateSession, createSession, getSession, history, joinSession, previewSettlement, recordCashOut, settleSession, updatePalette } from '../lib/sessions.js';
+import { AuthError, accountForToken, login, logout, register } from '../lib/accounts.js';
+import { ChipVisionError, countChipsWithAI } from '../lib/chipVision.js';
+import { GroupError, createGroup, getGroup, groupsForAccount, joinGroup, requireMember } from '../lib/groups.js';
+import {
+  SessionError,
+  addBuyIn,
+  activateSession,
+  createSession,
+  getSession,
+  history,
+  joinSession,
+  previewSettlement,
+  recordCashOut,
+  sessionsForGroup,
+  settleSession,
+  updatePalette,
+} from '../lib/sessions.js';
+import type { Account, ChipColor, Session } from '../shared/types.js';
 
 const PUBLIC_DIR = join(process.cwd(), 'dist', 'public');
 /** Photos are compressed client-side before upload, but allow headroom. */
@@ -95,60 +112,169 @@ function countsMap(body: Record<string, unknown> | null, key: string): Record<st
   return v as Record<string, number>;
 }
 
+function bearerToken(req: IncomingMessage): string | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  return header.slice('Bearer '.length).trim() || null;
+}
+
+function requireAuth(req: IncomingMessage): Account {
+  const token = bearerToken(req);
+  const account = token ? accountForToken(token) : null;
+  if (!account) throw new AuthError('Please log in.', 401);
+  return account;
+}
+
+function requireSessionAccess(session: Session, accountId: string): void {
+  requireMember(getGroup(session.groupId), accountId);
+}
+
 async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
-  const parts = url.pathname.split('/').filter(Boolean); // ['api', 'sessions', ...]
+  const parts = url.pathname.split('/').filter(Boolean); // ['api', ...]
 
   try {
-    // GET /api/history
-    if (req.method === 'GET' && parts.length === 2 && parts[1] === 'history') {
-      return sendJson(res, 200, history());
-    }
+    // --- Auth --------------------------------------------------------------
 
-    // POST /api/sessions
-    if (req.method === 'POST' && parts.length === 2 && parts[1] === 'sessions') {
+    // POST /api/auth/register
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'register') {
       const body = await readJsonBody(req);
-      const result = createSession(str(body, 'name'), str(body, 'hostName'));
+      const result = register(str(body, 'username'), str(body, 'password'), str(body, 'displayName'));
       return sendJson(res, 201, result);
     }
+
+    // POST /api/auth/login
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'login') {
+      const body = await readJsonBody(req);
+      const result = login(str(body, 'username'), str(body, 'password'));
+      return sendJson(res, 200, result);
+    }
+
+    // POST /api/auth/logout
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'logout') {
+      const token = bearerToken(req);
+      if (token) logout(token);
+      return sendJson(res, 200, { ok: true });
+    }
+
+    // GET /api/auth/me
+    if (req.method === 'GET' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'me') {
+      const account = requireAuth(req);
+      return sendJson(res, 200, { account });
+    }
+
+    // --- Groups --------------------------------------------------------------
+
+    // POST /api/groups
+    if (req.method === 'POST' && parts.length === 2 && parts[1] === 'groups') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const group = createGroup(str(body, 'name'), account.id);
+      return sendJson(res, 201, { group });
+    }
+
+    // GET /api/groups
+    if (req.method === 'GET' && parts.length === 2 && parts[1] === 'groups') {
+      const account = requireAuth(req);
+      return sendJson(res, 200, { groups: groupsForAccount(account.id) });
+    }
+
+    // POST /api/groups/join
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'groups' && parts[2] === 'join') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const group = joinGroup(str(body, 'joinCode'), account.id);
+      return sendJson(res, 200, { group });
+    }
+
+    if (parts[0] === 'api' && parts[1] === 'groups' && parts[2] && parts[2] !== 'join') {
+      const groupId = parts[2];
+
+      // GET /api/groups/:id
+      if (req.method === 'GET' && parts.length === 3) {
+        const account = requireAuth(req);
+        const group = getGroup(groupId);
+        requireMember(group, account.id);
+        return sendJson(res, 200, { group });
+      }
+
+      // GET /api/groups/:id/history
+      if (req.method === 'GET' && parts.length === 4 && parts[3] === 'history') {
+        const account = requireAuth(req);
+        requireMember(getGroup(groupId), account.id);
+        return sendJson(res, 200, history(groupId));
+      }
+
+      // GET /api/groups/:id/sessions — tables in this group
+      if (req.method === 'GET' && parts.length === 4 && parts[3] === 'sessions') {
+        const account = requireAuth(req);
+        requireMember(getGroup(groupId), account.id);
+        return sendJson(res, 200, { sessions: sessionsForGroup(groupId) });
+      }
+
+      // POST /api/groups/:id/sessions — create a table in this group
+      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'sessions') {
+        const account = requireAuth(req);
+        requireMember(getGroup(groupId), account.id);
+        const body = await readJsonBody(req);
+        const result = createSession(groupId, str(body, 'name'), account);
+        return sendJson(res, 201, result);
+      }
+    }
+
+    // --- Sessions (tables) ---------------------------------------------------
 
     if (parts[0] === 'api' && parts[1] === 'sessions' && parts[2]) {
       const id = parts[2];
 
       // GET /api/sessions/:id
       if (req.method === 'GET' && parts.length === 3) {
-        return sendJson(res, 200, { session: getSession(id) });
+        const account = requireAuth(req);
+        const session = getSession(id);
+        requireSessionAccess(session, account.id);
+        return sendJson(res, 200, { session });
       }
 
       // POST /api/sessions/:id/join
       if (req.method === 'POST' && parts.length === 4 && parts[3] === 'join') {
-        const body = await readJsonBody(req);
-        return sendJson(res, 200, joinSession(id, str(body, 'name')));
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
+        return sendJson(res, 200, joinSession(id, account));
       }
 
       // PUT /api/sessions/:id/palette
       if (req.method === 'PUT' && parts.length === 4 && parts[3] === 'palette') {
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
         const body = await readJsonBody(req);
         const palette = Array.isArray(body?.palette) ? body.palette : [];
-        return sendJson(res, 200, { session: updatePalette(id, palette) });
+        return sendJson(res, 200, { session: updatePalette(id, account.id, palette) });
       }
 
       // POST /api/sessions/:id/activate
       if (req.method === 'POST' && parts.length === 4 && parts[3] === 'activate') {
-        return sendJson(res, 200, { session: activateSession(id) });
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
+        return sendJson(res, 200, { session: activateSession(id, account.id) });
       }
 
       // GET /api/sessions/:id/settlement
       if (req.method === 'GET' && parts.length === 4 && parts[3] === 'settlement') {
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
         return sendJson(res, 200, { settlement: previewSettlement(id) });
       }
 
       // POST /api/sessions/:id/settle
       if (req.method === 'POST' && parts.length === 4 && parts[3] === 'settle') {
-        return sendJson(res, 200, settleSession(id));
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
+        return sendJson(res, 200, settleSession(id, account.id));
       }
 
       // POST /api/sessions/:id/players/:playerId/buyins|cashout
       if (req.method === 'POST' && parts.length === 6 && parts[3] === 'players' && (parts[5] === 'buyins' || parts[5] === 'cashout')) {
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
         const playerId = parts[4];
         const body = await readJsonBody(req);
         const photo = typeof body?.photo === 'string' ? body.photo : null;
@@ -156,13 +282,15 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         const confirmed = countsMap(body, 'confirmedCounts');
         const session =
           parts[5] === 'buyins'
-            ? addBuyIn(id, playerId, photo, detected, confirmed)
-            : recordCashOut(id, playerId, photo, detected, confirmed);
+            ? addBuyIn(id, playerId, account.id, photo, detected, confirmed)
+            : recordCashOut(id, playerId, account.id, photo, detected, confirmed);
         return sendJson(res, 200, { session });
       }
     }
   } catch (err) {
-    if (err instanceof SessionError) return sendJson(res, err.status, { error: err.message });
+    if (err instanceof SessionError || err instanceof GroupError || err instanceof AuthError) {
+      return sendJson(res, err.status, { error: err.message });
+    }
     console.error(err);
     return sendJson(res, 500, { error: 'Something went wrong.' });
   }

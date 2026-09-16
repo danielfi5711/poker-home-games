@@ -35,6 +35,8 @@ export const config = {
   tursoAuthToken: process.env.TURSO_AUTH_TOKEN ?? '',
 
   dataFile: process.env.DATA_FILE ?? 'data/sessions.json',
+  accountsFile: process.env.ACCOUNTS_FILE ?? 'data/accounts.json',
+  groupsFile: process.env.GROUPS_FILE ?? 'data/groups.json',
 
   /**
    * A session with no activity (no buy-in, cash-out, or setup change) for
@@ -43,6 +45,15 @@ export const config = {
    * leaderboard from being dominated by ancient test games.
    */
   historyWindowDays: num('HISTORY_WINDOW_DAYS', 365),
+
+  /**
+   * Claude API key for AI chip-stack counting (src/lib/chipVision.ts). Blank
+   * = that endpoint is disabled and the client falls back to its on-device
+   * pixel-heuristic counter.
+   */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  /** Vision model used for chip counting — favors accuracy over latency/cost, both negligible at this app's scale. */
+  chipVisionModel: process.env.CHIP_VISION_MODEL || 'claude-opus-5',
 } as const;
 
 // --- Production safety checks -------------------------------------------------
@@ -50,5 +61,11 @@ if (config.isProd && !config.tursoUrl) {
   console.warn(
     '[config] NODE_ENV=production but TURSO_DATABASE_URL is not set — session data will ' +
       'NOT survive a redeploy on an ephemeral host.',
+  );
+}
+if (config.isProd && !config.anthropicApiKey) {
+  console.warn(
+    '[config] ANTHROPIC_API_KEY is not set — AI chip counting is disabled; the app will fall ' +
+      'back to the on-device pixel-heuristic counter.',
   );
 }

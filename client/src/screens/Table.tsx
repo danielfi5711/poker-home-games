@@ -3,7 +3,6 @@ import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { initials } from '../initials.js';
-import { LinkIcon, CheckIcon } from '../icons.js';
 import { PhotoFlow } from './PhotoFlow.js';
 
 interface Props {
@@ -19,24 +18,12 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
   const [flow, setFlow] = useState<'buyin' | 'cashout' | null>(null);
   const [settling, setSettling] = useState(false);
   const [settleError, setSettleError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const me = session.players[playerId]!;
   const players = Object.values(session.players).sort((a, b) => a.joinedAt - b.joinedAt);
-  const shareUrl = `${location.origin}/?join=${session.id}`;
 
   function buyInTotal(playerBuyIns: { totalCents: number }[]): number {
     return playerBuyIns.reduce((sum, b) => sum + b.totalCents, 0);
-  }
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
-    }
   }
 
   async function settleGame() {
@@ -66,13 +53,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
 
   return (
     <div class="card">
-      <div class="joincode joincode--compact">
-        <span class="joincode__value">{session.id}</span>
-        <button class={`btn btn--small ${copied ? 'btn--copied' : ''}`} onClick={copyLink}>
-          {copied ? <CheckIcon size={13} /> : <LinkIcon size={13} />}
-          {copied ? 'Copied!' : 'Share link'}
-        </button>
-      </div>
+      <h2>{session.name}</h2>
 
       <ul class="playerlist playerlist--table">
         {players.map((p) => {

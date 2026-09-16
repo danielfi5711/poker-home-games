@@ -1,38 +1,40 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Session } from '../../../src/shared/types.js';
+import type { Group } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 
 interface Props {
-  onEnter: (session: Session, playerId: string) => void;
-  error: string | null;
-  setError: (err: string | null) => void;
+  onEnter: (group: Group) => void;
 }
 
 function joinCodeFromUrl(): string {
   return new URLSearchParams(location.search).get('join')?.toUpperCase() ?? '';
 }
 
-export function Home({ onEnter, error, setError }: Props) {
+export function Groups({ onEnter }: Props) {
   const initialJoinCode = joinCodeFromUrl();
+  const [groups, setGroups] = useState<Group[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'create' | 'join'>(initialJoinCode ? 'join' : 'create');
-  const [gameName, setGameName] = useState('');
-  const [hostName, setHostName] = useState('');
+  const [name, setName] = useState('');
   const [joinCode, setJoinCode] = useState(initialJoinCode);
-  const [joinName, setJoinName] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (initialJoinCode) history.replaceState(null, '', location.pathname);
+    api
+      .myGroups()
+      .then((r) => setGroups(r.groups))
+      .catch((err) => setError((err as Error).message));
   }, []);
 
   async function create(e: Event) {
     e.preventDefault();
-    if (!hostName.trim()) return setError('Enter your name.');
+    if (!name.trim()) return setError('Enter a group name.');
     setBusy(true);
     setError(null);
     try {
-      const { session, playerId } = await api.createSession(gameName, hostName);
-      onEnter(session, playerId!);
+      const { group } = await api.createGroup(name);
+      onEnter(group);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -42,12 +44,12 @@ export function Home({ onEnter, error, setError }: Props) {
 
   async function join(e: Event) {
     e.preventDefault();
-    if (!joinCode.trim() || !joinName.trim()) return setError('Enter the game code and your name.');
+    if (!joinCode.trim()) return setError('Enter the group code.');
     setBusy(true);
     setError(null);
     try {
-      const { session, playerId } = await api.join(joinCode.trim().toUpperCase(), joinName);
-      onEnter(session, playerId!);
+      const { group } = await api.joinGroup(joinCode.trim().toUpperCase());
+      onEnter(group);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -57,36 +59,49 @@ export function Home({ onEnter, error, setError }: Props) {
 
   return (
     <div class="card">
+      <h2>Your groups</h2>
+      {error && <p class="error">{error}</p>}
+      {!groups && !error && <p class="muted">Loading…</p>}
+
+      {groups && groups.length > 0 && (
+        <ul class="playerlist">
+          {groups.map((g) => (
+            <li key={g.id}>
+              <button class="btn btn--ghost btn--between" onClick={() => onEnter(g)}>
+                <span>{g.name}</span>
+                <span class="muted">
+                  {g.memberAccountIds.length} {g.memberAccountIds.length === 1 ? 'member' : 'members'}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {groups && groups.length === 0 && <p class="muted">You're not in any groups yet — create one or join with a code.</p>}
+
       <div class="tabs">
         <button class={`tab ${mode === 'create' ? 'tab--active' : ''}`} onClick={() => setMode('create')}>
-          New game
+          New group
         </button>
         <button class={`tab ${mode === 'join' ? 'tab--active' : ''}`} onClick={() => setMode('join')}>
-          Join a game
+          Join a group
         </button>
       </div>
-
-      {error && <p class="error">{error}</p>}
 
       {mode === 'create' ? (
         <form onSubmit={create}>
           <label class="field">
-            Game name
-            <input value={gameName} onInput={(e) => setGameName(e.currentTarget.value)} placeholder="Friday Night" maxLength={60} />
-          </label>
-          <label class="field">
-            Your name
-            <input value={hostName} onInput={(e) => setHostName(e.currentTarget.value)} placeholder="Your name" maxLength={40} required />
+            Group name
+            <input value={name} onInput={(e) => setName(e.currentTarget.value)} placeholder="Friday Night Crew" maxLength={60} required />
           </label>
           <button class="btn btn--primary" type="submit" disabled={busy}>
-            {busy ? 'Creating…' : 'Create game'}
+            {busy ? 'Creating…' : 'Create group'}
           </button>
-          <p class="hint">You'll set the chip colors and values next, then get a code to share with everyone.</p>
         </form>
       ) : (
         <form onSubmit={join}>
           <label class="field">
-            Game code
+            Group code
             <input
               value={joinCode}
               onInput={(e) => setJoinCode(e.currentTarget.value.toUpperCase())}
@@ -96,12 +111,8 @@ export function Home({ onEnter, error, setError }: Props) {
               required
             />
           </label>
-          <label class="field">
-            Your name
-            <input value={joinName} onInput={(e) => setJoinName(e.currentTarget.value)} placeholder="Your name" maxLength={40} required />
-          </label>
           <button class="btn btn--primary" type="submit" disabled={busy}>
-            {busy ? 'Joining…' : 'Join game'}
+            {busy ? 'Joining…' : 'Join group'}
           </button>
         </form>
       )}

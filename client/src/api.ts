@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import type {
+  Account,
+  AuthResponse,
   ChipColor,
   ChipColorId,
+  Group,
   HistoryResponse,
   Session,
   SessionResponse,
@@ -10,11 +13,34 @@ import type {
 } from '../../src/shared/types.js';
 
 const BASE = '/api';
+const TOKEN_KEY = 'poker.authToken';
+
+export function loadToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* localStorage unavailable — login just won't survive a refresh */
+  }
+}
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const token = loadToken();
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers['content-type'] = 'application/json';
+  if (token) headers.authorization = `Bearer ${token}`;
+
   const res = await fetch(BASE + path, {
     method,
-    headers: body !== undefined ? { 'content-type': 'application/json' } : undefined,
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}) as Record<string, unknown>);
@@ -32,8 +58,21 @@ export interface PhotoPayload {
 }
 
 export const api = {
-  createSession: (name: string, hostName: string) => req<SessionResponse>('POST', '/sessions', { name, hostName }),
-  join: (id: string, name: string) => req<SessionResponse>('POST', `/sessions/${id}/join`, { name }),
+  register: (username: string, password: string, displayName: string) =>
+    req<AuthResponse>('POST', '/auth/register', { username, password, displayName }),
+  login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
+  logout: () => req<{ ok: true }>('POST', '/auth/logout'),
+  me: () => req<{ account: Account }>('GET', '/auth/me'),
+
+  myGroups: () => req<{ groups: Group[] }>('GET', '/groups'),
+  createGroup: (name: string) => req<{ group: Group }>('POST', '/groups', { name }),
+  joinGroup: (joinCode: string) => req<{ group: Group }>('POST', '/groups/join', { joinCode }),
+  getGroup: (groupId: string) => req<{ group: Group }>('GET', `/groups/${groupId}`),
+  groupHistory: (groupId: string) => req<HistoryResponse>('GET', `/groups/${groupId}/history`),
+  groupSessions: (groupId: string) => req<{ sessions: Session[] }>('GET', `/groups/${groupId}/sessions`),
+  createSession: (groupId: string, name: string) => req<SessionResponse>('POST', `/groups/${groupId}/sessions`, { name }),
+
+  join: (id: string) => req<SessionResponse>('POST', `/sessions/${id}/join`),
   get: (id: string) => req<{ session: Session }>('GET', `/sessions/${id}`),
   setPalette: (id: string, palette: Omit<ChipColor, 'id'>[]) => req<{ session: Session }>('PUT', `/sessions/${id}/palette`, { palette }),
   activate: (id: string) => req<{ session: Session }>('POST', `/sessions/${id}/activate`),
@@ -41,12 +80,12 @@ export const api = {
   cashOut: (id: string, playerId: string, payload: PhotoPayload) => req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/cashout`, payload),
   settlementPreview: (id: string) => req<{ settlement: SettlementResult }>('GET', `/sessions/${id}/settlement`),
   settle: (id: string) => req<SettleResponse>('POST', `/sessions/${id}/settle`),
-  history: () => req<HistoryResponse>('GET', '/history'),
 };
 
 const SAVED_KEY = 'poker.activeSession';
 
 export interface SavedIdentity {
+  groupId: string;
   sessionId: string;
   playerId: string;
 }
@@ -66,6 +105,25 @@ export function saveIdentity(identity: SavedIdentity | null): void {
     else localStorage.removeItem(SAVED_KEY);
   } catch {
     /* localStorage unavailable — session just won't survive a refresh */
+  }
+}
+
+const SAVED_GROUP_KEY = 'poker.activeGroup';
+
+export function loadSavedGroupId(): string | null {
+  try {
+    return localStorage.getItem(SAVED_GROUP_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveGroupId(groupId: string | null): void {
+  try {
+    if (groupId) localStorage.setItem(SAVED_GROUP_KEY, groupId);
+    else localStorage.removeItem(SAVED_GROUP_KEY);
+  } catch {
+    /* ignore */
   }
 }
 

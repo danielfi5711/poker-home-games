@@ -2,7 +2,9 @@ import { config } from '../config.js';
 import { JsonStore } from './store.js';
 import { newId, newJoinCode } from './id.js';
 import { computeSettlement } from './settlement.js';
+import { getAccount } from './accounts.js';
 import type {
+  Account,
   ChipColor,
   ChipColorId,
   HistoryResponse,
@@ -52,10 +54,23 @@ function requirePlayer(session: Session, playerId: string): Player {
   return player;
 }
 
-function newPlayer(name: string): Player {
-  const trimmed = name.trim().slice(0, 40);
-  if (!trimmed) throw new SessionError('Name is required.', 400);
-  return { id: newId(), name: trimmed, joinedAt: Date.now(), buyIns: [], cashOut: null };
+/** Buy-ins, cash-outs, and rejoining are only ever done as the account you're logged in as. */
+function requirePlayerOwnedBy(session: Session, playerId: string, accountId: string): Player {
+  const player = requirePlayer(session, playerId);
+  if (player.accountId !== accountId) throw new SessionError('That seat belongs to someone else.', 403);
+  return player;
+}
+
+/** Setup/start/settle are host-only, verified against the logged-in account, not just a client-supplied id. */
+function requireHost(session: Session, accountId: string): void {
+  const host = session.players[session.hostPlayerId];
+  if (!host || host.accountId !== accountId) {
+    throw new SessionError('Only the host can do that.', 403);
+  }
+}
+
+function newPlayer(account: Account): Player {
+  return { id: newId(), accountId: account.id, name: account.displayName, joinedAt: Date.now(), buyIns: [], cashOut: null };
 }
 
 /** Recompute a photo entry's total from confirmedCounts against the session's
@@ -84,46 +99,52 @@ function sanitizeCounts(
   return out;
 }
 
-export function createSession(name: string, hostName: string): { session: Session; playerId: string } {
-  const host = newPlayer(hostName);
+export function createSession(groupId: string, name: string, host: Account): { session: Session; playerId: string } {
+  const hostPlayer = newPlayer(host);
   let id = newJoinCode();
   while (data().sessions[id]) id = newJoinCode();
 
   const session: Session = {
     id,
+    groupId,
     name: name.trim().slice(0, 60) || 'Poker Night',
     createdAt: Date.now(),
     status: 'setup',
-    hostPlayerId: host.id,
+    hostPlayerId: hostPlayer.id,
     chipPalette: [],
-    players: { [host.id]: host },
+    players: { [hostPlayer.id]: hostPlayer },
     settledAt: null,
   };
 
   save((d) => {
     d.sessions[id] = session;
   });
-  return { session, playerId: host.id };
+  return { session, playerId: hostPlayer.id };
 }
 
 export function getSession(id: string): Session {
   return requireSession(id);
 }
 
-export function joinSession(id: string, name: string): { session: Session; playerId: string } {
+/** Joining is idempotent — reopening a table you're already seated at returns your existing seat. */
+export function joinSession(id: string, account: Account): { session: Session; playerId: string } {
   const session = requireSession(id);
+  const existing = Object.values(session.players).find((p) => p.accountId === account.id);
+  if (existing) return { session, playerId: existing.id };
+
   if (session.status === 'settled') {
     throw new SessionError('This game has already been settled.', 409);
   }
-  const player = newPlayer(name);
+  const player = newPlayer(account);
   save((d) => {
     d.sessions[session.id].players[player.id] = player;
   });
   return { session: requireSession(id), playerId: player.id };
 }
 
-export function updatePalette(id: string, palette: Omit<ChipColor, 'id'>[]): Session {
+export function updatePalette(id: string, accountId: string, palette: Omit<ChipColor, 'id'>[]): Session {
   const session = requireSession(id);
+  requireHost(session, accountId);
   if (session.status !== 'setup') {
     throw new SessionError('Chip values can only be changed before the game starts.', 409);
   }
@@ -142,8 +163,9 @@ export function updatePalette(id: string, palette: Omit<ChipColor, 'id'>[]): Ses
   return requireSession(id);
 }
 
-export function activateSession(id: string): Session {
+export function activateSession(id: string, accountId: string): Session {
   const session = requireSession(id);
+  requireHost(session, accountId);
   if (session.status !== 'setup') return session;
   if (session.chipPalette.length === 0) {
     throw new SessionError('Set up the chip colors and values before starting.', 400);
@@ -174,13 +196,14 @@ function recordPhoto(
 export function addBuyIn(
   id: string,
   playerId: string,
+  accountId: string,
   photo: string | null,
   detectedCounts: Record<ChipColorId, number> | undefined,
   confirmedCounts: Record<ChipColorId, number> | undefined,
 ): Session {
   const session = requireSession(id);
   if (session.status === 'settled') throw new SessionError('This game has already been settled.', 409);
-  requirePlayer(session, playerId);
+  requirePlayerOwnedBy(session, playerId, accountId);
 
   const entry = recordPhoto(session, photo, detectedCounts, confirmedCounts);
   if (entry.totalCents <= 0) throw new SessionError('Buy-in must be worth more than $0.', 400);
@@ -194,13 +217,14 @@ export function addBuyIn(
 export function recordCashOut(
   id: string,
   playerId: string,
+  accountId: string,
   photo: string | null,
   detectedCounts: Record<ChipColorId, number> | undefined,
   confirmedCounts: Record<ChipColorId, number> | undefined,
 ): Session {
   const session = requireSession(id);
   if (session.status === 'settled') throw new SessionError('This game has already been settled.', 409);
-  requirePlayer(session, playerId);
+  requirePlayerOwnedBy(session, playerId, accountId);
 
   const entry = recordPhoto(session, photo, detectedCounts, confirmedCounts);
 
@@ -214,11 +238,12 @@ export function previewSettlement(id: string): SettleResponse['settlement'] {
   return computeSettlement(requireSession(id));
 }
 
-export function settleSession(id: string): SettleResponse {
+export function settleSession(id: string, accountId: string): SettleResponse {
   const session = requireSession(id);
   if (session.status === 'settled') {
     return { session, settlement: computeSettlement(session) };
   }
+  requireHost(session, accountId);
   const settlement = computeSettlement(session);
   if (!settlement.complete) {
     throw new SessionError(
@@ -233,25 +258,34 @@ export function settleSession(id: string): SettleResponse {
   return { session: requireSession(id), settlement };
 }
 
-export function history(): HistoryResponse {
+export function sessionsForGroup(groupId: string): Session[] {
+  return Object.values(data().sessions)
+    .filter((s) => s.groupId === groupId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function history(groupId: string): HistoryResponse {
   const cutoff = Date.now() - config.historyWindowDays * 24 * 60 * 60 * 1000;
   const sessions = Object.values(data().sessions)
-    .filter((s) => s.status === 'settled' && (s.settledAt ?? 0) >= cutoff)
+    .filter((s) => s.groupId === groupId && s.status === 'settled' && (s.settledAt ?? 0) >= cutoff)
     .sort((a, b) => (b.settledAt ?? 0) - (a.settledAt ?? 0));
 
-  const byName = new Map<string, LeaderboardEntry>();
+  const byAccount = new Map<string, LeaderboardEntry>();
   for (const session of sessions) {
     const { netsCents } = computeSettlement(session);
     for (const player of Object.values(session.players)) {
-      const key = player.name.trim().toLowerCase();
-      if (!key) continue;
-      const existing = byName.get(key) ?? { name: player.name.trim(), sessionsPlayed: 0, netCents: 0 };
+      const existing = byAccount.get(player.accountId) ?? {
+        accountId: player.accountId,
+        name: getAccount(player.accountId)?.displayName ?? player.name,
+        sessionsPlayed: 0,
+        balanceCents: 0,
+      };
       existing.sessionsPlayed += 1;
-      existing.netCents += netsCents[player.id] ?? 0;
-      byName.set(key, existing);
+      existing.balanceCents += netsCents[player.id] ?? 0;
+      byAccount.set(player.accountId, existing);
     }
   }
 
-  const leaderboard = [...byName.values()].sort((a, b) => b.netCents - a.netCents);
+  const leaderboard = [...byAccount.values()].sort((a, b) => b.balanceCents - a.balanceCents);
   return { sessions, leaderboard };
 }

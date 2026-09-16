@@ -1,30 +1,40 @@
 # Poker Home Games
 
 An installable app (PWA — add it to your phone's home screen, no App Store
-needed) for tracking a local poker night: everyone logs their buy-ins, takes
+needed) for tracking local poker nights: everyone logs their buy-ins, takes
 a photo of their chip stack at the end, and the app prices it, calculates
-who's up and down, and works out who pays whom — plus a running leaderboard
-across game nights. No real money moves through the app; it's a calculator
-for a cash game your group already plays.
+who's up and down, and works out who pays whom — plus a running per-group
+leaderboard of every account's balance across game nights. No real money
+moves through the app; it's a calculator for a cash game your group already
+plays.
 
 ## How it works
 
-1. **Host creates a game** and sets the table's chip colors and dollar
-   values (e.g. White = $1, Red = $5, Blue = $25) — every home game's chip
-   set is different, so this is a one-time setup per game.
-2. **Everyone joins** with the game code or a shared link, and types their
-   name (no accounts, no login — this is for a private group of friends).
-3. **Buy-ins**: each player photographs their chips (stacked and sorted by
+1. **Sign up** with a username and password — this is what ties your buy-ins
+   and cash-outs to *you* across every game, instead of a typed name anyone
+   could reuse.
+2. **Create or join a group** — a group is one friend circle with its own
+   join code and its own leaderboard. Your poker buddies and your work
+   league can be two completely separate groups with separate standings.
+3. **Host creates a table** inside a group and sets the table's chip colors
+   and dollar values (e.g. White = $1, Red = $5, Blue = $25) — every home
+   game's chip set is different, so this is a one-time setup per table.
+   Anyone else in the group sees the table appear in the group's table list
+   and taps it to join — no code to type or link to share for the table
+   itself, since group membership already controls who can get in.
+4. **Buy-ins**: each player photographs their chips (stacked and sorted by
    color) when they buy in — repeatable for re-buys. **Cash-out**: same
    photo flow at the end of the night for the final stack.
-4. **The app counts the chips itself**, fully on-device (see below) — and
+5. **The app counts the chips itself**, fully on-device (see below) — and
    always shows an editable confirmation screen before anything is saved, so
    a misread never silently becomes the recorded amount.
-5. Once everyone has cashed out, the host taps **Settle game**: it computes
+6. Once everyone has cashed out, the host taps **Settle game**: it computes
    each player's net and the minimum set of payments to square everyone up,
    and flags it if the buy-ins and cash-outs don't quite add up (a sign
    someone's count was off).
-6. Past games and a cumulative leaderboard live under **History**.
+7. That table's result folds into the group's **Leaderboard** tab — each
+   account's balance is the running sum of its net across every settled
+   table in that group.
 
 ## The chip-counting engine
 
@@ -71,8 +81,8 @@ This runs on Render's free web-service tier:
 
 - Chip-stack photo counting is a heuristic, not perfect — the confirm screen
   is the safety net, always double check before submitting.
-- Player identity is just a typed name (no accounts) — fine for a trusted
-  friend group, not spoof-proof.
+- Login tokens don't expire (there's no session-timeout/refresh flow) — fine
+  for a casual friend-group app, not meant to hold anything sensitive.
 - On the free JSON-file storage backend, photos are stored inline as base64
   in the session data — fine for casual use, but will grow the data file
   over many game nights; Turso avoids the redeploy-wipe problem but not this

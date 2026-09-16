@@ -5,19 +5,24 @@ import { formatCents } from '../money.js';
 import { initials } from '../initials.js';
 import { TrophyIcon } from '../icons.js';
 
-export function HistoryScreen() {
+interface Props {
+  groupId: string;
+}
+
+export function HistoryScreen({ groupId }: Props) {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setData(null);
     api
-      .history()
+      .groupHistory(groupId)
       .then(setData)
       .catch((err) => setError((err as Error).message));
-  }, []);
+  }, [groupId]);
 
   return (
-    <div class="card">
+    <>
       <h2 class="section-icon">
         <TrophyIcon size={20} />
         Leaderboard
@@ -32,7 +37,7 @@ export function HistoryScreen() {
           ) : (
             <ul class="results">
               {data.leaderboard.map((entry, i) => (
-                <li key={entry.name}>
+                <li key={entry.accountId}>
                   <span class="results__player">
                     <span class={`leaderboard__rank ${i === 0 ? 'leaderboard__rank--1' : ''}`}>{i + 1}</span>
                     <span class="avatar avatar--sm">{initials(entry.name)}</span>
@@ -40,9 +45,9 @@ export function HistoryScreen() {
                       {entry.name} <span class="muted">({entry.sessionsPlayed} games)</span>
                     </span>
                   </span>
-                  <span class={`results__net ${entry.netCents > 0 ? 'positive' : entry.netCents < 0 ? 'negative' : ''}`}>
-                    {entry.netCents > 0 ? '+' : ''}
-                    {formatCents(entry.netCents)}
+                  <span class={`results__net ${entry.balanceCents > 0 ? 'positive' : entry.balanceCents < 0 ? 'negative' : ''}`}>
+                    {entry.balanceCents > 0 ? '+' : ''}
+                    {formatCents(entry.balanceCents)}
                   </span>
                 </li>
               ))}
@@ -65,6 +70,6 @@ export function HistoryScreen() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

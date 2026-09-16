@@ -405,6 +405,12 @@ form {
   color: var(--ink-dim);
 }
 
+.btn--between {
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+}
+
 .btn--ghost:hover:not(:disabled) {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.05) !important;

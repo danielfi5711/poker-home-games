@@ -3,7 +3,6 @@ import type { ChipColor, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { parseDollarsToCents } from '../money.js';
 import { initials } from '../initials.js';
-import { LinkIcon, CheckIcon } from '../icons.js';
 
 interface Props {
   session: Session;
@@ -34,9 +33,6 @@ export function ChipSetupScreen({ session, isHost, onChanged, onLeave }: Props) 
   const [rows, setRows] = useState<Row[]>(() => (session.chipPalette.length ? toRows(session.chipPalette) : PRESET));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const shareUrl = `${location.origin}/?join=${session.id}`;
 
   function updateRow(i: number, patch: Partial<Row>) {
     setRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
@@ -79,31 +75,11 @@ export function ChipSetupScreen({ session, isHost, onChanged, onLeave }: Props) 
     }
   }
 
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable — the code is shown on screen regardless */
-    }
-  }
-
   const players = Object.values(session.players);
 
   return (
     <div class="card">
       <h2>{session.name}</h2>
-      <div class="joincode">
-        <div>
-          <div class="joincode__label">Game code</div>
-          <div class="joincode__value">{session.id}</div>
-        </div>
-        <button class={`btn ${copied ? 'btn--copied' : ''}`} onClick={copyLink}>
-          {copied ? <CheckIcon size={14} /> : <LinkIcon size={14} />}
-          {copied ? 'Copied!' : 'Copy link'}
-        </button>
-      </div>
 
       <h3>Players ({players.length})</h3>
       <ul class="playerlist">
