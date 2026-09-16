@@ -9,13 +9,22 @@ import type { ChipColor, ChipColorId } from '../../../src/shared/types.js';
  *
  * Expects a photo of chips arranged in stacks sorted by color (the normal
  * way poker players organize a stack for counting) — the algorithm:
- *  1. Classifies every pixel to the nearest color in the session's chip
+ *  1. Corrects large-scale lighting gradients (a lamp on one side of the
+ *     table, a shadow across a corner) with a coarse local white-balance
+ *     pass, so color classification doesn't drift across the photo.
+ *  2. Classifies every pixel to the nearest color in the session's chip
  *     palette (or "background").
- *  2. Finds connected blobs per color — each blob is a candidate stack.
- *  3. Estimates chips-per-blob two ways and reconciles them:
+ *  3. Finds connected blobs per color — each blob is one or more stacks of
+ *     that color touching each other (players often set same-color stacks
+ *     side by side).
+ *  4. Calibrates a single reference chip diameter (in px) from whichever
+ *     blobs look like a single stack (taller than wide), then uses it to
+ *     split any wider blob into that many side-by-side stacks instead of
+ *     undercounting a merged blob as one.
+ *  5. Estimates chips per stack two ways and reconciles them:
  *     - geometry: stack height ÷ an assumed chip-thickness-to-diameter
- *       ratio, using the blob's own width as the diameter reference (so it
- *       self-calibrates to how close the photo was taken).
+ *       ratio, using the calibrated diameter (falling back to the blob's
+ *       own width when no calibration is available).
  *     - edges: counts the horizontal rim lines up the middle of the stack
  *       via a brightness-gradient peak count.
  */
@@ -65,6 +74,60 @@ function drawDownscaled(image: CanvasImageSource, srcW: number, srcH: number): {
   if (!ctx) throw new Error('Canvas 2D not supported on this device.');
   ctx.drawImage(image, 0, 0, width, height);
   return { ctx, width, height };
+}
+
+/**
+ * Flattens large-scale lighting gradients (a lamp to one side, a shadow
+ * across a corner of the table) before color classification. Splits the
+ * image into a coarse grid, averages brightness per cell, then rescales
+ * each pixel toward the image's overall average brightness by its cell's
+ * ratio. The grid is coarse relative to a chip (12 cells across the short
+ * side) so real chip-to-chip and rim edges within a stack survive; only the
+ * slow, room-lighting-scale gradient gets corrected.
+ */
+function correctIllumination(pixels: Uint8ClampedArray, width: number, height: number): void {
+  const cellSize = Math.max(8, Math.round(Math.min(width, height) / 12));
+  const cols = Math.ceil(width / cellSize);
+  const rows = Math.ceil(height / cellSize);
+  const cellSum = new Float64Array(cols * rows);
+  const cellCount = new Int32Array(cols * rows);
+
+  for (let y = 0, p = 0; y < height; y++) {
+    const cy = (y / cellSize) | 0;
+    for (let x = 0; x < width; x++, p += 4) {
+      const cx = (x / cellSize) | 0;
+      const cell = cy * cols + cx;
+      cellSum[cell]! += (pixels[p]! + pixels[p + 1]! + pixels[p + 2]!) / 3;
+      cellCount[cell]!++;
+    }
+  }
+
+  let globalSum = 0;
+  let globalCount = 0;
+  const cellAvg = new Float64Array(cols * rows);
+  for (let c = 0; c < cellAvg.length; c++) {
+    if (cellCount[c]! > 0) {
+      cellAvg[c] = cellSum[c]! / cellCount[c]!;
+      globalSum += cellSum[c]!;
+      globalCount += cellCount[c]!;
+    }
+  }
+  if (globalCount === 0) return;
+  const globalAvg = globalSum / globalCount;
+
+  for (let y = 0, p = 0; y < height; y++) {
+    const cy = (y / cellSize) | 0;
+    for (let x = 0; x < width; x++, p += 4) {
+      const cx = (x / cellSize) | 0;
+      const cell = cy * cols + cx;
+      const avg = cellAvg[cell]!;
+      if (avg <= 0) continue;
+      const factor = Math.min(2, Math.max(0.5, globalAvg / avg));
+      pixels[p] = Math.min(255, pixels[p]! * factor);
+      pixels[p + 1] = Math.min(255, pixels[p + 1]! * factor);
+      pixels[p + 2] = Math.min(255, pixels[p + 2]! * factor);
+    }
+  }
 }
 
 /** Labels every pixel with a palette color index, or -1 for "background". */
@@ -170,26 +233,77 @@ function estimateByEdges(gray: Float32Array, width: number, blob: Blob): number 
   return peaks;
 }
 
-function estimateByGeometry(blob: Blob): number {
-  const width = blob.maxX - blob.minX + 1;
+function estimateByGeometry(blob: Blob, diameterPx: number): number {
   const height = blob.maxY - blob.minY + 1;
-  const chipThicknessPx = Math.max(1, width * CHIP_THICKNESS_TO_DIAMETER);
+  const chipThicknessPx = Math.max(1, diameterPx * CHIP_THICKNESS_TO_DIAMETER);
   return Math.max(1, Math.round(height / chipThicknessPx));
+}
+
+/**
+ * A photo's chip diameter, in pixels, calibrated from whichever blobs look
+ * like a single stack (taller than they are wide — merged side-by-side
+ * stacks read as wider than any one stack is tall). Returns null when no
+ * blob qualifies, so callers fall back to a blob's own width.
+ */
+function estimateReferenceDiameterPx(blobs: Blob[]): number | null {
+  const widths = blobs.filter((b) => b.maxY - b.minY >= b.maxX - b.minX).map((b) => b.maxX - b.minX + 1);
+  if (widths.length === 0) return null;
+  widths.sort((a, b) => a - b);
+  const mid = widths.length >> 1;
+  return widths.length % 2 === 1 ? widths[mid]! : (widths[mid - 1]! + widths[mid]!) / 2;
+}
+
+/** Re-measures the actual y-extent of one color within an x-range of a blob — used to split a merged, multi-stack blob into its individual stacks, which may differ slightly in height. */
+function measureBand(labels: Int16Array, width: number, colorIndex: number, bandMinX: number, bandMaxX: number, searchMinY: number, searchMaxY: number): Blob | null {
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let y = searchMinY; y <= searchMaxY; y++) {
+    const rowBase = y * width;
+    for (let x = bandMinX; x <= bandMaxX; x++) {
+      if (labels[rowBase + x] === colorIndex) {
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        break;
+      }
+    }
+  }
+  if (minY > maxY) return null;
+  return { colorIndex, area: (bandMaxX - bandMinX + 1) * (maxY - minY + 1), minX: bandMinX, maxX: bandMaxX, minY, maxY };
+}
+
+/** Splits a blob into `count` equal-width vertical bands — one per stack merged into it. */
+function splitBlobIntoStacks(labels: Int16Array, width: number, blob: Blob, count: number): Blob[] {
+  if (count <= 1) return [blob];
+  const blobWidth = blob.maxX - blob.minX + 1;
+  const bands: Blob[] = [];
+  for (let i = 0; i < count; i++) {
+    const bandMinX = blob.minX + Math.round((i * blobWidth) / count);
+    const bandMaxX = i === count - 1 ? blob.maxX : blob.minX + Math.round(((i + 1) * blobWidth) / count) - 1;
+    const band = measureBand(labels, width, blob.colorIndex, bandMinX, bandMaxX, blob.minY, blob.maxY);
+    if (band) bands.push(band);
+  }
+  return bands.length > 0 ? bands : [blob];
 }
 
 export interface CountResult {
   counts: Record<ChipColorId, number>;
-  /** Bounding boxes of everything the heuristic found, for an optional debug overlay. */
+  /** Bounding boxes of every individual stack the heuristic found, for an optional debug overlay. */
   blobs: { colorId: ChipColorId; count: number; minX: number; minY: number; maxX: number; maxY: number }[];
+  /** Pixel size of the analysis canvas the blob boxes above are in, so a caller can scale them onto the displayed photo. */
+  imageWidth: number;
+  imageHeight: number;
 }
 
 export async function countChipStacks(image: CanvasImageSource, srcW: number, srcH: number, palette: ChipColor[]): Promise<CountResult> {
   const counts: Record<ChipColorId, number> = {};
   for (const color of palette) counts[color.id] = 0;
-  if (palette.length === 0) return { counts, blobs: [] };
+  if (palette.length === 0) return { counts, blobs: [], imageWidth: 0, imageHeight: 0 };
 
   const { ctx, width, height } = drawDownscaled(image, srcW, srcH);
-  const { data } = ctx.getImageData(0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const { data } = imageData;
+
+  correctIllumination(data, width, height);
 
   const paletteRgb = palette.map((c) => hexToRgb(c.hex));
   const labels = classifyPixels(data, width, height, paletteRgb);
@@ -201,18 +315,26 @@ export async function countChipStacks(image: CanvasImageSource, srcW: number, sr
 
   const minArea = Math.max(24, Math.round(width * height * MIN_BLOB_AREA_FRACTION));
   const blobs = findBlobs(labels, width, height, minArea);
+  const referenceDiameterPx = estimateReferenceDiameterPx(blobs);
 
   const resultBlobs: CountResult['blobs'] = [];
   for (const blob of blobs) {
     const color = palette[blob.colorIndex]!;
-    const geometryGuess = estimateByGeometry(blob);
-    const edgeGuess = estimateByEdges(gray, width, blob);
-    // Trust the edge count when it's in the right ballpark; otherwise the
-    // stack is too small/blurry for rim detection and geometry is safer.
-    const count = edgeGuess > 0 && edgeGuess <= geometryGuess * 1.6 && edgeGuess >= geometryGuess * 0.4 ? edgeGuess : geometryGuess;
-    counts[color.id] = (counts[color.id] ?? 0) + count;
-    resultBlobs.push({ colorId: color.id, count, minX: blob.minX, minY: blob.minY, maxX: blob.maxX, maxY: blob.maxY });
+    const blobWidth = blob.maxX - blob.minX + 1;
+    const diameterPx = referenceDiameterPx ?? blobWidth;
+    const stackCount = Math.max(1, Math.round(blobWidth / diameterPx));
+    const stacks = splitBlobIntoStacks(labels, width, blob, stackCount);
+
+    for (const stack of stacks) {
+      const geometryGuess = estimateByGeometry(stack, diameterPx);
+      const edgeGuess = estimateByEdges(gray, width, stack);
+      // Trust the edge count when it's in the right ballpark; otherwise the
+      // stack is too small/blurry for rim detection and geometry is safer.
+      const count = edgeGuess > 0 && edgeGuess <= geometryGuess * 1.6 && edgeGuess >= geometryGuess * 0.4 ? edgeGuess : geometryGuess;
+      counts[color.id] = (counts[color.id] ?? 0) + count;
+      resultBlobs.push({ colorId: color.id, count, minX: stack.minX, minY: stack.minY, maxX: stack.maxX, maxY: stack.maxY });
+    }
   }
 
-  return { counts, blobs: resultBlobs };
+  return { counts, blobs: resultBlobs, imageWidth: width, imageHeight: height };
 }

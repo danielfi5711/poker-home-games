@@ -2,7 +2,7 @@ import { useMemo, useState } from 'preact/hooks';
 import type { ChipColorId, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { capturePhoto } from '../cv/photo.js';
-import { countChipStacks } from '../cv/chipCounter.js';
+import { countChipStacks, type CountResult } from '../cv/chipCounter.js';
 import { formatCents } from '../money.js';
 
 interface Props {
@@ -18,6 +18,8 @@ type Step = 'capture' | 'analyzing' | 'confirm';
 export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) {
   const [step, setStep] = useState<Step>('capture');
   const [photo, setPhoto] = useState<string | null>(null);
+  const [scan, setScan] = useState<CountResult | null>(null);
+  const [showOverlay, setShowOverlay] = useState(true);
   const [detected, setDetected] = useState<Record<ChipColorId, number>>({});
   const [counts, setCounts] = useState<Record<ChipColorId, number>>({});
   const [busy, setBusy] = useState(false);
