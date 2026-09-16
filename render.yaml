@@ -1,0 +1,25 @@
+# Render Blueprint — free web service.
+# Deploy: push to GitHub, then on Render: New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: poker-home-games
+    runtime: node
+    plan: free
+    region: oregon
+    branch: master
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUBLIC_URL
+        sync: false
+      # Hosted libSQL (Turso, free tier) — set both so game history survives a
+      # redeploy. Without them the app still works, but session data resets
+      # every time Render redeploys.
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
