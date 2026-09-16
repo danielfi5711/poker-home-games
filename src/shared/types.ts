@@ -152,9 +152,8 @@ export interface RecordPhotoRequest {
 }
 
 export interface VisionCountRequest {
-  /** JPEG/PNG data URL of the chip photo. */
+  /** JPEG/PNG data URL of the chip photo. Counted against the session's own chipPalette server-side. */
   photo: string;
-  palette: ChipColor[];
 }
 
 /** One physical stack the AI vision counter found in the photo. */

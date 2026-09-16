@@ -38,3 +38,24 @@ export async function capturePhoto(file: File, maxDim = 900, quality = 0.72): Pr
     height: img.naturalHeight,
   };
 }
+
+/**
+ * A separate, higher-resolution JPEG encode of the same photo for the AI
+ * vision counter — sharper than the compressed thumbnail stored on the
+ * buy-in/cash-out entry (`capturePhoto`'s `dataUrl`), since counting
+ * individual chip rims needs more detail than is worth keeping around in
+ * every session's stored history.
+ */
+export function encodeForVision(image: HTMLImageElement, maxDim = 1400, quality = 0.85): string {
+  const scale = Math.min(1, maxDim / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D not supported on this device.');
+  ctx.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+}

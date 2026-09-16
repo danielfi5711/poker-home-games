@@ -271,6 +271,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         return sendJson(res, 200, settleSession(id, account.id));
       }
 
+      // POST /api/sessions/:id/vision-count — AI chip-stack count for a photo (a suggestion only; never trusted for money)
+      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'vision-count') {
+        const account = requireAuth(req);
+        const session = getSession(id);
+        requireSessionAccess(session, account.id);
+        const body = await readJsonBody(req);
+        const photo = str(body, 'photo');
+        if (!photo) throw new ChipVisionError('No photo provided.', 400);
+        const result = await countChipsWithAI(photo, session.chipPalette);
+        return sendJson(res, 200, result);
+      }
+
       // POST /api/sessions/:id/players/:playerId/buyins|cashout
       if (req.method === 'POST' && parts.length === 6 && parts[3] === 'players' && (parts[5] === 'buyins' || parts[5] === 'cashout')) {
         const account = requireAuth(req);
@@ -288,7 +300,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       }
     }
   } catch (err) {
-    if (err instanceof SessionError || err instanceof GroupError || err instanceof AuthError) {
+    if (err instanceof SessionError || err instanceof GroupError || err instanceof AuthError || err instanceof ChipVisionError) {
       return sendJson(res, err.status, { error: err.message });
     }
     console.error(err);

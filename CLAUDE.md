@@ -45,6 +45,20 @@ independent balance standings, not one global leaderboard.
   (`requirePlayerOwnedBy`), and setup/start/settle must come from the
   account that owns the host seat (`requireHost`) — a client-supplied
   `playerId` alone is never enough.
+- `src/lib/chipVision.ts` — AI chip-stack counting: sends the buy-in/cash-out
+  photo to Claude's vision model (`config.chipVisionModel`, needs
+  `ANTHROPIC_API_KEY`) via a forced tool call, asking it to find every
+  individual stack and count its chips one by one from the rim lines up its
+  side (not just estimate from height). This is the primary counting path —
+  meaningfully more accurate than the on-device heuristic below, since it
+  isn't fooled by lighting, camera angle, or two same-color stacks standing
+  side by side. `POST /api/sessions/:id/vision-count` runs it against the
+  session's own `chipPalette` server-side (the client never sends a
+  palette). If `ANTHROPIC_API_KEY` is unset, or the request fails for any
+  reason (offline, rate limited, etc.), `PhotoFlow.tsx` falls back to the
+  on-device heuristic — the app works either way, just less accurately
+  without it. Exactly like the heuristic, this is only ever a *suggestion*:
+  shown on the same editable confirm screen, never trusted for money.
 - `src/lib/settlement.ts` — `computeSettlement()`: nets everyone
   (`cashOut − totalBuyIns`), then greedily matches the largest creditor
   against the largest debtor until everyone is settled (Splitwise-style
@@ -74,10 +88,16 @@ independent balance standings, not one global leaderboard.
   - `client/src/api.ts` — stores the bearer token in `localStorage`
     (`poker.authToken`) and attaches it to every request automatically.
   - `client/src/cv/chipCounter.ts` — the on-device, dependency-free chip
-    counting heuristic (pixel color classification → connected blobs →
-    height/edge-based count estimate per blob). It's a best-effort guess;
-    `client/src/screens/PhotoFlow.tsx` always shows it on an editable
-    confirm screen before a count is saved — never trust an unconfirmed
+    counting heuristic (illumination correction → pixel color classification
+    → connected blobs, split into individual stacks via a calibrated chip
+    diameter → height/edge-based count estimate per stack). Now only the
+    *fallback* path when `src/lib/chipVision.ts`'s AI counter is unavailable
+    (no API key, offline, request failed) — see that file's doc comment.
+    `client/src/cv/photo.ts`'s `encodeForVision()` produces a separate,
+    higher-resolution JPEG for the AI call than the compressed thumbnail
+    that gets stored on the entry. Either way, `PhotoFlow.tsx` always shows
+    the result on an editable confirm screen (with a detected-stacks overlay
+    on the photo) before a count is saved — never trust an unconfirmed
     detection for money.
   - `client/src/screens/` — `Login` (log in / sign up), `Groups` (list your
     groups, create one, join one by code), `GroupScreen` (a group's table

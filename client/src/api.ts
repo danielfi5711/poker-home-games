@@ -10,6 +10,7 @@ import type {
   SessionResponse,
   SettleResponse,
   SettlementResult,
+  VisionCountResponse,
 } from '../../src/shared/types.js';
 
 const BASE = '/api';
@@ -78,6 +79,7 @@ export const api = {
   activate: (id: string) => req<{ session: Session }>('POST', `/sessions/${id}/activate`),
   addBuyIn: (id: string, playerId: string, payload: PhotoPayload) => req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/buyins`, payload),
   cashOut: (id: string, playerId: string, payload: PhotoPayload) => req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/cashout`, payload),
+  visionCount: (id: string, photo: string) => req<VisionCountResponse>('POST', `/sessions/${id}/vision-count`, { photo }),
   settlementPreview: (id: string) => req<{ settlement: SettlementResult }>('GET', `/sessions/${id}/settlement`),
   settle: (id: string) => req<SettleResponse>('POST', `/sessions/${id}/settle`),
 };

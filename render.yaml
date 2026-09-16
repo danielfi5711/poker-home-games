@@ -23,3 +23,8 @@ services:
         sync: false
       - key: TURSO_AUTH_TOKEN
         sync: false
+      # AI chip-stack counting (src/lib/chipVision.ts). Without it, the app
+      # still works — it just falls back to the less-accurate on-device
+      # heuristic for photo counts.
+      - key: ANTHROPIC_API_KEY
+        sync: false

@@ -73,14 +73,19 @@ This runs on Render's free web-service tier:
    `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` in the Render dashboard — the
    app automatically switches to it when those are set (same pattern as the
    `discord-gambling` project).
-4. Open the deployed URL on your phone and use the browser's "Add to Home
+4. For accurate chip-stack photo counting, set `ANTHROPIC_API_KEY` in the
+   Render dashboard (any account with API access to Claude works). Without
+   it, the app still works, but falls back to a much rougher on-device
+   pixel-counting heuristic.
+5. Open the deployed URL on your phone and use the browser's "Add to Home
    Screen" (Safari) / "Install app" (Chrome) prompt to install it — that's
    the whole app-store-free "app" install.
 
 ## Known limitations (first cut)
 
-- Chip-stack photo counting is a heuristic, not perfect — the confirm screen
-  is the safety net, always double check before submitting.
+- Chip-stack photo counting (AI or on-device) is a best-effort guess, not
+  perfect — the confirm screen is the safety net, always double check
+  before submitting.
 - Login tokens don't expire (there's no session-timeout/refresh flow) — fine
   for a casual friend-group app, not meant to hold anything sensitive.
 - On the free JSON-file storage backend, photos are stored inline as base64

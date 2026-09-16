@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import type { ChipColorId, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
-import { capturePhoto } from '../cv/photo.js';
+import { capturePhoto, encodeForVision } from '../cv/photo.js';
 import { countChipStacks, type CountResult } from '../cv/chipCounter.js';
 import { formatCents } from '../money.js';
 import { CameraIcon } from '../icons.js';
@@ -25,6 +25,7 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
   const [counts, setCounts] = useState<Record<ChipColorId, number>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   const palette = session.chipPalette;
 
@@ -38,6 +39,7 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
     for (const c of palette) zero[c.id] = 0;
     setPhoto(null);
     setScan(null);
+    setWarning(null);
     setDetected(zero);
     setCounts(zero);
     setStep('confirm');
@@ -48,14 +50,35 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
     if (!file) return;
     setStep('analyzing');
     setError(null);
+    setWarning(null);
     try {
       const captured = await capturePhoto(file);
-      const result = await countChipStacks(captured.image, captured.width, captured.height, palette);
+      let result: CountResult;
+      let lowConfidence = false;
+
+      try {
+        // AI vision counting is the primary path — far more accurate than
+        // the on-device heuristic, since it counts each stack's chips
+        // individually instead of guessing from pixel geometry.
+        const ai = await api.visionCount(session.id, encodeForVision(captured.image));
+        result = {
+          counts: ai.counts,
+          blobs: ai.stacks.map((s) => ({ colorId: s.colorId, count: s.count, minX: s.box.xMinPct, minY: s.box.yMinPct, maxX: s.box.xMaxPct, maxY: s.box.yMaxPct })),
+          imageWidth: 100,
+          imageHeight: 100,
+        };
+        lowConfidence = ai.confidence === 'low';
+      } catch {
+        // No network, no API key configured, etc. — fall back to the on-device heuristic.
+        result = await countChipStacks(captured.image, captured.width, captured.height, palette);
+      }
+
       setPhoto(captured.dataUrl);
       setScan(result);
       setShowOverlay(true);
       setDetected(result.counts);
       setCounts(result.counts);
+      if (lowConfidence) setWarning("The AI wasn't fully confident in this count — double-check it below.");
       setStep('confirm');
     } catch (err) {
       setError((err as Error).message || "Couldn't read that photo — try again or enter chips manually.");
@@ -89,6 +112,7 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
         <div class="modal__handle" />
         <h2>{title}</h2>
         {error && <p class="error">{error}</p>}
+        {warning && <p class="warning">{warning}</p>}
 
         {step === 'capture' && (
           <div class="capture">
