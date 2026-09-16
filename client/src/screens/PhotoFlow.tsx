@@ -36,6 +36,7 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
     const zero: Record<ChipColorId, number> = {};
     for (const c of palette) zero[c.id] = 0;
     setPhoto(null);
+    setScan(null);
     setDetected(zero);
     setCounts(zero);
     setStep('confirm');
@@ -48,10 +49,12 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
     setError(null);
     try {
       const captured = await capturePhoto(file);
-      const { counts: guess } = await countChipStacks(captured.image, captured.width, captured.height, palette);
+      const result = await countChipStacks(captured.image, captured.width, captured.height, palette);
       setPhoto(captured.dataUrl);
-      setDetected(guess);
-      setCounts(guess);
+      setScan(result);
+      setShowOverlay(true);
+      setDetected(result.counts);
+      setCounts(result.counts);
       setStep('confirm');
     } catch (err) {
       setError((err as Error).message || "Couldn't read that photo — try again or enter chips manually.");
@@ -112,7 +115,38 @@ export function PhotoFlow({ session, playerId, mode, onDone, onCancel }: Props) 
 
         {step === 'confirm' && (
           <div class="confirm">
-            {photo && <img class="confirm__photo" src={photo} alt="Chip stack" />}
+            {photo && (
+              <div class="confirm__photo-wrap">
+                <img class="confirm__photo" src={photo} alt="Chip stack" />
+                {showOverlay && scan && scan.imageWidth > 0 && (
+                  <div class="confirm__overlay">
+                    {scan.blobs.map((b, i) => {
+                      const color = palette.find((c) => c.id === b.colorId);
+                      const left = (b.minX / scan.imageWidth) * 100;
+                      const top = (b.minY / scan.imageHeight) * 100;
+                      const w = ((b.maxX - b.minX + 1) / scan.imageWidth) * 100;
+                      const h = ((b.maxY - b.minY + 1) / scan.imageHeight) * 100;
+                      return (
+                        <div
+                          key={i}
+                          class="confirm__box"
+                          style={{ left: `${left}%`, top: `${top}%`, width: `${w}%`, height: `${h}%`, borderColor: color?.hex ?? '#fff' }}
+                        >
+                          <span class="confirm__box-label" style={{ background: color?.hex ?? '#333' }}>
+                            {b.count}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            {photo && scan && scan.blobs.length > 0 && (
+              <button class="btn btn--ghost btn--small" onClick={() => setShowOverlay((v) => !v)}>
+                {showOverlay ? 'Hide detected stacks' : 'Show detected stacks'}
+              </button>
+            )}
             <p class="hint">Check the counts below — tap +/− to fix anything the app got wrong.</p>
             <div class="counters">
               {palette.map((c) => (
