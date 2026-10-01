@@ -56,6 +56,8 @@ export const api = {
   login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
   logout: () => req<{ ok: true }>('POST', '/auth/logout'),
   me: () => req<{ account: Account }>('GET', '/auth/me'),
+  changeUsername: (newUsername: string, currentPassword: string) =>
+    req<{ account: Account }>('PUT', '/auth/username', { newUsername, currentPassword }),
 
   vapidPublicKey: () => req<VapidKeyResponse>('GET', '/push/vapid-public-key'),
   subscribePush: (subscription: PushSubscriptionJSON) => req<{ ok: true }>('POST', '/push/subscribe', { subscription }),

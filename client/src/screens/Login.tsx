@@ -51,6 +51,7 @@ export function Login({ onAuthed }: Props) {
             maxLength={24}
             required
             autocomplete="username"
+            dir="auto"
           />
         </label>
         {mode === 'register' && <p class="hint">This is what friends see on the leaderboard and at the table.</p>}

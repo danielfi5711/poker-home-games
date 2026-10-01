@@ -29,6 +29,25 @@ export function ChipIcon({ size = 24 }: IconProps) {
   );
 }
 
+export function GearIcon({ size = 20 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 3.5v2.3M12 18.2v2.3M4.6 7.3l2 1.15M17.4 15.55l2 1.15M4.6 16.7l2-1.15M17.4 8.45l2-1.15M3.5 12h2.3M18.2 12h2.3" />
+    </svg>
+  );
+}
+
 export function BellIcon({ size = 20 }: IconProps) {
   return (
     <svg

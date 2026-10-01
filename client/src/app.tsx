@@ -16,10 +16,11 @@ import { GroupScreen } from './screens/GroupScreen.js';
 import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
-import { ChipIcon, BellIcon } from './icons.js';
+import { SettingsScreen } from './screens/Settings.js';
+import { ChipIcon, BellIcon, GearIcon } from './icons.js';
 import { ensurePushSubscription } from './push.js';
 
-type View = 'login' | 'groups' | 'group' | 'session';
+type View = 'login' | 'groups' | 'group' | 'session' | 'settings';
 
 export function App() {
   const [booting, setBooting] = useState(true);
@@ -28,6 +29,7 @@ export function App() {
   const [group, setGroup] = useState<Group | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [returnView, setReturnView] = useState<View>('groups');
 
   useEffect(() => {
     (async () => {
@@ -113,6 +115,15 @@ export function App() {
     setView('group');
   }
 
+  function openSettings() {
+    setReturnView(view);
+    setView('settings');
+  }
+
+  function closeSettings() {
+    setView(returnView);
+  }
+
   async function logout() {
     try {
       await api.logout();
@@ -170,8 +181,12 @@ export function App() {
                 )}
               </button>
             )}
-            <button class="topbar__link" onClick={logout}>
-              Log out
+            <button
+              class={`topbar__link topbar__link--icon ${view === 'settings' ? 'topbar__link--active' : ''}`}
+              onClick={openSettings}
+              aria-label="Settings"
+            >
+              <GearIcon size={18} />
             </button>
           </nav>
         )}
@@ -211,6 +226,10 @@ export function App() {
               Back to group
             </button>
           </div>
+        )}
+
+        {view === 'settings' && account && (
+          <SettingsScreen account={account} onAccountChanged={setAccount} onLogout={logout} onBack={closeSettings} />
         )}
       </main>
     </div>

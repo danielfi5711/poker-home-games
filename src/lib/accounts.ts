@@ -63,14 +63,25 @@ function verifyPassword(password: string, stored: string): boolean {
 }
 
 function normalizeUsername(username: string): string {
-  return username.trim().toLowerCase();
+  return username.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+// Letters from any script (Hebrew included — `\p{L}` is Unicode-general,
+// not Latin-only), numbers, single internal spaces, "_", "." or "-"; must
+// start and end on a letter/number so it can't be all punctuation/spaces.
+const USERNAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} _.-]{1,22}[\p{L}\p{N}]$/u;
+const USERNAME_FORMAT_MESSAGE =
+  'Name must be 3-24 characters: letters (any language), numbers, spaces, "_", "." or "-" — and can\'t start or end with a space or symbol.';
+
+function validateUsernameFormat(normalized: string): void {
+  if (!USERNAME_PATTERN.test(normalized)) {
+    throw new AuthError(USERNAME_FORMAT_MESSAGE, 400);
+  }
 }
 
 export function register(username: string, password: string): { token: string; account: Account } {
   const normalized = normalizeUsername(username);
-  if (!/^[a-z0-9_.-]{3,24}$/.test(normalized)) {
-    throw new AuthError('Username must be 3-24 characters: letters, numbers, "_", "." or "-".', 400);
-  }
+  validateUsernameFormat(normalized);
   if (password.length < 6) throw new AuthError('Password must be at least 6 characters.', 400);
   if (data().usernameIndex[normalized]) throw new AuthError('That username is already taken.', 409);
 
@@ -78,7 +89,7 @@ export function register(username: string, password: string): { token: string; a
     id: newId(),
     username: normalized,
     // displayName always matches the username (as typed, not lowercased) — no separate field.
-    displayName: username.trim().slice(0, 40),
+    displayName: username.trim().replace(/\s+/g, ' ').slice(0, 40),
     passwordHash: hashPassword(password),
     createdAt: Date.now(),
   };
@@ -105,6 +116,31 @@ export function login(username: string, password: string): { token: string; acco
     d.tokens[token] = { accountId: account.id, createdAt: Date.now() };
   });
   return { token, account: toPublic(account) };
+}
+
+/** Requires the current password, same as any other security-relevant account change. */
+export function changeUsername(accountId: string, newUsername: string, currentPassword: string): Account {
+  const account = data().accounts[accountId];
+  if (!account) throw new AuthError('Account not found.', 404);
+  if (!verifyPassword(currentPassword, account.passwordHash)) {
+    throw new AuthError('Incorrect password.', 401);
+  }
+
+  const normalized = normalizeUsername(newUsername);
+  validateUsernameFormat(normalized);
+  const existingOwner = data().usernameIndex[normalized];
+  if (existingOwner && existingOwner !== accountId) {
+    throw new AuthError('That username is already taken.', 409);
+  }
+
+  const oldNormalized = account.username;
+  save((d) => {
+    delete d.usernameIndex[oldNormalized];
+    d.usernameIndex[normalized] = accountId;
+    d.accounts[accountId].username = normalized;
+    d.accounts[accountId].displayName = newUsername.trim().replace(/\s+/g, ' ').slice(0, 40);
+  });
+  return toPublic(data().accounts[accountId]);
 }
 
 export function logout(token: string): void {

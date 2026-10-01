@@ -108,6 +108,15 @@ export interface AuthResponse {
   account: Account;
 }
 
+export interface ChangeUsernameRequest {
+  newUsername: string;
+  currentPassword: string;
+}
+
+export interface AccountResponse {
+  account: Account;
+}
+
 export interface CreateGroupRequest {
   name: string;
 }

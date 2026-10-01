@@ -197,6 +197,12 @@ input {
   background: var(--accent-gradient);
 }
 
+.topbar__link--icon {
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
 .topbar__bell {
   display: inline-flex;
   align-items: center;
@@ -959,6 +965,34 @@ form {
   align-items: center;
   gap: 8px;
   color: var(--accent);
+}
+
+/* ---------- settings ---------- */
+
+.settings__account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings__name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.settings__saved {
+  color: var(--good);
+}
+
+.settings__editform {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--felt-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  animation: card-in var(--dur) var(--ease) both;
 }
 
 /* ---------- install gate ---------- */

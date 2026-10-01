@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
-import { AuthError, accountForToken, login, logout, register } from '../lib/accounts.js';
+import { AuthError, accountForToken, changeUsername, login, logout, register } from '../lib/accounts.js';
 import { GroupError, createGroup, getGroup, groupsForAccount, joinGroup, requireMember } from '../lib/groups.js';
 import {
   SessionError,
@@ -159,6 +159,14 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (req.method === 'GET' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'me') {
       const account = requireAuth(req);
       return sendJson(res, 200, { account });
+    }
+
+    // PUT /api/auth/username
+    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'username') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const updated = changeUsername(account.id, str(body, 'newUsername'), str(body, 'currentPassword'));
+      return sendJson(res, 200, { account: updated });
     }
 
     // --- Push notifications ----------------------------------------------------
