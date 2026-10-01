@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.onrender.poker_home_games.twa",
+      "sha256_cert_fingerprints": [
+        "D8:98:00:15:49:FD:BB:42:C9:68:D4:88:9A:E2:F5:36:9A:CF:B6:91:D7:99:8A:C5:B0:47:EC:E1:79:74:25:7F"
+      ]
+    }
+  }
+]
