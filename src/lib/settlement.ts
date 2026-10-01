@@ -17,8 +17,10 @@ export function computeSettlement(session: Session): SettlementResult {
   let complete = true;
 
   for (const player of Object.values(session.players)) {
-    const totalBuyIns = player.buyIns.reduce((sum, b) => sum + b.totalCents, 0);
-    const cashOutCents = player.cashOut?.totalCents ?? 0;
+    const totalBuyIns = player.buyIns
+      .filter((b) => b.status === 'approved')
+      .reduce((sum, b) => sum + b.amountCents, 0);
+    const cashOutCents = player.cashOut?.amountCents ?? 0;
     if (!player.cashOut) complete = false;
     netsCents[player.id] = cashOutCents - totalBuyIns;
   }

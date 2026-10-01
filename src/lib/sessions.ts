@@ -3,17 +3,8 @@ import { JsonStore } from './store.js';
 import { newId, newJoinCode } from './id.js';
 import { computeSettlement } from './settlement.js';
 import { getAccount } from './accounts.js';
-import type {
-  Account,
-  ChipColor,
-  ChipColorId,
-  HistoryResponse,
-  LeaderboardEntry,
-  Player,
-  PhotoCount,
-  Session,
-  SettleResponse,
-} from '../shared/types.js';
+import { notify } from './push.js';
+import type { Account, BuyIn, HistoryResponse, LeaderboardEntry, Player, Session, SettleResponse } from '../shared/types.js';
 
 export class SessionError extends Error {
   constructor(
@@ -61,42 +52,26 @@ function requirePlayerOwnedBy(session: Session, playerId: string, accountId: str
   return player;
 }
 
-/** Setup/start/settle are host-only, verified against the logged-in account, not just a client-supplied id. */
-function requireHost(session: Session, accountId: string): void {
+/** Starting/approving/settling are host-only, verified against the logged-in account, not just a client-supplied id. */
+function requireHost(session: Session, accountId: string): Player {
   const host = session.players[session.hostPlayerId];
   if (!host || host.accountId !== accountId) {
     throw new SessionError('Only the host can do that.', 403);
   }
+  return host;
 }
 
 function newPlayer(account: Account): Player {
   return { id: newId(), accountId: account.id, name: account.displayName, joinedAt: Date.now(), buyIns: [], cashOut: null };
 }
 
-/** Recompute a photo entry's total from confirmedCounts against the session's
- *  current palette — never trust a client-supplied total. */
-function priceCounts(palette: ChipColor[], confirmedCounts: Record<ChipColorId, number>): number {
-  let totalCents = 0;
-  for (const color of palette) {
-    const count = confirmedCounts[color.id];
-    if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
-      totalCents += Math.round(count) * color.valueCents;
-    }
-  }
-  return totalCents;
-}
+const MAX_AMOUNT_CENTS = 100_000_00; // $100,000 — generous ceiling against fat-finger/garbage input.
 
-function sanitizeCounts(
-  palette: ChipColor[],
-  counts: Record<ChipColorId, number> | undefined,
-): Record<ChipColorId, number> {
-  const out: Record<ChipColorId, number> = {};
-  if (!counts) return out;
-  for (const color of palette) {
-    const n = counts[color.id];
-    out[color.id] = typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
-  }
-  return out;
+function sanitizeAmountCents(amountCents: number): number {
+  if (!Number.isFinite(amountCents)) throw new SessionError('Enter a valid dollar amount.', 400);
+  const rounded = Math.round(amountCents);
+  if (rounded < 0 || rounded > MAX_AMOUNT_CENTS) throw new SessionError('That amount looks wrong.', 400);
+  return rounded;
 }
 
 export function createSession(groupId: string, name: string, host: Account): { session: Session; playerId: string } {
@@ -111,7 +86,6 @@ export function createSession(groupId: string, name: string, host: Account): { s
     createdAt: Date.now(),
     status: 'setup',
     hostPlayerId: hostPlayer.id,
-    chipPalette: [],
     players: { [hostPlayer.id]: hostPlayer },
     settledAt: null,
   };
@@ -142,94 +116,98 @@ export function joinSession(id: string, account: Account): { session: Session; p
   return { session: requireSession(id), playerId: player.id };
 }
 
-export function updatePalette(id: string, accountId: string, palette: Omit<ChipColor, 'id'>[]): Session {
-  const session = requireSession(id);
-  requireHost(session, accountId);
-  if (session.status !== 'setup') {
-    throw new SessionError('Chip values can only be changed before the game starts.', 409);
-  }
-  if (palette.length === 0) throw new SessionError('Add at least one chip color.', 400);
-
-  const withIds: ChipColor[] = palette.map((c, i) => ({
-    id: session.chipPalette[i]?.id ?? newId(),
-    label: c.label.trim().slice(0, 20) || `Chip ${i + 1}`,
-    hex: /^#[0-9a-fA-F]{6}$/.test(c.hex) ? c.hex : '#888888',
-    valueCents: Math.max(1, Math.round(c.valueCents || 0)),
-  }));
-
-  save((d) => {
-    d.sessions[id].chipPalette = withIds;
-  });
-  return requireSession(id);
-}
-
 export function activateSession(id: string, accountId: string): Session {
   const session = requireSession(id);
   requireHost(session, accountId);
   if (session.status !== 'setup') return session;
-  if (session.chipPalette.length === 0) {
-    throw new SessionError('Set up the chip colors and values before starting.', 400);
-  }
   save((d) => {
     d.sessions[id].status = 'active';
   });
   return requireSession(id);
 }
 
-function recordPhoto(
-  session: Session,
-  photo: string | null,
-  detectedCounts: Record<ChipColorId, number> | undefined,
-  confirmedCounts: Record<ChipColorId, number> | undefined,
-): PhotoCount {
-  const confirmed = sanitizeCounts(session.chipPalette, confirmedCounts);
-  const detected = sanitizeCounts(session.chipPalette, detectedCounts);
-  return {
-    at: Date.now(),
-    photo: photo ?? null,
-    detectedCounts: detected,
-    confirmedCounts: confirmed,
-    totalCents: priceCounts(session.chipPalette, confirmed),
-  };
-}
-
-export function addBuyIn(
-  id: string,
-  playerId: string,
-  accountId: string,
-  photo: string | null,
-  detectedCounts: Record<ChipColorId, number> | undefined,
-  confirmedCounts: Record<ChipColorId, number> | undefined,
-): Session {
+/**
+ * A player asks to buy in for `amountCents`. The host's own requests
+ * auto-approve (there's no one above the host); everyone else's request sits
+ * `pending` until the host approves or denies it, and the host gets a push
+ * notification so they don't have to be staring at the app.
+ */
+export function requestBuyIn(id: string, playerId: string, accountId: string, amountCentsRaw: number): Session {
   const session = requireSession(id);
-  if (session.status === 'settled') throw new SessionError('This game has already been settled.', 409);
-  requirePlayerOwnedBy(session, playerId, accountId);
+  if (session.status !== 'active') throw new SessionError('The game needs to be started before buy-ins can be recorded.', 409);
+  const player = requirePlayerOwnedBy(session, playerId, accountId);
+  const amountCents = sanitizeAmountCents(amountCentsRaw);
+  if (amountCents <= 0) throw new SessionError('Buy-in must be worth more than $0.', 400);
 
-  const entry = recordPhoto(session, photo, detectedCounts, confirmedCounts);
-  if (entry.totalCents <= 0) throw new SessionError('Buy-in must be worth more than $0.', 400);
+  const isHost = session.hostPlayerId === playerId;
+  const buyIn: BuyIn = {
+    id: newId(),
+    amountCents,
+    requestedAt: Date.now(),
+    status: isHost ? 'approved' : 'pending',
+    respondedAt: isHost ? Date.now() : null,
+  };
 
   save((d) => {
-    d.sessions[id].players[playerId].buyIns.push(entry);
+    d.sessions[id].players[playerId].buyIns.push(buyIn);
   });
+
+  if (!isHost) {
+    const host = session.players[session.hostPlayerId];
+    if (host) {
+      notify(host.accountId, {
+        title: `${player.name} wants to buy in`,
+        body: `${player.name} is requesting a $${(amountCents / 100).toFixed(2)} buy-in at "${session.name}".`,
+        url: `/?session=${session.id}`,
+      });
+    }
+  }
+
   return requireSession(id);
 }
 
-export function recordCashOut(
-  id: string,
-  playerId: string,
-  accountId: string,
-  photo: string | null,
-  detectedCounts: Record<ChipColorId, number> | undefined,
-  confirmedCounts: Record<ChipColorId, number> | undefined,
-): Session {
+/** Host-only: approve or deny a pending buy-in request. The requesting player gets a push either way. */
+export function respondToBuyIn(id: string, buyInId: string, accountId: string, approve: boolean): Session {
+  const session = requireSession(id);
+  requireHost(session, accountId);
+
+  let target: { player: Player; buyIn: BuyIn } | null = null;
+  for (const player of Object.values(session.players)) {
+    const buyIn = player.buyIns.find((b) => b.id === buyInId);
+    if (buyIn) {
+      target = { player, buyIn };
+      break;
+    }
+  }
+  if (!target) throw new SessionError('That buy-in request no longer exists.', 404);
+  if (target.buyIn.status !== 'pending') throw new SessionError('That request was already handled.', 409);
+
+  const status = approve ? 'approved' : 'denied';
+  save((d) => {
+    const buyIn = d.sessions[id].players[target!.player.id].buyIns.find((b) => b.id === buyInId)!;
+    buyIn.status = status;
+    buyIn.respondedAt = Date.now();
+  });
+
+  notify(target.player.accountId, {
+    title: approve ? 'Buy-in approved' : 'Buy-in denied',
+    body: approve
+      ? `Your $${(target.buyIn.amountCents / 100).toFixed(2)} buy-in at "${session.name}" was approved.`
+      : `Your $${(target.buyIn.amountCents / 100).toFixed(2)} buy-in request at "${session.name}" was denied.`,
+    url: `/?session=${session.id}`,
+  });
+
+  return requireSession(id);
+}
+
+export function recordCashOut(id: string, playerId: string, accountId: string, amountCentsRaw: number): Session {
   const session = requireSession(id);
   if (session.status === 'settled') throw new SessionError('This game has already been settled.', 409);
   requirePlayerOwnedBy(session, playerId, accountId);
-
-  const entry = recordPhoto(session, photo, detectedCounts, confirmedCounts);
+  const amountCents = sanitizeAmountCents(amountCentsRaw);
 
   save((d) => {
-    d.sessions[id].players[playerId].cashOut = entry;
+    d.sessions[id].players[playerId].cashOut = { amountCents, at: Date.now() };
   });
   return requireSession(id);
 }

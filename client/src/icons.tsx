@@ -29,7 +29,7 @@ export function ChipIcon({ size = 24 }: IconProps) {
   );
 }
 
-export function CameraIcon({ size = 20 }: IconProps) {
+export function BellIcon({ size = 20 }: IconProps) {
   return (
     <svg
       width={size}
@@ -42,8 +42,8 @@ export function CameraIcon({ size = 20 }: IconProps) {
       stroke-linejoin="round"
       aria-hidden="true"
     >
-      <path d="M4 8a2 2 0 0 1 2-2h1.4l1-1.5h7.2l1 1.5H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" />
-      <circle cx="12" cy="13" r="3.4" />
+      <path d="M6 10a6 6 0 1 1 12 0c0 3 1 4.5 1.6 5.4a1 1 0 0 1-.8 1.6H5.2a1 1 0 0 1-.8-1.6C5 14.5 6 13 6 10Z" />
+      <path d="M9.5 19a2.5 2.5 0 0 0 5 0" />
     </svg>
   );
 }

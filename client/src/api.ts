@@ -2,15 +2,14 @@ import { useCallback, useEffect, useState } from 'preact/hooks';
 import type {
   Account,
   AuthResponse,
-  ChipColor,
-  ChipColorId,
   Group,
   HistoryResponse,
+  PushSubscriptionJSON,
   Session,
   SessionResponse,
   SettleResponse,
   SettlementResult,
-  VisionCountResponse,
+  VapidKeyResponse,
 } from '../../src/shared/types.js';
 
 const BASE = '/api';
@@ -52,18 +51,15 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return data as T;
 }
 
-export interface PhotoPayload {
-  photo: string | null;
-  detectedCounts: Record<ChipColorId, number>;
-  confirmedCounts: Record<ChipColorId, number>;
-}
-
 export const api = {
   register: (username: string, password: string, displayName: string) =>
     req<AuthResponse>('POST', '/auth/register', { username, password, displayName }),
   login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
   logout: () => req<{ ok: true }>('POST', '/auth/logout'),
   me: () => req<{ account: Account }>('GET', '/auth/me'),
+
+  vapidPublicKey: () => req<VapidKeyResponse>('GET', '/push/vapid-public-key'),
+  subscribePush: (subscription: PushSubscriptionJSON) => req<{ ok: true }>('POST', '/push/subscribe', { subscription }),
 
   myGroups: () => req<{ groups: Group[] }>('GET', '/groups'),
   createGroup: (name: string) => req<{ group: Group }>('POST', '/groups', { name }),
@@ -75,11 +71,13 @@ export const api = {
 
   join: (id: string) => req<SessionResponse>('POST', `/sessions/${id}/join`),
   get: (id: string) => req<{ session: Session }>('GET', `/sessions/${id}`),
-  setPalette: (id: string, palette: Omit<ChipColor, 'id'>[]) => req<{ session: Session }>('PUT', `/sessions/${id}/palette`, { palette }),
   activate: (id: string) => req<{ session: Session }>('POST', `/sessions/${id}/activate`),
-  addBuyIn: (id: string, playerId: string, payload: PhotoPayload) => req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/buyins`, payload),
-  cashOut: (id: string, playerId: string, payload: PhotoPayload) => req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/cashout`, payload),
-  visionCount: (id: string, photo: string) => req<VisionCountResponse>('POST', `/sessions/${id}/vision-count`, { photo }),
+  requestBuyIn: (id: string, playerId: string, amountCents: number) =>
+    req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/buyins`, { amountCents }),
+  respondToBuyIn: (id: string, buyInId: string, approve: boolean) =>
+    req<{ session: Session }>('POST', `/sessions/${id}/buyins/${buyInId}/respond`, { approve }),
+  cashOut: (id: string, playerId: string, amountCents: number) =>
+    req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/cashout`, { amountCents }),
   settlementPreview: (id: string) => req<{ settlement: SettlementResult }>('GET', `/sessions/${id}/settlement`),
   settle: (id: string) => req<SettleResponse>('POST', `/sessions/${id}/settle`),
 };

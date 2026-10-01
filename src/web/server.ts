@@ -3,11 +3,11 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
 import { AuthError, accountForToken, login, logout, register } from '../lib/accounts.js';
-import { ChipVisionError, countChipsWithAI } from '../lib/chipVision.js';
 import { GroupError, createGroup, getGroup, groupsForAccount, joinGroup, requireMember } from '../lib/groups.js';
 import {
   SessionError,
-  addBuyIn,
+  requestBuyIn,
+  respondToBuyIn,
   activateSession,
   createSession,
   getSession,
@@ -17,9 +17,9 @@ import {
   recordCashOut,
   sessionsForGroup,
   settleSession,
-  updatePalette,
 } from '../lib/sessions.js';
-import type { Account, ChipColor, Session } from '../shared/types.js';
+import { subscribe, vapidPublicKey } from '../lib/push.js';
+import type { Account, Session } from '../shared/types.js';
 
 const PUBLIC_DIR = join(process.cwd(), 'dist', 'public');
 /** Photos are compressed client-side before upload, but allow headroom. */
@@ -106,10 +106,9 @@ function str(body: Record<string, unknown> | null, key: string): string {
   return typeof v === 'string' ? v : '';
 }
 
-function countsMap(body: Record<string, unknown> | null, key: string): Record<string, number> | undefined {
+function num(body: Record<string, unknown> | null, key: string): number {
   const v = body?.[key];
-  if (!v || typeof v !== 'object') return undefined;
-  return v as Record<string, number>;
+  return typeof v === 'number' ? v : NaN;
 }
 
 function bearerToken(req: IncomingMessage): string | null {
@@ -160,6 +159,26 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (req.method === 'GET' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'me') {
       const account = requireAuth(req);
       return sendJson(res, 200, { account });
+    }
+
+    // --- Push notifications ----------------------------------------------------
+
+    // GET /api/push/vapid-public-key
+    if (req.method === 'GET' && parts.length === 3 && parts[1] === 'push' && parts[2] === 'vapid-public-key') {
+      requireAuth(req);
+      return sendJson(res, 200, { publicKey: vapidPublicKey() });
+    }
+
+    // POST /api/push/subscribe
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'push' && parts[2] === 'subscribe') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const subscription = body?.subscription;
+      if (!subscription || typeof subscription !== 'object') {
+        return sendJson(res, 400, { error: 'Missing subscription.' });
+      }
+      subscribe(account.id, subscription as never);
+      return sendJson(res, 200, { ok: true });
     }
 
     // --- Groups --------------------------------------------------------------
@@ -241,15 +260,6 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         return sendJson(res, 200, joinSession(id, account));
       }
 
-      // PUT /api/sessions/:id/palette
-      if (req.method === 'PUT' && parts.length === 4 && parts[3] === 'palette') {
-        const account = requireAuth(req);
-        requireSessionAccess(getSession(id), account.id);
-        const body = await readJsonBody(req);
-        const palette = Array.isArray(body?.palette) ? body.palette : [];
-        return sendJson(res, 200, { session: updatePalette(id, account.id, palette) });
-      }
-
       // POST /api/sessions/:id/activate
       if (req.method === 'POST' && parts.length === 4 && parts[3] === 'activate') {
         const account = requireAuth(req);
@@ -271,36 +281,38 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         return sendJson(res, 200, settleSession(id, account.id));
       }
 
-      // POST /api/sessions/:id/vision-count — AI chip-stack count for a photo (a suggestion only; never trusted for money)
-      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'vision-count') {
-        const account = requireAuth(req);
-        const session = getSession(id);
-        requireSessionAccess(session, account.id);
-        const body = await readJsonBody(req);
-        const photo = str(body, 'photo');
-        if (!photo) throw new ChipVisionError('No photo provided.', 400);
-        const result = await countChipsWithAI(photo, session.chipPalette);
-        return sendJson(res, 200, result);
-      }
-
-      // POST /api/sessions/:id/players/:playerId/buyins|cashout
-      if (req.method === 'POST' && parts.length === 6 && parts[3] === 'players' && (parts[5] === 'buyins' || parts[5] === 'cashout')) {
+      // POST /api/sessions/:id/players/:playerId/buyins — request a buy-in (pending host approval, unless you are the host)
+      if (req.method === 'POST' && parts.length === 6 && parts[3] === 'players' && parts[5] === 'buyins') {
         const account = requireAuth(req);
         requireSessionAccess(getSession(id), account.id);
         const playerId = parts[4];
         const body = await readJsonBody(req);
-        const photo = typeof body?.photo === 'string' ? body.photo : null;
-        const detected = countsMap(body, 'detectedCounts');
-        const confirmed = countsMap(body, 'confirmedCounts');
-        const session =
-          parts[5] === 'buyins'
-            ? addBuyIn(id, playerId, account.id, photo, detected, confirmed)
-            : recordCashOut(id, playerId, account.id, photo, detected, confirmed);
+        const session = requestBuyIn(id, playerId, account.id, num(body, 'amountCents'));
+        return sendJson(res, 200, { session });
+      }
+
+      // POST /api/sessions/:id/players/:playerId/cashout
+      if (req.method === 'POST' && parts.length === 6 && parts[3] === 'players' && parts[5] === 'cashout') {
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
+        const playerId = parts[4];
+        const body = await readJsonBody(req);
+        const session = recordCashOut(id, playerId, account.id, num(body, 'amountCents'));
+        return sendJson(res, 200, { session });
+      }
+
+      // POST /api/sessions/:id/buyins/:buyInId/respond — host-only approve/deny
+      if (req.method === 'POST' && parts.length === 6 && parts[3] === 'buyins' && parts[5] === 'respond') {
+        const account = requireAuth(req);
+        requireSessionAccess(getSession(id), account.id);
+        const buyInId = parts[4];
+        const body = await readJsonBody(req);
+        const session = respondToBuyIn(id, buyInId, account.id, body?.approve === true);
         return sendJson(res, 200, { session });
       }
     }
   } catch (err) {
-    if (err instanceof SessionError || err instanceof GroupError || err instanceof AuthError || err instanceof ChipVisionError) {
+    if (err instanceof SessionError || err instanceof GroupError || err instanceof AuthError) {
       return sendJson(res, err.status, { error: err.message });
     }
     console.error(err);

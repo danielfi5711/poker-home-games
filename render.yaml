@@ -23,8 +23,13 @@ services:
         sync: false
       - key: TURSO_AUTH_TOKEN
         sync: false
-      # AI chip-stack counting (src/lib/chipVision.ts). Without it, the app
-      # still works — it just falls back to the less-accurate on-device
-      # heuristic for photo counts.
-      - key: ANTHROPIC_API_KEY
+      # Web Push (VAPID) keys so hosts get a push notification when a player
+      # requests a buy-in (src/lib/push.ts). Generate with
+      # `npx web-push generate-vapid-keys`. Without them, the app still
+      # works — the host just won't be pushed until they reopen it.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
         sync: false

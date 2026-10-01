@@ -9,10 +9,20 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
+      // injectManifest (not the default generateSW) because the service
+      // worker needs its own push/notificationclick handlers for host
+      // buy-in-request notifications (src/sw.ts) — generateSW only
+      // supports the built-in caching strategies, no custom event handlers.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+      },
       manifest: {
         name: 'Poker Home Games',
         short_name: 'Poker Night',
-        description: 'Track buy-ins and cash-outs for local poker games — photo-counted chip stacks, automatic settlement.',
+        description: 'Track buy-ins and cash-outs for local poker games — host-approved buy-ins, automatic settlement, all-time leaderboard.',
         theme_color: '#155c3e',
         background_color: '#155c3e',
         display: 'standalone',
@@ -24,12 +34,6 @@ export default defineConfig({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
-      },
-      workbox: {
-        // App-shell only: session data always comes from the network (never
-        // cache /api/* responses — this is live money data).
-        globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],

@@ -3,6 +3,7 @@ import type { HistoryResponse } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { initials } from '../initials.js';
+import { avatarStyle } from '../avatarColor.js';
 import { TrophyIcon } from '../icons.js';
 
 interface Props {
@@ -25,7 +26,7 @@ export function HistoryScreen({ groupId }: Props) {
     <>
       <h2 class="section-icon">
         <TrophyIcon size={20} />
-        Leaderboard
+        All-Time Leaderboard
       </h2>
       {error && <p class="error">{error}</p>}
       {!data && !error && <p class="muted">Loading…</p>}
@@ -37,10 +38,12 @@ export function HistoryScreen({ groupId }: Props) {
           ) : (
             <ul class="results">
               {data.leaderboard.map((entry, i) => (
-                <li key={entry.accountId}>
+                <li key={entry.accountId} class={i < 3 ? `results__row--medal results__row--medal-${i + 1}` : ''}>
                   <span class="results__player">
-                    <span class={`leaderboard__rank ${i === 0 ? 'leaderboard__rank--1' : ''}`}>{i + 1}</span>
-                    <span class="avatar avatar--sm">{initials(entry.name)}</span>
+                    <span class={`leaderboard__rank leaderboard__rank--${i + 1}`}>{i + 1}</span>
+                    <span class="avatar avatar--sm" style={avatarStyle(entry.accountId)}>
+                      {initials(entry.name)}
+                    </span>
                     <span class="results__name">
                       {entry.name} <span class="muted">({entry.sessionsPlayed} games)</span>
                     </span>

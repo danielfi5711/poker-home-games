@@ -3,6 +3,7 @@ import type { Session, SettlementResult } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { initials } from '../initials.js';
+import { avatarStyle } from '../avatarColor.js';
 import { ArrowRightIcon } from '../icons.js';
 
 interface Props {
@@ -47,7 +48,9 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
               return (
                 <li key={p.id} class={p.id === playerId ? 'results__row--me' : ''}>
                   <span class="results__player">
-                    <span class={`avatar avatar--sm ${p.id === playerId ? 'avatar--me' : ''}`}>{initials(p.name)}</span>
+                    <span class="avatar avatar--sm" style={avatarStyle(p.accountId)}>
+                      {initials(p.name)}
+                    </span>
                     <span class="results__name">
                       {p.name}
                       {p.id === playerId ? ' (you)' : ''}

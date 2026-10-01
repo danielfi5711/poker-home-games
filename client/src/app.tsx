@@ -13,10 +13,11 @@ import {
 import { Login } from './screens/Login.js';
 import { Groups } from './screens/Groups.js';
 import { GroupScreen } from './screens/GroupScreen.js';
-import { ChipSetupScreen } from './screens/ChipSetup.js';
+import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
-import { ChipIcon } from './icons.js';
+import { ChipIcon, BellIcon } from './icons.js';
+import { ensurePushSubscription } from './push.js';
 
 type View = 'login' | 'groups' | 'group' | 'session';
 
@@ -38,6 +39,7 @@ export function App() {
       try {
         const { account } = await api.me();
         setAccount(account);
+        void ensurePushSubscription();
 
         const savedSession = loadSavedIdentity();
         if (savedSession) {
@@ -78,6 +80,7 @@ export function App() {
 
   function onAuthed(acc: Account) {
     setAccount(acc);
+    void ensurePushSubscription();
     setView('groups');
   }
 
@@ -128,6 +131,8 @@ export function App() {
 
   const me = session && playerId ? (session.players[playerId] ?? null) : null;
   const isHost = !!(session && playerId && session.hostPlayerId === playerId);
+  const pendingCount =
+    isHost && session ? Object.values(session.players).reduce((n, p) => n + p.buyIns.filter((b) => b.status === 'pending').length, 0) : 0;
 
   if (booting) {
     return (
@@ -157,6 +162,12 @@ export function App() {
                 onClick={() => setView(session ? 'session' : 'group')}
               >
                 {group.name}
+                {pendingCount > 0 && (
+                  <span class="topbar__bell">
+                    <BellIcon size={13} />
+                    <span class="topbar__bell-count">{pendingCount}</span>
+                  </span>
+                )}
               </button>
             )}
             <button class="topbar__link" onClick={logout}>
@@ -176,7 +187,7 @@ export function App() {
         {view === 'session' && session && playerId && me && (
           <>
             {session.status === 'setup' && (
-              <ChipSetupScreen session={session} isHost={isHost} onChanged={setSession} onLeave={leaveSession} />
+              <LobbyScreen session={session} isHost={isHost} onChanged={setSession} onLeave={leaveSession} />
             )}
             {session.status === 'active' && (
               <TableScreen

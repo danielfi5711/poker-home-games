@@ -1,27 +1,20 @@
 /** All money is integer cents — never floats — to keep settlement math exact. */
 
-export type ChipColorId = string;
+export type BuyInStatus = 'pending' | 'approved' | 'denied';
 
-export interface ChipColor {
-  id: ChipColorId;
-  label: string;
-  /** CSS hex color, e.g. "#d0342c". */
-  hex: string;
-  /** Dollar value of a single chip of this color, in cents. */
-  valueCents: number;
+/** A buy-in request. Host-approved before it counts toward any total (the
+ *  host's own requests auto-approve — there's no one above the host). */
+export interface BuyIn {
+  id: string;
+  amountCents: number;
+  requestedAt: number;
+  status: BuyInStatus;
+  respondedAt: number | null;
 }
 
-/** One buy-in or cash-out, backed by a photo of the chip stack(s). */
-export interface PhotoCount {
+export interface CashOut {
+  amountCents: number;
   at: number;
-  /** Compressed JPEG data URL, or null if the player skipped the photo. */
-  photo: string | null;
-  /** What the on-device heuristic guessed per chip color. */
-  detectedCounts: Record<ChipColorId, number>;
-  /** What the player confirmed (starts as a copy of detectedCounts). */
-  confirmedCounts: Record<ChipColorId, number>;
-  /** sum(confirmedCounts[id] * palette[id].valueCents) at the time of entry. */
-  totalCents: number;
 }
 
 export interface Player {
@@ -31,8 +24,8 @@ export interface Player {
   /** Snapshot of the account's display name at join time. */
   name: string;
   joinedAt: number;
-  buyIns: PhotoCount[];
-  cashOut: PhotoCount | null;
+  buyIns: BuyIn[];
+  cashOut: CashOut | null;
 }
 
 export type SessionStatus = 'setup' | 'active' | 'settled';
@@ -43,9 +36,9 @@ export interface Session {
   groupId: string;
   name: string;
   createdAt: number;
+  /** 'setup' = lobby, waiting for the host to start; 'active' = playing; 'settled' = final. */
   status: SessionStatus;
   hostPlayerId: string;
-  chipPalette: ChipColor[];
   players: Record<string, Player>;
   settledAt: number | null;
 }
@@ -76,25 +69,25 @@ export interface Transfer {
 }
 
 export interface SettlementResult {
-  /** cashOut - totalBuyIns per player, in cents. */
+  /** cashOut - approved buy-ins per player, in cents. */
   netsCents: Record<string, number>;
   /** Minimal set of payments that settles every net. */
   transfers: Transfer[];
   /**
-   * Sum of all nets. Should be 0 (chips in == chips out). A nonzero value
-   * means someone's chip count doesn't add up — most likely a miscounted
-   * cash-out — and is surfaced as a warning before payouts are shown.
+   * Sum of all nets. Should be 0 (money in == money out). A nonzero value
+   * means someone's numbers don't add up and is surfaced as a warning
+   * before payouts are shown.
    */
   discrepancyCents: number;
   /** True once every player at the table has recorded a cash-out. */
   complete: boolean;
 }
 
+/** All-time, across every settled game in a group — a player's running balance. */
 export interface LeaderboardEntry {
   accountId: string;
   name: string;
   sessionsPlayed: number;
-  /** Running total of every settled game's net for this account in this group — the group's "balance." */
   balanceCents: number;
 }
 
@@ -141,34 +134,16 @@ export interface SessionResponse {
   playerId?: string;
 }
 
-export interface UpdatePaletteRequest {
-  palette: Omit<ChipColor, 'id'>[];
+export interface RequestBuyInRequest {
+  amountCents: number;
 }
 
-export interface RecordPhotoRequest {
-  photo: string | null;
-  detectedCounts: Record<ChipColorId, number>;
-  confirmedCounts: Record<ChipColorId, number>;
+export interface RespondBuyInRequest {
+  approve: boolean;
 }
 
-export interface VisionCountRequest {
-  /** JPEG/PNG data URL of the chip photo. Counted against the session's own chipPalette server-side. */
-  photo: string;
-}
-
-/** One physical stack the AI vision counter found in the photo. */
-export interface VisionStackDetection {
-  colorId: ChipColorId;
-  count: number;
-  /** Bounding box as a percentage (0-100) of the photo's width/height, from the top-left corner. */
-  box: { xMinPct: number; yMinPct: number; xMaxPct: number; yMaxPct: number };
-}
-
-export interface VisionCountResponse {
-  counts: Record<ChipColorId, number>;
-  stacks: VisionStackDetection[];
-  /** The model's own read on how trustworthy this count is — "low" surfaces a warning to double-check before confirming. */
-  confidence: 'high' | 'medium' | 'low';
+export interface CashOutRequest {
+  amountCents: number;
 }
 
 export interface SettleResponse {
@@ -179,4 +154,24 @@ export interface SettleResponse {
 export interface HistoryResponse {
   sessions: Session[];
   leaderboard: LeaderboardEntry[];
+}
+
+// --- Push notifications -------------------------------------------------------
+
+export interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscriptionJSON {
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+}
+
+export interface SubscribePushRequest {
+  subscription: PushSubscriptionJSON;
+}
+
+export interface VapidKeyResponse {
+  publicKey: string;
 }

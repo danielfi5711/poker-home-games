@@ -1,7 +1,7 @@
 {
   "name": "poker-home-games",
   "version": "0.1.0",
-  "description": "Installable PWA for tracking local home poker games: buy-ins, photo-based chip-stack valuation, and settlement.",
+  "description": "Installable PWA for tracking local home poker games: host-approved buy-ins, cash-outs, settlement, and an all-time group leaderboard.",
   "type": "module",
   "engines": {
     "node": ">=20.9"
@@ -15,18 +15,20 @@
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.126.0",
     "@libsql/client": "^0.15.15",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^20.16.5",
+    "@types/web-push": "^3.6.4",
     "concurrently": "^10.0.5",
     "preact": "^10.29.8",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
     "vite": "^8.2.2",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-precaching": "^7.3.0"
   }
 }
