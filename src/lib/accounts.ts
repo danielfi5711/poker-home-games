@@ -66,19 +66,19 @@ function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }
 
-export function register(username: string, password: string, displayName: string): { token: string; account: Account } {
+export function register(username: string, password: string): { token: string; account: Account } {
   const normalized = normalizeUsername(username);
   if (!/^[a-z0-9_.-]{3,24}$/.test(normalized)) {
     throw new AuthError('Username must be 3-24 characters: letters, numbers, "_", "." or "-".', 400);
   }
   if (password.length < 6) throw new AuthError('Password must be at least 6 characters.', 400);
-  const trimmedDisplayName = displayName.trim().slice(0, 40) || username.trim().slice(0, 40);
   if (data().usernameIndex[normalized]) throw new AuthError('That username is already taken.', 409);
 
   const account: StoredAccount = {
     id: newId(),
     username: normalized,
-    displayName: trimmedDisplayName,
+    // displayName always matches the username (as typed, not lowercased) — no separate field.
+    displayName: username.trim().slice(0, 40),
     passwordHash: hashPassword(password),
     createdAt: Date.now(),
   };

@@ -96,7 +96,6 @@ export interface LeaderboardEntry {
 export interface RegisterRequest {
   username: string;
   password: string;
-  displayName: string;
 }
 
 export interface LoginRequest {

@@ -9,7 +9,6 @@ interface Props {
 export function Login({ onAuthed }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,8 +18,7 @@ export function Login({ onAuthed }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const result =
-        mode === 'login' ? await api.login(username, password) : await api.register(username, password, displayName);
+      const result = mode === 'login' ? await api.login(username, password) : await api.register(username, password);
       saveToken(result.token);
       onAuthed(result.account);
     } catch (err) {
@@ -55,18 +53,7 @@ export function Login({ onAuthed }: Props) {
             autocomplete="username"
           />
         </label>
-
-        {mode === 'register' && (
-          <label class="field">
-            Display name
-            <input
-              value={displayName}
-              onInput={(e) => setDisplayName(e.currentTarget.value)}
-              placeholder="What friends see on the leaderboard"
-              maxLength={40}
-            />
-          </label>
-        )}
+        {mode === 'register' && <p class="hint">This is what friends see on the leaderboard and at the table.</p>}
 
         <label class="field">
           Password

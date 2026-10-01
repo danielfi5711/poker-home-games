@@ -137,7 +137,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     // POST /api/auth/register
     if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'register') {
       const body = await readJsonBody(req);
-      const result = register(str(body, 'username'), str(body, 'password'), str(body, 'displayName'));
+      const result = register(str(body, 'username'), str(body, 'password'));
       return sendJson(res, 201, result);
     }
 
