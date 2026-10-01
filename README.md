@@ -3,36 +3,40 @@
 An installable app (PWA — add it to your phone's home screen, no App Store
 needed) for tracking local poker nights: players request buy-ins, the host
 approves them (with a push notification, so they don't have to be staring at
-their phone), everyone cashes out at the end, and the app works out who pays
-whom — plus an all-time per-group leaderboard of every account's balance
-across game nights. No real money moves through the app; it's a calculator
-for a cash game your group already plays.
+their phone), the host ends the game whenever they're ready, and the app
+works out who pays whom — plus an all-time per-group leaderboard with
+winning/losing streaks and a full match history. No real money moves through
+the app; it's a calculator for a cash game your group already plays. Amounts
+are in shekels (₪).
 
 ## How it works
 
-1. **Sign up** with a username and password — this is what ties your buy-ins
-   and cash-outs to *you* across every game, instead of a typed name anyone
-   could reuse.
+1. **Sign up** with a username and password — no separate display name, your
+   username *is* what friends see everywhere (letters from any language,
+   including Hebrew, are fine). Usernames are unique, case-insensitively.
 2. **Create or join a group** — a group is one friend circle with its own
    join code and its own leaderboard. Your poker buddies and your work
    league can be two completely separate groups with separate standings.
-3. **Host creates a table** inside a group; anyone else in the group sees it
-   appear in the group's table list and taps it to join — no extra code to
-   type or link to share for the table itself, since group membership
+3. **Host starts a table** inside a group — its name is picked automatically
+   from the day and time (e.g. "Thursday Evening"), no typing needed. Anyone
+   else in the group sees it appear in the table list and taps it to join —
+   no extra code to share for the table itself, since group membership
    already controls who can get in. The host taps **Start game** once
    everyone's seated.
-4. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters a
-   dollar amount, and it sits pending until the host approves or denies it —
-   the host gets a push notification the moment it comes in, even if the app
+4. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters an
+   amount, and it sits pending until the host approves or denies it — the
+   host gets a push notification the moment it comes in, even if the app
    isn't open. The host's own buy-ins are approved automatically.
-5. **Cash-out**: at the end of the night, each player enters what they're
-   leaving the table with (even $0 is a valid cash-out).
-6. Once everyone has cashed out, the host taps **Settle game**: it computes
-   each player's net and the minimum set of payments to square everyone up,
-   and flags it if the buy-ins and cash-outs don't quite add up.
-7. That table's result folds into the group's **All-Time Leaderboard** —
-   each account's balance is the running sum of its net across every settled
-   table in that group.
+5. **Cash-out**: a player enters what they're leaving the table with (even
+   ₪0 is a valid cash-out).
+6. The host taps **Settle game** whenever they're ready to end it — no need
+   to wait for every player to cash out first; anyone who hasn't is simply
+   recorded as cashing out for ₪0. Settling computes each player's net and
+   the minimum set of payments to square everyone up, and flags it if the
+   buy-ins and cash-outs don't quite add up.
+7. That table folds into the group's **All-Time Leaderboard** (balance,
+   winning/losing streaks, biggest win/loss) and its **Match History** (every
+   settled game's full per-player breakdown).
 
 ## Push notifications
 
@@ -74,6 +78,13 @@ This runs on Render's free web-service tier:
    the whole app-store-free "app" install. An Android user who wants a real
    downloadable `.apk` instead can use the one published under this repo's
    GitHub Releases (built as a Trusted Web Activity wrapping this same site).
+6. `.github/workflows/keep-alive.yml` pings `/healthz` every 10 minutes via
+   GitHub Actions, forever, for free — Render's free tier spins the app down
+   after ~15 minutes of no traffic otherwise, causing a slow cold start on
+   the next real request. This only runs free-of-charge with no Actions-minute
+   limit because the repo is **public**; a private repo would need a reduced
+   ping frequency (to stay within the free 2000-min/month quota) or an
+   external pinger like cron-job.org/UptimeRobot instead.
 
 ## Known limitations (first cut)
 

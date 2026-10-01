@@ -1,4 +1,8 @@
-/** All money is integer cents — never floats — to keep settlement math exact. */
+/**
+ * All money is in shekels (₪), stored as integer agorot/cents — never
+ * floats — to keep settlement math exact. Field names stay "*Cents" (the
+ * generic hundredth-of-a-unit, same convention regardless of currency).
+ */
 
 export type BuyInStatus = 'pending' | 'approved' | 'denied';
 
@@ -83,12 +87,44 @@ export interface SettlementResult {
   complete: boolean;
 }
 
-/** All-time, across every settled game in a group — a player's running balance. */
+export type StreakType = 'win' | 'loss' | null;
+
+/** All-time, across every settled game in a group — a player's running balance and streaks. */
 export interface LeaderboardEntry {
   accountId: string;
   name: string;
   sessionsPlayed: number;
   balanceCents: number;
+  /** The player's streak as of their most recent match — null if it just broke (a breakeven game). */
+  currentStreakType: StreakType;
+  currentStreakCount: number;
+  longestWinStreak: number;
+  longestLossStreak: number;
+  /** Biggest single-match net, 0 if they've never won/lost respectively. Loss is stored negative. */
+  biggestWinCents: number;
+  biggestLossCents: number;
+}
+
+/** One player's result in one specific settled match. */
+export interface MatchPlayerResult {
+  accountId: string;
+  name: string;
+  netCents: number;
+}
+
+/** A settled match's per-player breakdown — the "match history" entry. */
+export interface MatchSummary {
+  id: string;
+  name: string;
+  settledAt: number;
+  players: MatchPlayerResult[];
+}
+
+export interface HistoryHighlights {
+  hottest: { accountId: string; name: string; streakCount: number } | null;
+  coldest: { accountId: string; name: string; streakCount: number } | null;
+  biggestWin: { accountId: string; name: string; amountCents: number; matchName: string } | null;
+  biggestLoss: { accountId: string; name: string; amountCents: number; matchName: string } | null;
 }
 
 // --- REST API DTOs -----------------------------------------------------------
@@ -160,8 +196,9 @@ export interface SettleResponse {
 }
 
 export interface HistoryResponse {
-  sessions: Session[];
+  matches: MatchSummary[];
   leaderboard: LeaderboardEntry[];
+  highlights: HistoryHighlights;
 }
 
 // --- Push notifications -------------------------------------------------------

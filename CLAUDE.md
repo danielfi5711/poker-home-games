@@ -4,11 +4,11 @@
 
 An installable PWA for tracking local home poker games: real logins, friend
 groups, host-approved buy-ins, cash-outs, automatic settlement (nets +
-minimal payments) across the table, an all-time per-group leaderboard of
-every account's running balance, and push notifications so a host doesn't
-have to be staring at the app to approve a buy-in. No real money moves
-through the app — it's a calculator for a cash game the group already plays,
-not a payment product.
+minimal payments) across the table, an all-time per-group leaderboard with
+winning/losing streaks, a full match history, and push notifications so a
+host doesn't have to be staring at the app to approve a buy-in. No real
+money moves through the app — it's a calculator for a cash game the group
+already plays, not a payment product. Amounts are in shekels (₪).
 
 Identity model: every player logs into an **account** (username/password).
 Accounts join **groups** (a friend circle, via a shareable join code).
@@ -17,11 +17,18 @@ members can see or join them, and a group's leaderboard only ever sums
 settled tables from that group — so each friend group has its own
 independent balance standings, not one global leaderboard.
 
-Buy-in model: a player requests a buy-in for a dollar amount; it sits
-`pending` until the host approves or denies it (the host's own requests
-auto-approve — there's no one above the host). Only `approved` buy-ins count
-toward a player's total or the settlement math. Cash-outs don't need
-approval — a player just records what they're leaving the table with.
+Buy-in model: a player requests a buy-in for an amount; it sits `pending`
+until the host approves or denies it (the host's own requests auto-approve —
+there's no one above the host). Only `approved` buy-ins count toward a
+player's total or the settlement math. Cash-outs don't need approval — a
+player just records what they're leaving the table with, and the host can
+settle the game whenever they're ready even if some players never cash out
+(treated as a ₪0 cash-out).
+
+Usernames double as display names (no separate field) and are globally
+unique, case- and whitespace-insensitively (`src/lib/accounts.ts`'s
+`usernameIndex`) — any script's letters are allowed (Hebrew included), not
+just ASCII, via a Unicode-aware regex.
 
 ## Layout
 
@@ -46,11 +53,18 @@ approval — a player just records what they're leaving the table with.
 - `src/lib/sessions.ts` — all table state mutation lives here: create/join a
   table, start it (`activateSession`), request a buy-in (`requestBuyIn` —
   auto-approves for the host, `pending` for everyone else), approve/deny one
-  (`respondToBuyIn`, host-only), record a cash-out, and settle. Ownership is
-  enforced server-side: buy-ins and cash-outs must be posted by the account
-  that owns that seat (`requirePlayerOwnedBy`), and starting/approving/
-  settling must come from the account that owns the host seat (`requireHost`)
-  — a client-supplied `playerId` alone is never enough.
+  (`respondToBuyIn`, host-only), record a cash-out, and settle (host-only,
+  doesn't require every player to have cashed out). Ownership is enforced
+  server-side: buy-ins and cash-outs must be posted by the account that owns
+  that seat (`requirePlayerOwnedBy`), and starting/approving/settling must
+  come from the account that owns the host seat (`requireHost`) — a
+  client-supplied `playerId` alone is never enough. `history()` also lives
+  here: builds the per-match breakdown (`MatchSummary[]`), and walks each
+  account's settled matches in chronological order to derive
+  `currentStreakType`/`currentStreakCount` (the streak as of their most
+  recent match — a breakeven game resets it to `null`/0), `longestWinStreak`/
+  `longestLossStreak`, and `biggestWinCents`/`biggestLossCents`, which also
+  feed the `HistoryHighlights` ("🔥 on a 3-game win streak", "💰 biggest win").
 - `src/lib/push.ts` — Web Push (VAPID). Stores each account's push
   subscription(s) (one per device/browser) and sends a notification when a
   non-host requests a buy-in (to the host) or when the host responds (to the
@@ -74,11 +88,13 @@ approval — a player just records what they're leaving the table with.
   latency-sensitive); push notifications cover the "host isn't looking at
   the app right now" case instead.
 - `src/shared/types.ts` — the `Account` / `Group` / `Session` / `Player` /
-  `BuyIn` / `CashOut` / `SettlementResult` / `LeaderboardEntry` shapes,
-  imported directly by the client (see below). **All money is integer
-  cents, never floats.** `LeaderboardEntry.balanceCents` is the sum of that
-  account's net across every settled table in one group — the all-time
-  group leaderboard shown in the Leaderboard tab.
+  `BuyIn` / `CashOut` / `SettlementResult` / `LeaderboardEntry` /
+  `MatchSummary` / `HistoryHighlights` shapes, imported directly by the
+  client (see below). **All money is in shekels, stored as integer
+  agorot/cents, never floats** — field names stay `*Cents` regardless.
+  `LeaderboardEntry.balanceCents` is the sum of that account's net across
+  every settled table in one group — the all-time group leaderboard shown
+  in the Leaderboard tab.
 - `client/` — Preact + Vite, built as a PWA via `vite-plugin-pwa`
   (`vite.config.ts`), using the `injectManifest` strategy (not the default
   `generateSW`) because `client/src/sw.ts` needs its own `push` /
@@ -96,28 +112,41 @@ approval — a player just records what they're leaving the table with.
   - `client/src/avatarColor.ts` — a deterministic hue-from-string hash so
     every player gets a distinct, consistent avatar color instead of one
     flat gray.
-  - `client/src/screens/` — `Login` (log in / sign up), `Groups` (list your
-    groups, create one, join one by code), `GroupScreen` (a group's table
-    lobby — create/rejoin a table — plus its `History` all-time-leaderboard
-    tab), `Lobby` (`setup` status — host starts the game once everyone's
-    in), `Table` (live buy-in requests/approvals, cash-outs, `active`
-    status), `AmountModal` (shared dollar-amount entry sheet for buy-in
-    requests and cash-outs), `Settlement` (`settled` status).
+  - `client/src/sessionName.ts` — `autoSessionName()`: a table's name is
+    always picked automatically from the *host device's* local day/time
+    (e.g. "Thursday Evening"), never typed — there's no name field in the
+    create-table UI at all.
+  - `client/src/screens/` — `Login` (log in / sign up — no separate display
+    name field), `Settings` (change name, log out — behind a confirm
+    dialog), `Groups` (list your groups, create one, join one by code),
+    `GroupScreen` (a group's table lobby — create/rejoin a table — plus its
+    `History` tab: all-time leaderboard with streak badges/highlights, and
+    match history), `Lobby` (`setup` status — host starts the game once
+    everyone's in), `Table` (live buy-in requests/approvals, cash-outs,
+    `active` status), `AmountModal` (shared amount-entry sheet for buy-in
+    requests and cash-outs), `ConfirmModal` (generic themed confirm dialog,
+    used for logout), `Settlement` (`settled` status).
 - `scripts/gen-icons.mjs` — generates the PWA/`apple-touch-icon` PNGs with
   zero image-library dependencies (hand-rolled PNG/CRC32 writer over
   `node:zlib`). Re-run it if you change the icon art in that script.
+- `.github/workflows/keep-alive.yml` — pings `/healthz` every 10 minutes,
+  forever, so Render's free tier never spins the app down from inactivity.
+  Only free/unlimited because the repo is **public**; see the README for the
+  private-repo tradeoff if that ever changes.
 
 ## Conventions
 
 - ESM + `NodeNext` resolution on the server: **relative imports need `.js`
   extensions**, same as `discord-gambling`.
-- Money is integer cents everywhere, both server and client
-  (`client/src/money.ts` has the only `$`-formatting/parsing).
+- Money is integer cents (agorot) everywhere, both server and client
+  (`client/src/money.ts` has the only `₪`-formatting/parsing).
 - A buy-in is only `pending`, `approved`, or `denied`; only `approved`
   buy-ins are ever summed for a total or settlement — never trust a
   `pending` one for money.
-- `settleSession()` requires every player to have a (possibly $0) cash-out
-  recorded first — there's no partial/force settle.
+- `settleSession()` is host-only but does **not** require every player to
+  have cashed out first — a missing cash-out is simply treated as ₪0
+  (`settlement.ts` already defaults it that way); the client warns and
+  confirms before settling if anyone's still mid-game.
 
 ## Checks
 

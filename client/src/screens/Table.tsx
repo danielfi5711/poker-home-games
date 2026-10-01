@@ -49,9 +49,11 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
     setSettleError(null);
     try {
       const { settlement } = await api.settlementPreview(session.id);
-      if (!settlement.complete) {
-        setSettleError('Everyone needs to cash out first — even for $0 — before you can settle the game.');
-        return;
+      const stillPlaying = players.filter((p) => !p.cashOut);
+      if (stillPlaying.length > 0) {
+        const names = stillPlaying.map((p) => p.name).join(', ');
+        const ok = confirm(`${names} ${stillPlaying.length === 1 ? "hasn't" : "haven't"} cashed out — they'll be recorded as ₪0. Settle anyway?`);
+        if (!ok) return;
       }
       if (settlement.discrepancyCents !== 0) {
         const ok = confirm(
@@ -188,7 +190,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       {flow === 'cashout' && (
         <AmountModal
           title="Cash out"
-          hint="Enter what you're leaving the table with — it's fine to enter $0."
+          hint="Enter what you're leaving the table with — it's fine to enter ₪0."
           confirmLabel="Confirm cash-out"
           allowZero
           onCancel={() => setFlow(null)}

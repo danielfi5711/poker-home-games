@@ -10,6 +10,11 @@ interface Props {
   groupId: string;
 }
 
+function streakBadge(type: 'win' | 'loss' | null, count: number) {
+  if (!type || count < 2) return null;
+  return <span class={`streak streak--${type}`}>{type === 'win' ? '🔥' : '🧊'} {count}</span>;
+}
+
 export function HistoryScreen({ groupId }: Props) {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +38,33 @@ export function HistoryScreen({ groupId }: Props) {
 
       {data && (
         <>
+          {(data.highlights.hottest || data.highlights.coldest || data.highlights.biggestWin || data.highlights.biggestLoss) && (
+            <ul class="highlights">
+              {data.highlights.hottest && (
+                <li class="highlights__item highlights__item--hot">
+                  🔥 <strong>{data.highlights.hottest.name}</strong> is on a {data.highlights.hottest.streakCount}-game win streak
+                </li>
+              )}
+              {data.highlights.coldest && (
+                <li class="highlights__item highlights__item--cold">
+                  🧊 <strong>{data.highlights.coldest.name}</strong> is on a {data.highlights.coldest.streakCount}-game cold streak
+                </li>
+              )}
+              {data.highlights.biggestWin && (
+                <li class="highlights__item">
+                  💰 Biggest win: <strong>{data.highlights.biggestWin.name}</strong> +{formatCents(data.highlights.biggestWin.amountCents)} (
+                  {data.highlights.biggestWin.matchName})
+                </li>
+              )}
+              {data.highlights.biggestLoss && (
+                <li class="highlights__item">
+                  📉 Biggest loss: <strong>{data.highlights.biggestLoss.name}</strong> {formatCents(data.highlights.biggestLoss.amountCents)} (
+                  {data.highlights.biggestLoss.matchName})
+                </li>
+              )}
+            </ul>
+          )}
+
           {data.leaderboard.length === 0 ? (
             <p class="muted">No settled games yet — finish a game to start the leaderboard.</p>
           ) : (
@@ -46,6 +78,7 @@ export function HistoryScreen({ groupId }: Props) {
                     </span>
                     <span class="results__name">
                       {entry.name} <span class="muted">({entry.sessionsPlayed} games)</span>
+                      {streakBadge(entry.currentStreakType, entry.currentStreakCount)}
                     </span>
                   </span>
                   <span class={`results__net ${entry.balanceCents > 0 ? 'positive' : entry.balanceCents < 0 ? 'negative' : ''}`}>
@@ -57,16 +90,33 @@ export function HistoryScreen({ groupId }: Props) {
             </ul>
           )}
 
-          <h2>Past games</h2>
-          {data.sessions.length === 0 ? (
+          <h2>Match History</h2>
+          {data.matches.length === 0 ? (
             <p class="muted">Nothing here yet.</p>
           ) : (
-            <ul class="pastgames">
-              {data.sessions.map((s) => (
-                <li key={s.id}>
-                  <strong>{s.name}</strong>
-                  <span class="muted">{s.settledAt ? new Date(s.settledAt).toLocaleDateString() : ''}</span>
-                  <span class="muted">{Object.keys(s.players).length} players</span>
+            <ul class="matches">
+              {data.matches.map((m) => (
+                <li key={m.id} class="matches__item">
+                  <div class="matches__head">
+                    <strong>{m.name}</strong>
+                    <span class="muted">{new Date(m.settledAt).toLocaleDateString()}</span>
+                  </div>
+                  <ul class="matches__players">
+                    {[...m.players]
+                      .sort((a, b) => b.netCents - a.netCents)
+                      .map((p) => (
+                        <li key={p.accountId}>
+                          <span class="avatar avatar--sm" style={avatarStyle(p.accountId)}>
+                            {initials(p.name)}
+                          </span>
+                          <span class="matches__playername">{p.name}</span>
+                          <span class={`results__net ${p.netCents > 0 ? 'positive' : p.netCents < 0 ? 'negative' : ''}`}>
+                            {p.netCents > 0 ? '+' : ''}
+                            {formatCents(p.netCents)}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
                 </li>
               ))}
             </ul>

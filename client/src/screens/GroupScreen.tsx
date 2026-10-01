@@ -3,6 +3,7 @@ import type { Group, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { HistoryScreen } from './History.js';
 import { LinkIcon, CheckIcon } from '../icons.js';
+import { autoSessionName } from '../sessionName.js';
 
 interface Props {
   group: Group;
@@ -14,7 +15,6 @@ export function GroupScreen({ group, onEnterSession, onBack }: Props) {
   const [tab, setTab] = useState<'tables' | 'leaderboard'>('tables');
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [gameName, setGameName] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -25,12 +25,11 @@ export function GroupScreen({ group, onEnterSession, onBack }: Props) {
       .catch((err) => setError((err as Error).message));
   }, [group.id]);
 
-  async function createTable(e: Event) {
-    e.preventDefault();
+  async function createTable() {
     setBusy(true);
     setError(null);
     try {
-      const { session, playerId } = await api.createSession(group.id, gameName);
+      const { session, playerId } = await api.createSession(group.id, autoSessionName());
       onEnterSession(session, playerId!);
     } catch (err) {
       setError((err as Error).message);
@@ -112,16 +111,9 @@ export function GroupScreen({ group, onEnterSession, onBack }: Props) {
             </>
           )}
 
-          <h3>New table</h3>
-          <form onSubmit={createTable}>
-            <label class="field">
-              Table name
-              <input value={gameName} onInput={(e) => setGameName(e.currentTarget.value)} placeholder="Friday Night" maxLength={60} />
-            </label>
-            <button class="btn btn--primary" type="submit" disabled={busy}>
-              {busy ? 'Creating…' : 'Create table'}
-            </button>
-          </form>
+          <button class="btn btn--primary btn--big" onClick={createTable} disabled={busy}>
+            {busy ? 'Creating…' : `+ Start a table — "${autoSessionName()}"`}
+          </button>
         </>
       ) : (
         <HistoryScreen groupId={group.id} />

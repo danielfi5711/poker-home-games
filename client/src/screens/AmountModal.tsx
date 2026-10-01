@@ -1,23 +1,23 @@
 import { useState } from 'preact/hooks';
-import { parseDollarsToCents, formatCents } from '../money.js';
+import { parseShekelsToCents, formatCents } from '../money.js';
 
 interface Props {
   title: string;
   hint: string;
   confirmLabel: string;
-  /** Cash-outs are allowed to be $0 (busted out); buy-ins must be worth something. */
+  /** Cash-outs are allowed to be ₪0 (busted out); buy-ins must be worth something. */
   allowZero?: boolean;
   onCancel: () => void;
   onConfirm: (amountCents: number) => Promise<void>;
 }
 
 export function AmountModal({ title, hint, confirmLabel, allowZero, onCancel, onConfirm }: Props) {
-  const [dollars, setDollars] = useState('');
+  const [shekels, setShekels] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const amountCents = parseDollarsToCents(dollars);
-  const valid = allowZero ? amountCents >= 0 && dollars.trim() !== '' : amountCents > 0;
+  const amountCents = parseShekelsToCents(shekels);
+  const valid = allowZero ? amountCents >= 0 && shekels.trim() !== '' : amountCents > 0;
 
   async function submit(e: Event) {
     e.preventDefault();
@@ -44,13 +44,13 @@ export function AmountModal({ title, hint, confirmLabel, allowZero, onCancel, on
           <label class="field">
             Amount
             <div class="amountfield">
-              <span class="amountfield__sign">$</span>
+              <span class="amountfield__sign">₪</span>
               <input
                 autoFocus
                 inputMode="decimal"
                 placeholder="0.00"
-                value={dollars}
-                onInput={(e) => setDollars(e.currentTarget.value)}
+                value={shekels}
+                onInput={(e) => setShekels(e.currentTarget.value)}
                 class="amountfield__input"
               />
             </div>

@@ -4,7 +4,17 @@ import { newId, newJoinCode } from './id.js';
 import { computeSettlement } from './settlement.js';
 import { getAccount } from './accounts.js';
 import { notify } from './push.js';
-import type { Account, BuyIn, HistoryResponse, LeaderboardEntry, Player, Session, SettleResponse } from '../shared/types.js';
+import type {
+  Account,
+  BuyIn,
+  HistoryHighlights,
+  HistoryResponse,
+  LeaderboardEntry,
+  MatchSummary,
+  Player,
+  Session,
+  SettleResponse,
+} from '../shared/types.js';
 
 export class SessionError extends Error {
   constructor(
@@ -65,10 +75,10 @@ function newPlayer(account: Account): Player {
   return { id: newId(), accountId: account.id, name: account.displayName, joinedAt: Date.now(), buyIns: [], cashOut: null };
 }
 
-const MAX_AMOUNT_CENTS = 100_000_00; // $100,000 — generous ceiling against fat-finger/garbage input.
+const MAX_AMOUNT_CENTS = 100_000_00; // ₪100,000 — generous ceiling against fat-finger/garbage input.
 
 function sanitizeAmountCents(amountCents: number): number {
-  if (!Number.isFinite(amountCents)) throw new SessionError('Enter a valid dollar amount.', 400);
+  if (!Number.isFinite(amountCents)) throw new SessionError('Enter a valid amount.', 400);
   const rounded = Math.round(amountCents);
   if (rounded < 0 || rounded > MAX_AMOUNT_CENTS) throw new SessionError('That amount looks wrong.', 400);
   return rounded;
@@ -137,7 +147,7 @@ export function requestBuyIn(id: string, playerId: string, accountId: string, am
   if (session.status !== 'active') throw new SessionError('The game needs to be started before buy-ins can be recorded.', 409);
   const player = requirePlayerOwnedBy(session, playerId, accountId);
   const amountCents = sanitizeAmountCents(amountCentsRaw);
-  if (amountCents <= 0) throw new SessionError('Buy-in must be worth more than $0.', 400);
+  if (amountCents <= 0) throw new SessionError('Buy-in must be worth more than ₪0.', 400);
 
   const isHost = session.hostPlayerId === playerId;
   const buyIn: BuyIn = {
@@ -157,7 +167,7 @@ export function requestBuyIn(id: string, playerId: string, accountId: string, am
     if (host) {
       notify(host.accountId, {
         title: `${player.name} wants to buy in`,
-        body: `${player.name} is requesting a $${(amountCents / 100).toFixed(2)} buy-in at "${session.name}".`,
+        body: `${player.name} is requesting a ₪${(amountCents / 100).toFixed(2)} buy-in at "${session.name}".`,
         url: `/?session=${session.id}`,
       });
     }
@@ -192,8 +202,8 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
   notify(target.player.accountId, {
     title: approve ? 'Buy-in approved' : 'Buy-in denied',
     body: approve
-      ? `Your $${(target.buyIn.amountCents / 100).toFixed(2)} buy-in at "${session.name}" was approved.`
-      : `Your $${(target.buyIn.amountCents / 100).toFixed(2)} buy-in request at "${session.name}" was denied.`,
+      ? `Your ₪${(target.buyIn.amountCents / 100).toFixed(2)} buy-in at "${session.name}" was approved.`
+      : `Your ₪${(target.buyIn.amountCents / 100).toFixed(2)} buy-in request at "${session.name}" was denied.`,
     url: `/?session=${session.id}`,
   });
 
@@ -216,6 +226,13 @@ export function previewSettlement(id: string): SettleResponse['settlement'] {
   return computeSettlement(requireSession(id));
 }
 
+/**
+ * The host can end the game whenever they're ready — there's no requirement
+ * that every player has recorded a cash-out first. Anyone who hasn't is
+ * simply treated as cashing out for ₪0 (settlement.ts already defaults a
+ * missing cash-out to 0), since the host is the one physically watching the
+ * table and chips.
+ */
 export function settleSession(id: string, accountId: string): SettleResponse {
   const session = requireSession(id);
   if (session.status === 'settled') {
@@ -223,12 +240,6 @@ export function settleSession(id: string, accountId: string): SettleResponse {
   }
   requireHost(session, accountId);
   const settlement = computeSettlement(session);
-  if (!settlement.complete) {
-    throw new SessionError(
-      'Every player needs to cash out (even for $0) before the game can be settled.',
-      409,
-    );
-  }
   save((d) => {
     d.sessions[id].status = 'settled';
     d.sessions[id].settledAt = Date.now();
@@ -242,28 +253,110 @@ export function sessionsForGroup(groupId: string): Session[] {
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
+interface StreakAccumulator extends LeaderboardEntry {
+  biggestWinMatchName: string | null;
+  biggestLossMatchName: string | null;
+}
+
 export function history(groupId: string): HistoryResponse {
   const cutoff = Date.now() - config.historyWindowDays * 24 * 60 * 60 * 1000;
-  const sessions = Object.values(data().sessions)
-    .filter((s) => s.groupId === groupId && s.status === 'settled' && (s.settledAt ?? 0) >= cutoff)
-    .sort((a, b) => (b.settledAt ?? 0) - (a.settledAt ?? 0));
+  const settled = Object.values(data().sessions).filter(
+    (s) => s.groupId === groupId && s.status === 'settled' && (s.settledAt ?? 0) >= cutoff,
+  );
+  // Oldest-first so streaks accumulate in actual chronological order; the
+  // running streak after the loop is, by definition, the *current* one.
+  const chronological = [...settled].sort((a, b) => (a.settledAt ?? 0) - (b.settledAt ?? 0));
 
-  const byAccount = new Map<string, LeaderboardEntry>();
-  for (const session of sessions) {
+  const byAccount = new Map<string, StreakAccumulator>();
+  const matches: MatchSummary[] = [];
+
+  for (const session of chronological) {
     const { netsCents } = computeSettlement(session);
+    const matchPlayers: MatchSummary['players'] = [];
+
     for (const player of Object.values(session.players)) {
-      const existing = byAccount.get(player.accountId) ?? {
-        accountId: player.accountId,
-        name: getAccount(player.accountId)?.displayName ?? player.name,
-        sessionsPlayed: 0,
-        balanceCents: 0,
-      };
-      existing.sessionsPlayed += 1;
-      existing.balanceCents += netsCents[player.id] ?? 0;
-      byAccount.set(player.accountId, existing);
+      const net = netsCents[player.id] ?? 0;
+      const name = getAccount(player.accountId)?.displayName ?? player.name;
+      matchPlayers.push({ accountId: player.accountId, name, netCents: net });
+
+      const entry: StreakAccumulator =
+        byAccount.get(player.accountId) ??
+        {
+          accountId: player.accountId,
+          name,
+          sessionsPlayed: 0,
+          balanceCents: 0,
+          currentStreakType: null,
+          currentStreakCount: 0,
+          longestWinStreak: 0,
+          longestLossStreak: 0,
+          biggestWinCents: 0,
+          biggestLossCents: 0,
+          biggestWinMatchName: null,
+          biggestLossMatchName: null,
+        };
+
+      entry.name = name;
+      entry.sessionsPlayed += 1;
+      entry.balanceCents += net;
+
+      // Capture the streak as it stood *before* this match, so we can tell
+      // whether this match extends it or starts a new one.
+      const prevStreakType = entry.currentStreakType;
+      const prevStreakCount = entry.currentStreakCount;
+
+      if (net > 0) {
+        entry.currentStreakType = 'win';
+        entry.currentStreakCount = prevStreakType === 'win' ? prevStreakCount + 1 : 1;
+        entry.longestWinStreak = Math.max(entry.longestWinStreak, entry.currentStreakCount);
+        if (net > entry.biggestWinCents) {
+          entry.biggestWinCents = net;
+          entry.biggestWinMatchName = session.name;
+        }
+      } else if (net < 0) {
+        entry.currentStreakType = 'loss';
+        entry.currentStreakCount = prevStreakType === 'loss' ? prevStreakCount + 1 : 1;
+        entry.longestLossStreak = Math.max(entry.longestLossStreak, entry.currentStreakCount);
+        if (net < entry.biggestLossCents) {
+          entry.biggestLossCents = net;
+          entry.biggestLossMatchName = session.name;
+        }
+      } else {
+        entry.currentStreakType = null;
+        entry.currentStreakCount = 0;
+      }
+
+      byAccount.set(player.accountId, entry);
     }
+
+    matches.push({ id: session.id, name: session.name, settledAt: session.settledAt ?? session.createdAt, players: matchPlayers });
   }
 
-  const leaderboard = [...byAccount.values()].sort((a, b) => b.balanceCents - a.balanceCents);
-  return { sessions, leaderboard };
+  matches.sort((a, b) => b.settledAt - a.settledAt);
+  const entries = [...byAccount.values()];
+  const leaderboard: LeaderboardEntry[] = entries
+    .map(({ biggestWinMatchName, biggestLossMatchName, ...entry }) => entry)
+    .sort((a, b) => b.balanceCents - a.balanceCents);
+
+  const hottest = entries
+    .filter((e) => e.currentStreakType === 'win' && e.currentStreakCount >= 2)
+    .sort((a, b) => b.currentStreakCount - a.currentStreakCount)[0];
+  const coldest = entries
+    .filter((e) => e.currentStreakType === 'loss' && e.currentStreakCount >= 2)
+    .sort((a, b) => b.currentStreakCount - a.currentStreakCount)[0];
+  const biggestWin = entries.filter((e) => e.biggestWinCents > 0).sort((a, b) => b.biggestWinCents - a.biggestWinCents)[0];
+  const biggestLoss = entries.filter((e) => e.biggestLossCents < 0).sort((a, b) => a.biggestLossCents - b.biggestLossCents)[0];
+
+  const highlights: HistoryHighlights = {
+    hottest: hottest ? { accountId: hottest.accountId, name: hottest.name, streakCount: hottest.currentStreakCount } : null,
+    coldest: coldest ? { accountId: coldest.accountId, name: coldest.name, streakCount: coldest.currentStreakCount } : null,
+    biggestWin: biggestWin
+      ? { accountId: biggestWin.accountId, name: biggestWin.name, amountCents: biggestWin.biggestWinCents, matchName: biggestWin.biggestWinMatchName ?? '' }
+      : null,
+    biggestLoss: biggestLoss
+      ? { accountId: biggestLoss.accountId, name: biggestLoss.name, amountCents: biggestLoss.biggestLossCents, matchName: biggestLoss.biggestLossMatchName ?? '' }
+      : null,
+  };
+
+  return { matches, leaderboard, highlights };
 }
