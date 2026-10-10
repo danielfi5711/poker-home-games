@@ -224,3 +224,24 @@ export function ChevronDownIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+export function WalletIcon({ size = 20 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v2" />
+      <path d="M4 7v11a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3" />
+      <path d="M4 7a2 2 0 0 0 2 2h13a1 1 0 0 1 1 1v3" />
+      <path d="M20 13h-4a1.5 1.5 0 0 0 0 3h4z" />
+    </svg>
+  );
+}

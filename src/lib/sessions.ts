@@ -11,6 +11,8 @@ import type {
   HistoryResponse,
   LeaderboardEntry,
   MatchSummary,
+  Payment,
+  PaymentView,
   Player,
   Session,
   SettleResponse,
@@ -252,17 +254,135 @@ export function settleSession(id: string, accountId: string): SettleResponse {
   }
   requireHost(session, accountId);
   const settlement = computeSettlement(session);
+  const now = Date.now();
+  const payments: Payment[] = settlement.transfers.map((t) => {
+    const from = session.players[t.fromPlayerId]!;
+    const to = session.players[t.toPlayerId]!;
+    return {
+      id: newId(),
+      sessionId: id,
+      sessionName: session.name,
+      fromAccountId: from.accountId,
+      fromName: from.name,
+      toAccountId: to.accountId,
+      toName: to.name,
+      amountCents: t.amountCents,
+      status: 'unpaid',
+      payTappedAt: null,
+      confirmAskDueAt: null,
+      confirmedAt: null,
+      createdAt: now,
+    };
+  });
   save((d) => {
     d.sessions[id].status = 'settled';
-    d.sessions[id].settledAt = Date.now();
+    d.sessions[id].settledAt = now;
+    d.sessions[id].payments = payments;
   });
   notifySettled(session, settlement);
   return { session: requireSession(id), settlement };
 }
 
+// --- Payments ----------------------------------------------------------------
+
+/** How long after the payer taps "Pay with Bit" the receiver is asked to confirm. */
+const CONFIRM_ASK_DELAY_MS = 60_000;
+
+const shekels = (cents: number) => `₪${(cents / 100).toFixed(2)}`;
+
+function findPayment(paymentId: string): { session: Session; payment: Payment } {
+  for (const session of Object.values(data().sessions)) {
+    const payment = session.payments?.find((p) => p.id === paymentId);
+    if (payment) return { session, payment };
+  }
+  throw new SessionError('Payment not found.', 404);
+}
+
+function updatePayment(sessionId: string, paymentId: string, mutate: (p: Payment) => void): Payment {
+  save((d) => {
+    const p = d.sessions[sessionId]?.payments?.find((x) => x.id === paymentId);
+    if (p) mutate(p);
+  });
+  return findPayment(paymentId).payment;
+}
+
+/** Every payment you owe or are owed, newest first, with the receiver's phone for Bit. */
+export function paymentsFor(accountId: string): PaymentView[] {
+  return Object.values(data().sessions)
+    .flatMap((s) => s.payments ?? [])
+    .filter((p) => p.fromAccountId === accountId || p.toAccountId === accountId)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map((p) => ({ ...p, toPhone: getAccount(p.toAccountId)?.phone ?? null }));
+}
+
+/** The payer tapped "Pay with Bit" — ask the receiver to confirm in a minute (re-tapping re-arms it). */
+export function startPayment(paymentId: string, accountId: string): Payment {
+  const { session, payment } = findPayment(paymentId);
+  if (payment.fromAccountId !== accountId) throw new SessionError('Only the payer can do that.', 403);
+  if (payment.status === 'confirmed') return payment;
+  const now = Date.now();
+  return updatePayment(session.id, paymentId, (p) => {
+    p.status = 'awaiting_confirmation';
+    p.payTappedAt = now;
+    p.confirmAskDueAt = now + CONFIRM_ASK_DELAY_MS;
+  });
+}
+
+/** The receiver says whether the money actually arrived. */
+export function respondPayment(paymentId: string, accountId: string, received: boolean): Payment {
+  const { session, payment } = findPayment(paymentId);
+  if (payment.toAccountId !== accountId) throw new SessionError('Only the person being paid can confirm.', 403);
+  if (payment.status === 'confirmed') return payment;
+
+  if (received) {
+    const updated = updatePayment(session.id, paymentId, (p) => {
+      p.status = 'confirmed';
+      p.confirmAskDueAt = null;
+      p.confirmedAt = Date.now();
+    });
+    notify(payment.fromAccountId, {
+      title: 'Payment confirmed ✓',
+      body: `${payment.toName} got your ${shekels(payment.amountCents)} for "${payment.sessionName}".`,
+      url: '/?tab=payments',
+    });
+    return updated;
+  }
+
+  const updated = updatePayment(session.id, paymentId, (p) => {
+    p.status = 'unpaid';
+    p.confirmAskDueAt = null;
+  });
+  notify(payment.fromAccountId, {
+    title: 'You still need to pay',
+    body: `${payment.toName} hasn't received your ${shekels(payment.amountCents)} for "${payment.sessionName}" yet.`,
+    url: '/?tab=payments',
+  });
+  return updated;
+}
+
+/**
+ * Sends each due "did the money arrive?" question once. Runs on an interval;
+ * due times live in the stored data, so a restart never loses one.
+ */
+export function sweepPaymentConfirmations(): void {
+  const now = Date.now();
+  for (const session of Object.values(data().sessions)) {
+    for (const payment of session.payments ?? []) {
+      if (payment.status !== 'awaiting_confirmation' || payment.confirmAskDueAt === null || payment.confirmAskDueAt > now) continue;
+      updatePayment(session.id, payment.id, (p) => {
+        p.confirmAskDueAt = null;
+      });
+      notify(payment.toAccountId, {
+        title: `Did ${payment.fromName} pay you?`,
+        body: `${payment.fromName} went to send you ${shekels(payment.amountCents)} on Bit for "${payment.sessionName}". Tap to confirm.`,
+        url: '/?tab=payments',
+      });
+    }
+  }
+}
+
 /** Tell every player at the table what they owe or are owed, so nobody has to ask. */
 function notifySettled(session: Session, settlement: SettlementResult): void {
-  const shekels = (cents: number) => `₪${(cents / 100).toFixed(2)}`;
   for (const player of Object.values(session.players)) {
     const pays = settlement.transfers.filter((t) => t.fromPlayerId === player.id);
     const gets = settlement.transfers.filter((t) => t.toPlayerId === player.id);
@@ -273,7 +393,7 @@ function notifySettled(session: Session, settlement: SettlementResult): void {
     notify(player.accountId, {
       title: `"${session.name}" is over`,
       body: lines.length > 0 ? lines.join('\n') : 'You broke even — nothing to pay.',
-      url: '/?tab=games',
+      url: lines.length > 0 ? '/?tab=payments' : '/?tab=games',
     });
   }
 }
@@ -367,13 +487,22 @@ export function history(): HistoryResponse {
       name: session.name,
       settledAt: session.settledAt ?? session.createdAt,
       players: matchPlayers,
-      transfers: transfers.map((t) => ({
-        fromAccountId: session.players[t.fromPlayerId]?.accountId ?? '',
-        fromName: nameOf(t.fromPlayerId),
-        toAccountId: session.players[t.toPlayerId]?.accountId ?? '',
-        toName: nameOf(t.toPlayerId),
-        amountCents: t.amountCents,
-      })),
+      transfers: transfers.map((t) => {
+        const fromAccountId = session.players[t.fromPlayerId]?.accountId ?? '';
+        const toAccountId = session.players[t.toPlayerId]?.accountId ?? '';
+        const payment = session.payments?.find(
+          (p) => p.fromAccountId === fromAccountId && p.toAccountId === toAccountId && p.amountCents === t.amountCents,
+        );
+        return {
+          fromAccountId,
+          fromName: nameOf(t.fromPlayerId),
+          toAccountId,
+          toName: nameOf(t.toPlayerId),
+          amountCents: t.amountCents,
+          paymentId: payment?.id ?? null,
+          status: payment?.status ?? null,
+        };
+      }),
       discrepancyCents,
     });
   }

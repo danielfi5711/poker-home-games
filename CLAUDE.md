@@ -94,6 +94,16 @@ just ASCII, via a Unicode-aware regex.
   `LeaderboardEntry.balanceCents` is the sum of that account's net across
   every settled table — the all-time leaderboard shown
   in the Leaderboard tab.
+  `Payment` (stored on `Session.payments`, created by `settleSession()`) is
+  one who-pays-whom debt: `unpaid` → `awaiting_confirmation` (payer tapped
+  Pay with Bit; `confirmAskDueAt` = +60s) → `confirmed` (receiver said Got
+  it). `sweepPaymentConfirmations()` (every 15s, started in `src/index.ts`)
+  sends the receiver the "did it arrive?" push once the due time passes —
+  persisted, so restarts don't lose it. "Not yet" resets to `unpaid` and
+  pushes the payer. Bit can't be pre-filled or verified, hence this flow.
+  `Account.phone` (Israeli mobile, normalized `05XXXXXXXX`) is required at
+  register and settable via `PUT /api/auth/phone`; older accounts have
+  `null` and the client blocks on a phone form until set.
 - `client/` — Preact + Vite, built as a PWA via `vite-plugin-pwa`
   (`vite.config.ts`), using the `injectManifest` strategy (not the default
   `generateSW`) because `client/src/sw.ts` needs its own `push` /

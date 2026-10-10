@@ -43,6 +43,41 @@ export interface Session {
   hostPlayerId: string;
   players: Record<string, Player>;
   settledAt: number | null;
+  /** Created when the game is settled — one per who-pays-whom transfer. Absent on older games. */
+  payments?: Payment[];
+}
+
+export type PaymentStatus = 'unpaid' | 'awaiting_confirmation' | 'confirmed';
+
+/**
+ * One settled-game debt. Bit has no API to verify a transfer, so "paid" means
+ * the receiver confirmed it: the payer taps Pay (-> awaiting_confirmation),
+ * and a minute later the receiver is asked whether the money arrived.
+ */
+export interface Payment {
+  id: string;
+  sessionId: string;
+  sessionName: string;
+  fromAccountId: string;
+  fromName: string;
+  toAccountId: string;
+  toName: string;
+  amountCents: number;
+  status: PaymentStatus;
+  payTappedAt: number | null;
+  /** When to ask the receiver to confirm; cleared once asked. Stored so a restart never loses it. */
+  confirmAskDueAt: number | null;
+  confirmedAt: number | null;
+  createdAt: number;
+}
+
+/** A payment as its payer/receiver sees it — with the receiver's phone so the payer can send via Bit. */
+export interface PaymentView extends Payment {
+  toPhone: string | null;
+}
+
+export interface PaymentsResponse {
+  payments: PaymentView[];
 }
 
 /** A logged-in player. Never carries the password hash — that never leaves the server. */
@@ -50,6 +85,8 @@ export interface Account {
   id: string;
   username: string;
   displayName: string;
+  /** Israeli mobile, normalized to 05XXXXXXXX — friends pay you on Bit with it. Null on accounts made before it was required. */
+  phone: string | null;
   createdAt: number;
 }
 
@@ -106,6 +143,9 @@ export interface MatchTransfer {
   toAccountId: string;
   toName: string;
   amountCents: number;
+  /** Set when the game has tracked payments (games settled after payments were added). */
+  paymentId: string | null;
+  status: PaymentStatus | null;
 }
 
 /** A settled match's per-player breakdown — the "match history" entry. */
@@ -132,6 +172,7 @@ export interface HistoryHighlights {
 export interface RegisterRequest {
   username: string;
   password: string;
+  phone: string;
 }
 
 export interface LoginRequest {

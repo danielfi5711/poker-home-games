@@ -3,6 +3,8 @@ import type {
   Account,
   AuthResponse,
   HistoryResponse,
+  Payment,
+  PaymentsResponse,
   PushSubscriptionJSON,
   Session,
   SessionResponse,
@@ -78,7 +80,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
-  register: (username: string, password: string) => req<AuthResponse>('POST', '/auth/register', { username, password }),
+  register: (username: string, password: string, phone: string) =>
+    req<AuthResponse>('POST', '/auth/register', { username, password, phone }),
+  setPhone: (phone: string) => req<{ account: Account }>('PUT', '/auth/phone', { phone }),
   login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
   logout: () => req<{ ok: true }>('POST', '/auth/logout'),
   me: () => req<{ account: Account }>('GET', '/auth/me'),
@@ -88,6 +92,9 @@ export const api = {
   vapidPublicKey: () => req<VapidKeyResponse>('GET', '/push/vapid-public-key'),
   subscribePush: (subscription: PushSubscriptionJSON) => req<{ ok: true }>('POST', '/push/subscribe', { subscription }),
 
+  payments: () => req<PaymentsResponse>('GET', '/payments'),
+  startPayment: (id: string) => req<{ payment: Payment }>('POST', `/payments/${id}/start`),
+  respondPayment: (id: string, received: boolean) => req<{ payment: Payment }>('POST', `/payments/${id}/respond`, { received }),
   history: () => req<HistoryResponse>('GET', '/history'),
   sessions: () => req<{ sessions: Session[] }>('GET', '/sessions'),
   createSession: (name: string) => req<SessionResponse>('POST', '/sessions', { name }),

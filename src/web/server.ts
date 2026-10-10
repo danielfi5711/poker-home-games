@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
-import { AuthError, accountForToken, changeUsername, login, logout, register } from '../lib/accounts.js';
+import { AuthError, accountForToken, changeUsername, login, logout, register, setPhone } from '../lib/accounts.js';
 import {
   SessionError,
   requestBuyIn,
@@ -16,6 +16,9 @@ import {
   recordCashOut,
   allSessions,
   settleSession,
+  paymentsFor,
+  startPayment,
+  respondPayment,
 } from '../lib/sessions.js';
 import { subscribe, vapidPublicKey } from '../lib/push.js';
 import { libsqlEnabled } from '../lib/libsql.js';
@@ -133,7 +136,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     // POST /api/auth/register
     if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'register') {
       const body = await readJsonBody(req);
-      const result = register(str(body, 'username'), str(body, 'password'));
+      const result = register(str(body, 'username'), str(body, 'password'), str(body, 'phone'));
       return sendJson(res, 201, result);
     }
 
@@ -165,6 +168,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       return sendJson(res, 200, { account: updated });
     }
 
+    // PUT /api/auth/phone
+    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'phone') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      return sendJson(res, 200, { account: setPhone(account.id, str(body, 'phone')) });
+    }
+
     // --- Push notifications ----------------------------------------------------
 
     // GET /api/push/vapid-public-key
@@ -183,6 +193,27 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       }
       subscribe(account.id, subscription as never);
       return sendJson(res, 200, { ok: true });
+    }
+
+    // --- Payments -----------------------------------------------------------
+
+    // GET /api/payments — what you owe and what you're owed
+    if (req.method === 'GET' && parts.length === 2 && parts[1] === 'payments') {
+      const account = requireAuth(req);
+      return sendJson(res, 200, { payments: paymentsFor(account.id) });
+    }
+
+    // POST /api/payments/:id/start — payer tapped "Pay with Bit"
+    if (req.method === 'POST' && parts.length === 4 && parts[1] === 'payments' && parts[3] === 'start') {
+      const account = requireAuth(req);
+      return sendJson(res, 200, { payment: startPayment(parts[2], account.id) });
+    }
+
+    // POST /api/payments/:id/respond — receiver confirms (or not) the money arrived
+    if (req.method === 'POST' && parts.length === 4 && parts[1] === 'payments' && parts[3] === 'respond') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      return sendJson(res, 200, { payment: respondPayment(parts[2], account.id, body?.received === true) });
     }
 
     // --- Tables & history ------------------------------------------------

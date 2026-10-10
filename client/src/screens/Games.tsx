@@ -131,7 +131,14 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
                       <ArrowRightIcon size={14} />
                       <strong>{t.toAccountId === myAccountId ? 'You' : t.toName}</strong>
                     </span>
-                    <span class="transfers__amount">{formatCents(t.amountCents)}</span>
+                    <span class="transfers__amount">
+                      {formatCents(t.amountCents)}
+                      {t.status && (
+                        <span class={`paylabel paylabel--${t.status}`}>
+                          {t.status === 'confirmed' ? 'Paid ✓' : t.status === 'awaiting_confirmation' ? 'Waiting' : 'Unpaid'}
+                        </span>
+                      )}
+                    </span>
                   </li>
                 );
               })}

@@ -1445,3 +1445,199 @@ form {
     padding: 28px;
   }
 }
+
+/* ---------- bottom-nav badge ---------- */
+
+.bottomnav__icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottomnav__badge {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--accent-gradient);
+  color: var(--accent-ink);
+  font: 800 10.5px/17px var(--font-body);
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--felt-dark);
+  animation: badge-pop var(--dur-slow) var(--ease-spring) both;
+}
+
+@keyframes badge-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---------- payments ---------- */
+
+.pay {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pay__item {
+  background: var(--felt-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: card-in var(--dur) var(--ease) both;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.pay__item--owe {
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.pay__item--ask {
+  border-color: rgba(229, 187, 94, 0.55);
+  box-shadow: var(--shadow-glow);
+}
+
+.pay__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pay__person {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.pay__amount {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.pay__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+.pay__status {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+
+.pay__status--wait {
+  color: var(--accent-hi);
+}
+
+.pay__question {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pay__bit {
+  width: 100%;
+}
+
+.pay__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--good);
+  font-weight: 700;
+}
+
+.pay__sheet {
+  background: var(--felt-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px 14px;
+}
+
+.pay__sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.pay__sheet-row + .pay__sheet-row {
+  border-top: 1px solid var(--border);
+}
+
+.pay__sheet-amount {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--accent-hi);
+}
+
+.pay__sheet-phone {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.paylabel {
+  margin-inline-start: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font: 700 10.5px/1.4 var(--font-body);
+  vertical-align: middle;
+}
+
+.paylabel--confirmed {
+  background: var(--good-bg);
+  color: var(--good);
+}
+
+.paylabel--awaiting_confirmation {
+  background: rgba(229, 187, 94, 0.14);
+  color: var(--accent-hi);
+}
+
+.paylabel--unpaid {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.settings__phone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--felt-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.pay__amount.positive {
+  color: var(--good);
+}
+
+.pay__amount.negative {
+  color: var(--bad);
+}

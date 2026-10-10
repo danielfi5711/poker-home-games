@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Account, Session } from '../../src/shared/types.js';
+import type { Account, PaymentView, Session } from '../../src/shared/types.js';
 import {
   api,
   ApiError,
@@ -14,20 +14,23 @@ import { Login } from './screens/Login.js';
 import { TablesScreen } from './screens/Tables.js';
 import { LeaderboardScreen } from './screens/Leaderboard.js';
 import { GamesScreen } from './screens/Games.js';
+import { PaymentsScreen, paymentsNeedingAction } from './screens/Payments.js';
+import { PhoneForm } from './screens/PhoneForm.js';
 import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
-import { ChipIcon, BellIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon } from './icons.js';
+import { ChipIcon, BellIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
 import { ensurePushSubscription } from './push.js';
 
 type View = 'login' | 'home' | 'session' | 'settings';
-type HomeTab = 'tables' | 'leaderboard' | 'games';
+type HomeTab = 'tables' | 'leaderboard' | 'games' | 'payments';
 
 const HOME_TABS: { id: HomeTab; label: string; icon: typeof CardsIcon }[] = [
   { id: 'tables', label: 'Tables', icon: CardsIcon },
   { id: 'leaderboard', label: 'Leaderboard', icon: TrophyIcon },
   { id: 'games', label: 'Games', icon: ReceiptIcon },
+  { id: 'payments', label: 'Payments', icon: WalletIcon },
 ];
 
 /** `?tab=games` (e.g. from a "game is over" notification) opens straight to that tab. */
@@ -44,6 +47,28 @@ export function App() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [returnView, setReturnView] = useState<View>('home');
   const [homeTab, setHomeTab] = useState<HomeTab>(() => tabFromUrl(location.href) ?? 'tables');
+  const [payments, setPayments] = useState<PaymentView[] | null>(null);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
+
+  function refreshPayments() {
+    api
+      .payments()
+      .then((r) => {
+        setPayments(r.payments);
+        setPaymentsError(null);
+      })
+      .catch((err) => setPaymentsError((err as Error).message));
+  }
+
+  // Payments drive the bottom-nav badge, so keep them fresh while logged in —
+  // faster on the Payments tab itself, where a confirmation can land any second.
+  const onPaymentsTab = view === 'home' && homeTab === 'payments';
+  useEffect(() => {
+    if (!account?.phone) return;
+    refreshPayments();
+    const timer = setInterval(refreshPayments, onPaymentsTab ? 8000 : 30000);
+    return () => clearInterval(timer);
+  }, [account?.id, account?.phone, onPaymentsTab]);
 
   // A tapped notification focuses the already-open app and posts its URL here.
   useEffect(() => {
@@ -156,6 +181,9 @@ export function App() {
   const isHost = !!(session && playerId && session.hostPlayerId === playerId);
   const pendingCount =
     isHost && session ? Object.values(session.players).reduce((n, p) => n + p.buyIns.filter((b) => b.status === 'pending').length, 0) : 0;
+  // Accounts made before phones were required must add one before using the app.
+  const needsPhone = !!account && !account.phone && view !== 'login' && view !== 'settings';
+  const badge = account && payments ? paymentsNeedingAction(payments, account.id) : 0;
 
   if (booting) {
     return (
@@ -207,7 +235,18 @@ export function App() {
       <main class="app__main">
         {view === 'login' && <Login onAuthed={onAuthed} />}
 
-        {view === 'home' && account && (
+        {needsPhone && account && (
+          <div class="card">
+            <h2 class="section-icon">
+              <WalletIcon size={20} />
+              Add your phone number
+            </h2>
+            <p class="hint">Friends pay you on Bit with it after a game, so the app needs it before you continue.</p>
+            <PhoneForm submitLabel="Continue" onSaved={setAccount} />
+          </div>
+        )}
+
+        {!needsPhone && view === 'home' && account && (
           <div class="tabpanel" key={homeTab}>
             {homeTab === 'tables' && <TablesScreen onEnterSession={enterSession} />}
             {homeTab === 'leaderboard' && (
@@ -220,10 +259,13 @@ export function App() {
                 <GamesScreen myAccountId={account.id} />
               </div>
             )}
+            {homeTab === 'payments' && (
+              <PaymentsScreen myAccountId={account.id} payments={payments} error={paymentsError} onChanged={refreshPayments} />
+            )}
           </div>
         )}
 
-        {view === 'session' && session && playerId && me && (
+        {!needsPhone && view === 'session' && session && playerId && me && (
           <>
             {session.status === 'setup' && (
               <LobbyScreen session={session} isHost={isHost} onChanged={setSession} onLeave={leaveSession} />
@@ -244,15 +286,15 @@ export function App() {
                 playerId={playerId}
                 onLeave={() => {
                   leaveSession();
-                  openHomeTab('games');
+                  openHomeTab('payments');
                 }}
               />
             )}
           </>
         )}
 
-        {view === 'session' && sessionId && !session && !error && <p class="muted center">Loading game…</p>}
-        {view === 'session' && error && (
+        {!needsPhone && view === 'session' && sessionId && !session && !error && <p class="muted center">Loading game…</p>}
+        {!needsPhone && view === 'session' && error && (
           <div class="card center">
             <p>{error}</p>
             <button class="btn" onClick={leaveSession}>
@@ -266,7 +308,7 @@ export function App() {
         )}
       </main>
 
-      {account && view !== 'login' && (
+      {account && account.phone && view !== 'login' && (
         <nav class="bottomnav" aria-label="Main">
           {HOME_TABS.map(({ id, label, icon: Icon }) => {
             const active = view === 'home' && homeTab === id;
@@ -277,7 +319,10 @@ export function App() {
                 onClick={() => openHomeTab(id)}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon size={22} />
+                <span class="bottomnav__icon">
+                  <Icon size={22} />
+                  {id === 'payments' && badge > 0 && <span class="bottomnav__badge">{badge}</span>}
+                </span>
                 <span>{label}</span>
               </button>
             );

@@ -44,7 +44,13 @@ function save(mutator: (data: Data) => void): void {
 }
 
 function toPublic(account: StoredAccount): Account {
-  return { id: account.id, username: account.username, displayName: account.displayName, createdAt: account.createdAt };
+  return {
+    id: account.id,
+    username: account.username,
+    displayName: account.displayName,
+    phone: account.phone ?? null,
+    createdAt: account.createdAt,
+  };
 }
 
 function hashPassword(password: string): string {
@@ -73,16 +79,31 @@ const USERNAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} _.-]{1,22}[\p{L}\p{N}]$/u;
 const USERNAME_FORMAT_MESSAGE =
   'Name must be 3-24 characters: letters (any language), numbers, spaces, "_", "." or "-" — and can\'t start or end with a space or symbol.';
 
+/**
+ * Israeli mobile numbers only (that's what Bit uses): accepts "050-123-4567",
+ * "050 1234567", "+972 50 123 4567", "972501234567" and returns "0501234567".
+ */
+export function normalizeIsraeliMobile(raw: string): string {
+  let digits = raw.replace(/[\s\-().]/g, '');
+  if (digits.startsWith('+')) digits = digits.slice(1);
+  if (digits.startsWith('972')) digits = `0${digits.slice(3)}`;
+  if (!/^05\d{8}$/.test(digits)) {
+    throw new AuthError('Enter a valid Israeli mobile number, like 050-123-4567.', 400);
+  }
+  return digits;
+}
+
 function validateUsernameFormat(normalized: string): void {
   if (!USERNAME_PATTERN.test(normalized)) {
     throw new AuthError(USERNAME_FORMAT_MESSAGE, 400);
   }
 }
 
-export function register(username: string, password: string): { token: string; account: Account } {
+export function register(username: string, password: string, phoneRaw: string): { token: string; account: Account } {
   const normalized = normalizeUsername(username);
   validateUsernameFormat(normalized);
   if (password.length < 6) throw new AuthError('Password must be at least 6 characters.', 400);
+  const phone = normalizeIsraeliMobile(phoneRaw);
   if (data().usernameIndex[normalized]) throw new AuthError('That username is already taken.', 409);
 
   const account: StoredAccount = {
@@ -90,6 +111,7 @@ export function register(username: string, password: string): { token: string; a
     username: normalized,
     // displayName always matches the username (as typed, not lowercased) — no separate field.
     displayName: username.trim().replace(/\s+/g, ' ').slice(0, 40),
+    phone,
     passwordHash: hashPassword(password),
     createdAt: Date.now(),
   };
@@ -139,6 +161,16 @@ export function changeUsername(accountId: string, newUsername: string, currentPa
     d.usernameIndex[normalized] = accountId;
     d.accounts[accountId].username = normalized;
     d.accounts[accountId].displayName = newUsername.trim().replace(/\s+/g, ' ').slice(0, 40);
+  });
+  return toPublic(data().accounts[accountId]);
+}
+
+export function setPhone(accountId: string, phoneRaw: string): Account {
+  const account = data().accounts[accountId];
+  if (!account) throw new AuthError('Account not found.', 404);
+  const phone = normalizeIsraeliMobile(phoneRaw);
+  save((d) => {
+    d.accounts[accountId].phone = phone;
   });
   return toPublic(data().accounts[accountId]);
 }

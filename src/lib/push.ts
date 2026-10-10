@@ -53,7 +53,10 @@ export interface NotifyPayload {
 
 /** Fire-and-forget: a push failure never blocks the buy-in/approval request that triggered it. */
 export function notify(accountId: string, payload: NotifyPayload): void {
-  if (!pushEnabled()) return;
+  if (!pushEnabled()) {
+    console.log(`[push disabled] would notify ${accountId}: ${payload.title} — ${payload.body}`);
+    return;
+  }
   const subs = store.get().subscriptions[accountId] ?? [];
   for (const sub of subs) {
     webpush.sendNotification(sub, JSON.stringify(payload)).catch((err: unknown) => {

@@ -4,6 +4,8 @@ import { api } from '../api.js';
 import { avatarStyle } from '../avatarColor.js';
 import { initials } from '../initials.js';
 import { ConfirmModal } from './ConfirmModal.js';
+import { PhoneForm } from './PhoneForm.js';
+import { formatPhone } from '../phone.js';
 
 interface Props {
   account: Account;
@@ -20,6 +22,8 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneSaved, setPhoneSaved] = useState(false);
 
   function startEditingName() {
     setNewUsername(account.username);
@@ -100,6 +104,30 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
             </button>
           </div>
         </form>
+      )}
+
+      <h3>Phone number</h3>
+      <p class="hint">Friends pay you on Bit with this number.</p>
+      {phoneSaved && <p class="hint settings__saved">Phone number updated.</p>}
+      {!editingPhone ? (
+        <div class="settings__phone">
+          <span dir="ltr">{account.phone ? formatPhone(account.phone) : 'Not set'}</span>
+          <button class="btn btn--small" onClick={() => setEditingPhone(true)}>
+            Change
+          </button>
+        </div>
+      ) : (
+        <PhoneForm
+          initial={account.phone ?? ''}
+          submitLabel="Save number"
+          onCancel={() => setEditingPhone(false)}
+          onSaved={(updated) => {
+            onAccountChanged(updated);
+            setEditingPhone(false);
+            setPhoneSaved(true);
+            setTimeout(() => setPhoneSaved(false), 2500);
+          }}
+        />
       )}
 
       <h3>Session</h3>
