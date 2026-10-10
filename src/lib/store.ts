@@ -17,6 +17,14 @@ import { kvGet, kvSet, libsqlEnabled } from './libsql.js';
  *    mid-write cannot corrupt the data. Used for local development.
  */
 export class JsonStore<T> {
+  /** Every loaded store, so a shutdown can flush all pending writes at once. */
+  private static readonly all = new Set<JsonStore<unknown>>();
+
+  /** Flush every store now — called on SIGTERM so a deploy/restart never drops a just-made change. */
+  static async flushAll(): Promise<void> {
+    await Promise.all([...JsonStore.all].map((s) => s.flush()));
+  }
+
   private data: T;
   /** libSQL row key, or the original path for file mode. */
   private readonly key: string;
@@ -36,6 +44,7 @@ export class JsonStore<T> {
     const useDb = libsqlEnabled();
     const abs = path.resolve(file);
     const store = new JsonStore<T>(file, abs, useDb, defaults);
+    JsonStore.all.add(store as JsonStore<unknown>);
 
     let raw: string | null = null;
     if (useDb) {

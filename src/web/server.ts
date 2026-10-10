@@ -18,6 +18,7 @@ import {
   settleSession,
 } from '../lib/sessions.js';
 import { subscribe, vapidPublicKey } from '../lib/push.js';
+import { libsqlEnabled } from '../lib/libsql.js';
 import type { Account } from '../shared/types.js';
 
 const PUBLIC_DIR = join(process.cwd(), 'dist', 'public');
@@ -282,6 +283,11 @@ export function startWebServer(): void {
   const server = createServer((req, res) => {
     if (req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
+      return;
+    }
+    if (req.url === '/api/status') {
+      // Lets anyone confirm production is on durable storage, not Render's wiped-on-deploy disk.
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ storage: libsqlEnabled() ? 'turso' : 'file' }));
       return;
     }
     const url = new URL(req.url ?? '/', 'http://localhost');
