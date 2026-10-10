@@ -32,21 +32,48 @@ export function saveToken(token: string | null): void {
   }
 }
 
+/**
+ * Ask the browser not to evict this origin's storage under pressure, so the
+ * saved login survives until the player explicitly logs out.
+ */
+export function requestPersistentStorage(): void {
+  try {
+    void navigator.storage?.persist?.().catch(() => {});
+  } catch {
+    /* unsupported — best effort */
+  }
+}
+
+/** A failed API call. `status` is 0 when the server couldn't be reached at all. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = loadToken();
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
 
-  const res = await fetch(BASE + path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(BASE + path, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError('Could not reach the server.', 0);
+  }
   const data = await res.json().catch(() => ({}) as Record<string, unknown>);
   if (!res.ok) {
     const message = typeof (data as { error?: unknown }).error === 'string' ? (data as { error: string }).error : `Request failed (${res.status})`;
-    throw new Error(message);
+    throw new ApiError(message, res.status);
   }
   return data as T;
 }

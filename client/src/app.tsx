@@ -2,11 +2,13 @@ import { useEffect, useState } from 'preact/hooks';
 import type { Account, Group, Session } from '../../src/shared/types.js';
 import {
   api,
+  ApiError,
   loadSavedGroupId,
   loadSavedIdentity,
   loadToken,
   saveGroupId,
   saveIdentity,
+  requestPersistentStorage,
   saveToken,
   usePolledSession,
 } from './api.js';
@@ -39,7 +41,20 @@ export function App() {
         return;
       }
       try {
-        const { account } = await api.me();
+        requestPersistentStorage();
+        // Only a rejected token (401) logs the player out. A network error or
+        // the server waking from sleep just retries — the login is kept until
+        // the player logs out themselves.
+        let account: Account;
+        for (let attempt = 0; ; attempt++) {
+          try {
+            ({ account } = await api.me());
+            break;
+          } catch (err) {
+            if (err instanceof ApiError && err.status === 401) throw err;
+            await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** attempt, 5000)));
+          }
+        }
         setAccount(account);
         void ensurePushSubscription();
 
@@ -70,8 +85,8 @@ export function App() {
         }
 
         setView('groups');
-      } catch {
-        saveToken(null);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) saveToken(null);
       } finally {
         setBooting(false);
       }
