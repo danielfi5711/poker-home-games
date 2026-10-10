@@ -638,6 +638,11 @@ form {
   padding-left: 44px;
 }
 
+.playerlist__cashout {
+  align-self: flex-start;
+  margin-left: 44px;
+}
+
 .playerlist__buyin,
 .playerlist__status {
   font-size: 12px;

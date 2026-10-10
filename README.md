@@ -25,7 +25,8 @@ are in shekels (₪).
    host gets a push notification the moment it comes in, even if the app
    isn't open. The host's own buy-ins are approved automatically.
 4. **Cash-out**: a player enters what they're leaving the table with (even
-   ₪0 is a valid cash-out).
+   ₪0 is a valid cash-out). If someone leaves without entering theirs, the
+   host can cash them out from their row on the table screen.
 5. The host taps **Settle game** whenever they're ready to end it — no need
    to wait for every player to cash out first; anyone who hasn't is simply
    recorded as cashing out for ₪0. Settling computes each player's net and

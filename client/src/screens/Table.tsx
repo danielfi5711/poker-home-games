@@ -21,7 +21,9 @@ function approvedTotal(buyIns: BuyIn[]): number {
 }
 
 export function TableScreen({ session, playerId, isHost, onChanged, onSettled, onLeave }: Props) {
-  const [flow, setFlow] = useState<'buyin' | 'cashout' | null>(null);
+  const [flow, setFlow] = useState<'buyin' | null>(null);
+  /** Whose cash-out is being entered — your own, or (host only) another player's. */
+  const [cashOutFor, setCashOutFor] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
   const [settleError, setSettleError] = useState<string | null>(null);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
@@ -52,7 +54,9 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       const stillPlaying = players.filter((p) => !p.cashOut);
       if (stillPlaying.length > 0) {
         const names = stillPlaying.map((p) => p.name).join(', ');
-        const ok = confirm(`${names} ${stillPlaying.length === 1 ? "hasn't" : "haven't"} cashed out — they'll be recorded as ₪0. Settle anyway?`);
+        const ok = confirm(
+          `${names} ${stillPlaying.length === 1 ? "hasn't" : "haven't"} cashed out. Tap "Cash out" next to their name to enter their chips — or settle anyway and they'll count as ₪0.\n\nSettle anyway?`,
+        );
         if (!ok) return;
       }
       if (settlement.discrepancyCents !== 0) {
@@ -137,6 +141,11 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
                 )}
                 {p.cashOut && <span class="playerlist__status">Cashed out {formatCents(p.cashOut.amountCents)}</span>}
               </div>
+              {isHost && p.id !== playerId && !p.cashOut && (
+                <button class="btn btn--small playerlist__cashout" onClick={() => setCashOutFor(p.id)}>
+                  Cash out {p.name}
+                </button>
+              )}
             </li>
           );
         })}
@@ -154,7 +163,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
           + Request a buy-in
         </button>
         {!me.cashOut && (
-          <button class="btn btn--big" onClick={() => setFlow('cashout')}>
+          <button class="btn btn--big" onClick={() => setCashOutFor(playerId)}>
             Cash out
           </button>
         )}
@@ -187,16 +196,20 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
         />
       )}
 
-      {flow === 'cashout' && (
+      {cashOutFor && session.players[cashOutFor] && (
         <AmountModal
-          title="Cash out"
-          hint="Enter what you're leaving the table with — it's fine to enter ₪0."
+          title={cashOutFor === playerId ? 'Cash out' : `Cash out ${session.players[cashOutFor].name}`}
+          hint={
+            cashOutFor === playerId
+              ? "Enter what you're leaving the table with — it's fine to enter ₪0."
+              : `Enter how much ${session.players[cashOutFor].name} left the table with — ₪0 if they busted. They'll get a notification.`
+          }
           confirmLabel="Confirm cash-out"
           allowZero
-          onCancel={() => setFlow(null)}
+          onCancel={() => setCashOutFor(null)}
           onConfirm={async (amountCents) => {
-            const { session: updated } = await api.cashOut(session.id, playerId, amountCents);
-            setFlow(null);
+            const { session: updated } = await api.cashOut(session.id, cashOutFor, amountCents);
+            setCashOutFor(null);
             onChanged(updated);
           }}
         />

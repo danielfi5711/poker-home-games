@@ -56,7 +56,7 @@ function requirePlayer(session: Session, playerId: string): Player {
   return player;
 }
 
-/** Buy-ins, cash-outs, and rejoining are only ever done as the account you're logged in as. */
+/** Buy-ins and rejoining are only ever done as the account you're logged in as (cash-outs may also come from the host). */
 function requirePlayerOwnedBy(session: Session, playerId: string, accountId: string): Player {
   const player = requirePlayer(session, playerId);
   if (player.accountId !== accountId) throw new SessionError('That seat belongs to someone else.', 403);
@@ -213,12 +213,24 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
 export function recordCashOut(id: string, playerId: string, accountId: string, amountCentsRaw: number): Session {
   const session = requireSession(id);
   if (session.status === 'settled') throw new SessionError('This game has already been settled.', 409);
-  requirePlayerOwnedBy(session, playerId, accountId);
+  // A player cashes themselves out; the host can also do it for anyone who
+  // left without entering theirs, so the game can still be settled properly.
+  const player = requirePlayer(session, playerId);
+  const byHost = player.accountId !== accountId;
+  if (byHost) requireHost(session, accountId);
   const amountCents = sanitizeAmountCents(amountCentsRaw);
 
   save((d) => {
     d.sessions[id].players[playerId].cashOut = { amountCents, at: Date.now() };
   });
+
+  if (byHost) {
+    notify(player.accountId, {
+      title: 'The host cashed you out',
+      body: `You were cashed out for ₪${(amountCents / 100).toFixed(2)} at "${session.name}".`,
+      url: `/?session=${session.id}`,
+    });
+  }
   return requireSession(id);
 }
 
