@@ -241,11 +241,9 @@ export function previewSettlement(id: string): SettleResponse['settlement'] {
 }
 
 /**
- * The host can end the game whenever they're ready — there's no requirement
- * that every player has recorded a cash-out first. Anyone who hasn't is
- * simply treated as cashing out for ₪0 (settlement.ts already defaults a
- * missing cash-out to 0), since the host is the one physically watching the
- * table and chips.
+ * Host-only. Every player must have a cash-out (the host can enter it for
+ * them via `recordCashOut`) and no buy-in may still be pending — otherwise
+ * money silently goes missing from the settlement.
  */
 export function settleSession(id: string, accountId: string): SettleResponse {
   const session = requireSession(id);
@@ -253,6 +251,16 @@ export function settleSession(id: string, accountId: string): SettleResponse {
     return { session, settlement: computeSettlement(session) };
   }
   requireHost(session, accountId);
+  // Never settle with silent gaps: a missing cash-out used to count as ₪0,
+  // which made chips vanish and everyone look like they lost.
+  const players = Object.values(session.players);
+  const missing = players.filter((p) => !p.cashOut).map((p) => p.name);
+  if (missing.length > 0) {
+    throw new SessionError(`Enter a cash-out for ${missing.join(', ')} before settling.`, 409);
+  }
+  if (players.some((p) => p.buyIns.some((b) => b.status === 'pending'))) {
+    throw new SessionError('Approve or deny the pending buy-in requests before settling.', 409);
+  }
   const settlement = computeSettlement(session);
   const now = Date.now();
   const payments: Payment[] = settlement.transfers.map((t) => {

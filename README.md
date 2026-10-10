@@ -27,9 +27,9 @@ are in shekels (₪).
 4. **Cash-out**: a player enters what they're leaving the table with (even
    ₪0 is a valid cash-out). If someone leaves without entering theirs, the
    host can cash them out from their row on the table screen.
-5. The host taps **Settle game** whenever they're ready to end it — no need
-   to wait for every player to cash out first; anyone who hasn't is simply
-   recorded as cashing out for ₪0. Settling computes each player's net and
+5. The host taps **Settle game**: a sheet lists every player with a cash-out
+   box (already-entered ones filled in) and a live "money in vs. money out"
+   total, so nothing is silently counted as ₪0. Settling computes each player's net and
    the minimum set of payments to square everyone up, and flags it if the
    buy-ins and cash-outs don't quite add up.
 6. Everyone at the table gets a notification saying exactly whom to pay (or

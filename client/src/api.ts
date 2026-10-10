@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type {
   Account,
   AuthResponse,
@@ -139,17 +139,32 @@ export function saveIdentity(identity: SavedIdentity | null): void {
 
 /** Polls a session's state every `intervalMs` so every open phone stays live. */
 export function usePolledSession(sessionId: string | null, intervalMs = 3000) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSessionState] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Every poll and every local update takes a ticket; a poll response is only
+  // applied if nothing newer has landed since it was sent. Without this, a
+  // poll that was already in flight when you tapped "buy in" could come back
+  // with the old state and make your action look like it never happened.
+  const ticket = useRef(0);
+  const applied = useRef(0);
+
+  const setSession = useCallback((s: Session | null) => {
+    ticket.current += 1;
+    applied.current = ticket.current;
+    setSessionState(s);
+  }, []);
 
   const reload = useCallback(async () => {
     if (!sessionId) return;
+    const mine = ++ticket.current;
     try {
       const { session } = await api.get(sessionId);
-      setSession(session);
+      if (mine < applied.current) return; // stale — a newer state is already showing
+      applied.current = mine;
+      setSessionState(session);
       setError(null);
     } catch (err) {
-      setError((err as Error).message);
+      if (mine >= applied.current) setError((err as Error).message);
     }
   }, [sessionId]);
 

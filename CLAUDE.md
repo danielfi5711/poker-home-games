@@ -20,9 +20,10 @@ Buy-in model: a player requests a buy-in for an amount; it sits `pending`
 until the host approves or denies it (the host's own requests auto-approve —
 there's no one above the host). Only `approved` buy-ins count toward a
 player's total or the settlement math. Cash-outs don't need approval — a
-player just records what they're leaving the table with, and the host can
-settle the game whenever they're ready even if some players never cash out
-(treated as a ₪0 cash-out).
+player just records what they're leaving the table with (or the host enters
+it for them in the settle sheet). Settling requires a cash-out for every
+player and no pending buy-ins — a missing cash-out used to count as ₪0,
+which made money vanish.
 
 Usernames double as display names (no separate field) and are globally
 unique, case- and whitespace-insensitively (`src/lib/accounts.ts`'s
@@ -152,10 +153,12 @@ just ASCII, via a Unicode-aware regex.
 - A buy-in is only `pending`, `approved`, or `denied`; only `approved`
   buy-ins are ever summed for a total or settlement — never trust a
   `pending` one for money.
-- `settleSession()` is host-only but does **not** require every player to
-  have cashed out first — a missing cash-out is simply treated as ₪0
-  (`settlement.ts` already defaults it that way); the client warns and
-  confirms before settling if anyone's still mid-game.
+- `settleSession()` is host-only and **refuses** (409) while any player has
+  no cash-out or any buy-in is still pending. The client's `SettleSheet`
+  collects every cash-out with a live in-vs-out total (and can fill the last
+  one with the remainder); a non-zero difference needs an explicit "settle
+  anyway". `usePolledSession` (client/src/api.ts) drops poll responses older
+  than the latest local update so an in-flight poll can't revert an action.
 
 ## Checks
 

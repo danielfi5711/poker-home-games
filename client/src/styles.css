@@ -1641,3 +1641,93 @@ form {
 .pay__amount.negative {
   color: var(--bad);
 }
+
+/* ---------- settle sheet ---------- */
+
+.settle__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.settle__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--felt-dark);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.settle__row--missing {
+  border-color: rgba(229, 187, 94, 0.4);
+}
+
+.settle__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 14px;
+}
+
+.settle__who .muted {
+  font-size: 12px;
+}
+
+.settle__input {
+  width: 118px;
+  flex-shrink: 0;
+  padding: 0 10px;
+}
+
+.settle__input .amountfield__input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 4px;
+  font-size: 17px;
+}
+
+.settle__totals {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--felt-dark);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  color: var(--ink-dim);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.settle__totals strong {
+  color: var(--ink);
+}
+
+.settle__totals--ok {
+  background: var(--good-bg);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: var(--good);
+}
+
+.settle__totals--off {
+  background: var(--bad-bg);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: var(--bad);
+}
+
+.settle__accept {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}

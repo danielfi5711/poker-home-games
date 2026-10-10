@@ -5,6 +5,7 @@ import { formatCents } from '../money.js';
 import { initials } from '../initials.js';
 import { avatarStyle } from '../avatarColor.js';
 import { AmountModal } from './AmountModal.js';
+import { SettleSheet } from './SettleSheet.js';
 import { BellIcon } from '../icons.js';
 
 interface Props {
@@ -24,8 +25,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
   const [flow, setFlow] = useState<'buyin' | null>(null);
   /** Whose cash-out is being entered — your own, or (host only) another player's. */
   const [cashOutFor, setCashOutFor] = useState<string | null>(null);
-  const [settling, setSettling] = useState(false);
-  const [settleError, setSettleError] = useState<string | null>(null);
+  const [settleOpen, setSettleOpen] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
 
   const me = session.players[playerId]!;
@@ -43,34 +43,6 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       /* the next poll will reconcile either way */
     } finally {
       setRespondingTo(null);
-    }
-  }
-
-  async function settleGame() {
-    setSettling(true);
-    setSettleError(null);
-    try {
-      const { settlement } = await api.settlementPreview(session.id);
-      const stillPlaying = players.filter((p) => !p.cashOut);
-      if (stillPlaying.length > 0) {
-        const names = stillPlaying.map((p) => p.name).join(', ');
-        const ok = confirm(
-          `${names} ${stillPlaying.length === 1 ? "hasn't" : "haven't"} cashed out. Tap "Cash out" next to their name to enter their chips — or settle anyway and they'll count as ₪0.\n\nSettle anyway?`,
-        );
-        if (!ok) return;
-      }
-      if (settlement.discrepancyCents !== 0) {
-        const ok = confirm(
-          `Heads up: the buy-ins and cash-outs are off by ${formatCents(Math.abs(settlement.discrepancyCents))}. Settle anyway?`,
-        );
-        if (!ok) return;
-      }
-      const result = await api.settle(session.id);
-      onSettled(result.session);
-    } catch (err) {
-      setSettleError((err as Error).message);
-    } finally {
-      setSettling(false);
     }
   }
 
@@ -171,9 +143,8 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
 
       {isHost && (
         <div class="host-panel">
-          {settleError && <p class="error">{settleError}</p>}
-          <button class="btn btn--primary" onClick={settleGame} disabled={settling}>
-            {settling ? 'Settling…' : 'Settle game'}
+          <button class="btn btn--primary" onClick={() => setSettleOpen(true)}>
+            Settle game
           </button>
         </div>
       )}
@@ -181,6 +152,10 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       <button class="btn btn--ghost" onClick={onLeave}>
         Leave
       </button>
+
+      {settleOpen && (
+        <SettleSheet session={session} onChanged={onChanged} onSettled={onSettled} onCancel={() => setSettleOpen(false)} />
+      )}
 
       {flow === 'buyin' && (
         <AmountModal
