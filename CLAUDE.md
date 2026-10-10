@@ -19,7 +19,9 @@ sessions may still carry a stale `groupId` field; it is ignored.)
 Buy-in model: a player requests a buy-in for an amount; it sits `pending`
 until the host approves or denies it (the host's own requests auto-approve —
 there's no one above the host). Only `approved` buy-ins count toward a
-player's total or the settlement math. Cash-outs don't need approval — a
+player's total or the settlement math. A single buy-in is capped at ₪50
+(`MAX_BUY_IN_CENTS` in `src/shared/types.ts`, enforced by `requestBuyIn()` and
+the buy-in sheet) — buy in again for more. Cash-outs don't need approval — a
 player just records what they're leaving the table with (or the host enters
 it for them in the settle sheet). Settling requires a cash-out for every
 player and no pending buy-ins — a missing cash-out used to count as ₪0,

@@ -18,6 +18,7 @@ import type {
   SettleResponse,
   SettlementResult,
 } from '../shared/types.js';
+import { MAX_BUY_IN_CENTS } from '../shared/types.js';
 
 export class SessionError extends Error {
   constructor(
@@ -175,6 +176,7 @@ export function requestBuyIn(id: string, playerId: string, accountId: string, am
   const player = requirePlayerOwnedBy(session, playerId, accountId);
   const amountCents = sanitizeAmountCents(amountCentsRaw);
   if (amountCents <= 0) throw new SessionError('Buy-in must be worth more than ₪0.', 400);
+  if (amountCents > MAX_BUY_IN_CENTS) throw new SessionError('A buy-in can be at most ₪50.', 400);
 
   const isHost = session.hostPlayerId === playerId;
   const buyIn: BuyIn = {

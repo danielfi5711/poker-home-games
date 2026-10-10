@@ -1,6 +1,6 @@
-import { useState } from "preact/hooks";
-import { parseShekelsToCents } from "../money.js";
-import { Sheet } from "../ui.js";
+import { useState } from 'preact/hooks';
+import { parseShekelsToCents } from '../money.js';
+import { Sheet } from '../ui.js';
 
 interface Props {
   title: string;
@@ -8,28 +8,24 @@ interface Props {
   confirmLabel: string;
   /** Cash-outs are allowed to be ₪0 (busted out); buy-ins must be worth something. */
   allowZero?: boolean;
+  /** Largest allowed amount, in cents. */
+  maxCents?: number;
+  /** Quick-pick amounts in shekels. */
+  quick?: number[];
   onCancel: () => void;
   onConfirm: (amountCents: number) => Promise<void>;
 }
 
 const QUICK = [50, 100, 200, 500];
 
-export function AmountModal({
-  title,
-  hint,
-  confirmLabel,
-  allowZero,
-  onCancel,
-  onConfirm,
-}: Props) {
-  const [shekels, setShekels] = useState("");
+export function AmountModal({ title, hint, confirmLabel, allowZero, maxCents, quick, onCancel, onConfirm }: Props) {
+  const [shekels, setShekels] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const amountCents = parseShekelsToCents(shekels);
-  const valid = allowZero
-    ? amountCents >= 0 && shekels.trim() !== ""
-    : amountCents > 0;
+  const tooBig = maxCents !== undefined && amountCents > maxCents;
+  const valid = (allowZero ? amountCents >= 0 && shekels.trim() !== '' : amountCents > 0) && !tooBig;
 
   async function submit(e: Event) {
     e.preventDefault();
@@ -65,8 +61,10 @@ export function AmountModal({
           />
         </label>
 
+        {tooBig && <p class="error">That's over the ₪{maxCents! / 100} limit for one buy-in.</p>}
+
         <div class="quick">
-          {(allowZero ? [0, ...QUICK.slice(0, 3)] : QUICK).map((n) => (
+          {(quick ?? (allowZero ? [0, ...QUICK.slice(0, 3)] : QUICK)).map((n) => (
             <button type="button" key={n} onClick={() => setShekels(String(n))}>
               ₪{n}
             </button>
@@ -74,20 +72,11 @@ export function AmountModal({
         </div>
 
         <div class="btnrow">
-          <button
-            type="button"
-            class="btn btn--lg"
-            onClick={onCancel}
-            disabled={busy}
-          >
+          <button type="button" class="btn btn--lg" onClick={onCancel} disabled={busy}>
             Cancel
           </button>
-          <button
-            type="submit"
-            class="btn btn--primary btn--lg"
-            disabled={busy || !valid}
-          >
-            {busy ? "Saving…" : confirmLabel}
+          <button type="submit" class="btn btn--primary btn--lg" disabled={busy || !valid}>
+            {busy ? 'Saving…' : confirmLabel}
           </button>
         </div>
       </form>

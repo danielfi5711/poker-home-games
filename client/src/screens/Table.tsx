@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { BuyIn, Session } from '../../../src/shared/types.js';
+import { MAX_BUY_IN_CENTS } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { AmountModal } from './AmountModal.js';
@@ -183,7 +184,12 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       {flow === 'buyin' && (
         <AmountModal
           title="Buy in"
-          hint={isHost ? 'As the host, your own buy-ins are approved automatically.' : "The host will need to approve this before it counts."}
+          hint={
+            (isHost ? 'As the host, your buy-ins are approved automatically.' : 'The host approves it before it counts.') +
+            ' Max ₪50 per buy-in.'
+          }
+          maxCents={MAX_BUY_IN_CENTS}
+          quick={[10, 20, 30, 50]}
           confirmLabel={isHost ? 'Add buy-in' : 'Send request'}
           onCancel={() => setFlow(null)}
           onConfirm={async (amountCents) => {

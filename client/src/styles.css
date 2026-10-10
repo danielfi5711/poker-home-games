@@ -1240,6 +1240,7 @@ form {
 }
 
 .stat {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1260,7 +1261,8 @@ form {
 
 .stat__value {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: clamp(14px, 4.4vw, 18px);
+  white-space: nowrap;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -1808,7 +1810,8 @@ form {
 .settle__input {
   display: flex;
   align-items: center;
-  width: 112px;
+  width: 138px;
+  flex-shrink: 0;
   height: 46px;
   padding: 0 10px;
   border-radius: var(--r-sm);
@@ -1830,12 +1833,13 @@ form {
 .settle__input input {
   width: 100%;
   min-width: 0;
-  padding: 0 4px;
+  padding: 0 2px 0 4px;
+  text-align: end;
   border: none;
   outline: none;
   background: none;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1856,7 +1860,8 @@ form {
 .settle__totals strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: clamp(13px, 3.8vw, 16px);
+  white-space: nowrap;
   color: var(--ink);
 }
 

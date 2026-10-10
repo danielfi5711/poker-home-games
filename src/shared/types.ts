@@ -32,6 +32,9 @@ export interface Player {
   cashOut: CashOut | null;
 }
 
+/** House rule: a single buy-in can be at most ₪50 (buy in again for more). Shared by server + client. */
+export const MAX_BUY_IN_CENTS = 50_00;
+
 export type SessionStatus = 'setup' | 'active' | 'settled';
 
 export interface Session {
