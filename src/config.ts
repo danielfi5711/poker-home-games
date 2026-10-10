@@ -36,13 +36,12 @@ export const config = {
 
   dataFile: process.env.DATA_FILE ?? 'data/sessions.json',
   accountsFile: process.env.ACCOUNTS_FILE ?? 'data/accounts.json',
-  groupsFile: process.env.GROUPS_FILE ?? 'data/groups.json',
   pushFile: process.env.PUSH_FILE ?? 'data/push.json',
 
   /**
    * A session with no activity (no buy-in, cash-out, or setup change) for
    * this many days is left out of the default history/leaderboard view
-   * (still reachable by its join code). Keeps a long-running group's
+   * (still reachable by its join code). Keeps the
    * leaderboard from being dominated by ancient test games.
    */
   historyWindowDays: num('HISTORY_WINDOW_DAYS', 365),

@@ -4,9 +4,9 @@ An installable app (PWA — add it to your phone's home screen, no App Store
 needed) for tracking local poker nights: players request buy-ins, the host
 approves them (with a push notification, so they don't have to be staring at
 their phone), the host ends the game whenever they're ready, and the app
-works out who pays whom — plus an all-time per-group leaderboard with
+works out who pays whom — plus an all-time leaderboard with
 winning/losing streaks and a full match history. No real money moves through
-the app; it's a calculator for a cash game your group already plays. Amounts
+the app; it's a calculator for a cash game your friends already play. Amounts
 are in shekels (₪).
 
 ## How it works
@@ -14,27 +14,24 @@ are in shekels (₪).
 1. **Sign up** with a username and password — no separate display name, your
    username *is* what friends see everywhere (letters from any language,
    including Hebrew, are fine). Usernames are unique, case-insensitively.
-2. **Create or join a group** — a group is one friend circle with its own
-   join code and its own leaderboard. Your poker buddies and your work
-   league can be two completely separate groups with separate standings.
-3. **Host starts a table** inside a group — its name is picked automatically
-   from the day and time (e.g. "Thursday Evening"), no typing needed. Anyone
-   else in the group sees it appear in the table list and taps it to join —
-   no extra code to share for the table itself, since group membership
-   already controls who can get in. The host taps **Start game** once
+2. **Host starts a table** — its name is picked automatically
+   from the day and time (e.g. "Thursday Evening"), no typing needed. Everyone
+   else sees it appear in the table list and taps it to join — no codes or
+   groups; the app is just for one circle of friends, so every account shares
+   the same tables and leaderboard. The host taps **Start game** once
    everyone's seated.
-4. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters an
+3. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters an
    amount, and it sits pending until the host approves or denies it — the
    host gets a push notification the moment it comes in, even if the app
    isn't open. The host's own buy-ins are approved automatically.
-5. **Cash-out**: a player enters what they're leaving the table with (even
+4. **Cash-out**: a player enters what they're leaving the table with (even
    ₪0 is a valid cash-out).
-6. The host taps **Settle game** whenever they're ready to end it — no need
+5. The host taps **Settle game** whenever they're ready to end it — no need
    to wait for every player to cash out first; anyone who hasn't is simply
    recorded as cashing out for ₪0. Settling computes each player's net and
    the minimum set of payments to square everyone up, and flags it if the
    buy-ins and cash-outs don't quite add up.
-7. That table folds into the group's **All-Time Leaderboard** (balance,
+6. That table folds into the **All-Time Leaderboard** (balance,
    winning/losing streaks, biggest win/loss) and its **Match History** (every
    settled game's full per-player breakdown).
 
@@ -89,7 +86,7 @@ This runs on Render's free web-service tier:
 ## Known limitations (first cut)
 
 - Login tokens don't expire (there's no session-timeout/refresh flow) — fine
-  for a casual friend-group app, not meant to hold anything sensitive.
+  for a casual friends-only app, not meant to hold anything sensitive.
 - Push notifications need the app installed (Add to Home Screen / the
   Android app) — a plain browser tab can still subscribe on most platforms,
   but iOS specifically requires the installed/standalone PWA.

@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Account, Group, Session } from '../../src/shared/types.js';
+import type { Account, Session } from '../../src/shared/types.js';
 import {
   api,
   ApiError,
-  loadSavedGroupId,
   loadSavedIdentity,
   loadToken,
-  saveGroupId,
   saveIdentity,
   requestPersistentStorage,
   saveToken,
   usePolledSession,
 } from './api.js';
 import { Login } from './screens/Login.js';
-import { Groups } from './screens/Groups.js';
-import { GroupScreen } from './screens/GroupScreen.js';
+import { Home } from './screens/Home.js';
 import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
@@ -22,16 +19,15 @@ import { SettingsScreen } from './screens/Settings.js';
 import { ChipIcon, BellIcon, GearIcon } from './icons.js';
 import { ensurePushSubscription } from './push.js';
 
-type View = 'login' | 'groups' | 'group' | 'session' | 'settings';
+type View = 'login' | 'home' | 'session' | 'settings';
 
 export function App() {
   const [booting, setBooting] = useState(true);
   const [view, setView] = useState<View>('login');
   const [account, setAccount] = useState<Account | null>(null);
-  const [group, setGroup] = useState<Group | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [returnView, setReturnView] = useState<View>('groups');
+  const [returnView, setReturnView] = useState<View>('home');
 
   useEffect(() => {
     (async () => {
@@ -60,31 +56,13 @@ export function App() {
 
         const savedSession = loadSavedIdentity();
         if (savedSession) {
-          try {
-            const { group } = await api.getGroup(savedSession.groupId);
-            setGroup(group);
-            setSessionId(savedSession.sessionId);
-            setPlayerId(savedSession.playerId);
-            setView('session');
-            return;
-          } catch {
-            saveIdentity(null);
-          }
+          setSessionId(savedSession.sessionId);
+          setPlayerId(savedSession.playerId);
+          setView('session');
+          return;
         }
 
-        const savedGroupId = loadSavedGroupId();
-        if (savedGroupId) {
-          try {
-            const { group } = await api.getGroup(savedGroupId);
-            setGroup(group);
-            setView('group');
-            return;
-          } catch {
-            saveGroupId(null);
-          }
-        }
-
-        setView('groups');
+        setView('home');
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) saveToken(null);
       } finally {
@@ -98,24 +76,11 @@ export function App() {
   function onAuthed(acc: Account) {
     setAccount(acc);
     void ensurePushSubscription();
-    setView('groups');
-  }
-
-  function enterGroup(g: Group) {
-    saveGroupId(g.id);
-    setGroup(g);
-    setView('group');
-  }
-
-  function leaveGroup() {
-    saveGroupId(null);
-    setGroup(null);
-    setView('groups');
+    setView('home');
   }
 
   function enterSession(s: Session, pid: string) {
-    if (!group) return;
-    saveIdentity({ groupId: group.id, sessionId: s.id, playerId: pid });
+    saveIdentity({ sessionId: s.id, playerId: pid });
     setSession(s);
     setSessionId(s.id);
     setPlayerId(pid);
@@ -127,7 +92,7 @@ export function App() {
     setSessionId(null);
     setPlayerId(null);
     setSession(null);
-    setView('group');
+    setView('home');
   }
 
   function openSettings() {
@@ -147,9 +112,7 @@ export function App() {
     }
     saveToken(null);
     saveIdentity(null);
-    saveGroupId(null);
     setAccount(null);
-    setGroup(null);
     setSessionId(null);
     setPlayerId(null);
     setView('login');
@@ -175,19 +138,19 @@ export function App() {
       <header class="topbar">
         <button
           class="topbar__brand"
-          onClick={() => setView(account ? (group ? (session ? 'session' : 'group') : 'groups') : 'login')}
+          onClick={() => setView(account ? 'home' : 'login')}
         >
           <ChipIcon size={22} />
           <span class="topbar__brand-text">Poker Night</span>
         </button>
         {account && (
           <nav class="topbar__nav">
-            {group && (
+            {session && (
               <button
-                class={`topbar__link ${view === 'group' || view === 'session' ? 'topbar__link--active' : ''}`}
-                onClick={() => setView(session ? 'session' : 'group')}
+                class={`topbar__link ${view === 'session' ? 'topbar__link--active' : ''}`}
+                onClick={() => setView('session')}
               >
-                {group.name}
+                Table
                 {pendingCount > 0 && (
                   <span class="topbar__bell">
                     <BellIcon size={13} />
@@ -210,9 +173,7 @@ export function App() {
       <main class="app__main">
         {view === 'login' && <Login onAuthed={onAuthed} />}
 
-        {view === 'groups' && account && <Groups onEnter={enterGroup} />}
-
-        {view === 'group' && group && <GroupScreen group={group} onEnterSession={enterSession} onBack={leaveGroup} />}
+        {view === 'home' && account && <Home onEnterSession={enterSession} />}
 
         {view === 'session' && session && playerId && me && (
           <>
@@ -238,7 +199,7 @@ export function App() {
           <div class="card center">
             <p>{error}</p>
             <button class="btn" onClick={leaveSession}>
-              Back to group
+              Back to tables
             </button>
           </div>
         )}

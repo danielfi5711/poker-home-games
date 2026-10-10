@@ -84,14 +84,13 @@ function sanitizeAmountCents(amountCents: number): number {
   return rounded;
 }
 
-export function createSession(groupId: string, name: string, host: Account): { session: Session; playerId: string } {
+export function createSession(name: string, host: Account): { session: Session; playerId: string } {
   const hostPlayer = newPlayer(host);
   let id = newJoinCode();
   while (data().sessions[id]) id = newJoinCode();
 
   const session: Session = {
     id,
-    groupId,
     name: name.trim().slice(0, 60) || 'Poker Night',
     createdAt: Date.now(),
     status: 'setup',
@@ -247,10 +246,8 @@ export function settleSession(id: string, accountId: string): SettleResponse {
   return { session: requireSession(id), settlement };
 }
 
-export function sessionsForGroup(groupId: string): Session[] {
-  return Object.values(data().sessions)
-    .filter((s) => s.groupId === groupId)
-    .sort((a, b) => b.createdAt - a.createdAt);
+export function allSessions(): Session[] {
+  return Object.values(data().sessions).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 interface StreakAccumulator extends LeaderboardEntry {
@@ -258,10 +255,10 @@ interface StreakAccumulator extends LeaderboardEntry {
   biggestLossMatchName: string | null;
 }
 
-export function history(groupId: string): HistoryResponse {
+export function history(): HistoryResponse {
   const cutoff = Date.now() - config.historyWindowDays * 24 * 60 * 60 * 1000;
   const settled = Object.values(data().sessions).filter(
-    (s) => s.groupId === groupId && s.status === 'settled' && (s.settledAt ?? 0) >= cutoff,
+    (s) => s.status === 'settled' && (s.settledAt ?? 0) >= cutoff,
   );
   // Oldest-first so streaks accumulate in actual chronological order; the
   // running streak after the loop is, by definition, the *current* one.

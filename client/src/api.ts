@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'preact/hooks';
 import type {
   Account,
   AuthResponse,
-  Group,
   HistoryResponse,
   PushSubscriptionJSON,
   Session,
@@ -89,13 +88,9 @@ export const api = {
   vapidPublicKey: () => req<VapidKeyResponse>('GET', '/push/vapid-public-key'),
   subscribePush: (subscription: PushSubscriptionJSON) => req<{ ok: true }>('POST', '/push/subscribe', { subscription }),
 
-  myGroups: () => req<{ groups: Group[] }>('GET', '/groups'),
-  createGroup: (name: string) => req<{ group: Group }>('POST', '/groups', { name }),
-  joinGroup: (joinCode: string) => req<{ group: Group }>('POST', '/groups/join', { joinCode }),
-  getGroup: (groupId: string) => req<{ group: Group }>('GET', `/groups/${groupId}`),
-  groupHistory: (groupId: string) => req<HistoryResponse>('GET', `/groups/${groupId}/history`),
-  groupSessions: (groupId: string) => req<{ sessions: Session[] }>('GET', `/groups/${groupId}/sessions`),
-  createSession: (groupId: string, name: string) => req<SessionResponse>('POST', `/groups/${groupId}/sessions`, { name }),
+  history: () => req<HistoryResponse>('GET', '/history'),
+  sessions: () => req<{ sessions: Session[] }>('GET', '/sessions'),
+  createSession: (name: string) => req<SessionResponse>('POST', '/sessions', { name }),
 
   join: (id: string) => req<SessionResponse>('POST', `/sessions/${id}/join`),
   get: (id: string) => req<{ session: Session }>('GET', `/sessions/${id}`),
@@ -113,7 +108,6 @@ export const api = {
 const SAVED_KEY = 'poker.activeSession';
 
 export interface SavedIdentity {
-  groupId: string;
   sessionId: string;
   playerId: string;
 }
@@ -133,25 +127,6 @@ export function saveIdentity(identity: SavedIdentity | null): void {
     else localStorage.removeItem(SAVED_KEY);
   } catch {
     /* localStorage unavailable — session just won't survive a refresh */
-  }
-}
-
-const SAVED_GROUP_KEY = 'poker.activeGroup';
-
-export function loadSavedGroupId(): string | null {
-  try {
-    return localStorage.getItem(SAVED_GROUP_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function saveGroupId(groupId: string | null): void {
-  try {
-    if (groupId) localStorage.setItem(SAVED_GROUP_KEY, groupId);
-    else localStorage.removeItem(SAVED_GROUP_KEY);
-  } catch {
-    /* ignore */
   }
 }
 

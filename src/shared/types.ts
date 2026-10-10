@@ -36,8 +36,6 @@ export type SessionStatus = 'setup' | 'active' | 'settled';
 
 export interface Session {
   id: string;
-  /** Every table belongs to exactly one group — only that group's members can see or join it. */
-  groupId: string;
   name: string;
   createdAt: number;
   /** 'setup' = lobby, waiting for the host to start; 'active' = playing; 'settled' = final. */
@@ -52,17 +50,6 @@ export interface Account {
   id: string;
   username: string;
   displayName: string;
-  createdAt: number;
-}
-
-/** A friend group: its own roster and its own leaderboard, scoped to the tables created inside it. */
-export interface Group {
-  id: string;
-  name: string;
-  /** Shareable code a friend types in to join this group. */
-  joinCode: string;
-  ownerAccountId: string;
-  memberAccountIds: string[];
   createdAt: number;
 }
 
@@ -89,7 +76,7 @@ export interface SettlementResult {
 
 export type StreakType = 'win' | 'loss' | null;
 
-/** All-time, across every settled game in a group — a player's running balance and streaks. */
+/** All-time, across every settled game — a player's running balance and streaks. */
 export interface LeaderboardEntry {
   accountId: string;
   name: string;
@@ -151,22 +138,6 @@ export interface ChangeUsernameRequest {
 
 export interface AccountResponse {
   account: Account;
-}
-
-export interface CreateGroupRequest {
-  name: string;
-}
-
-export interface JoinGroupRequest {
-  joinCode: string;
-}
-
-export interface GroupResponse {
-  group: Group;
-}
-
-export interface GroupListResponse {
-  groups: Group[];
 }
 
 export interface CreateSessionRequest {

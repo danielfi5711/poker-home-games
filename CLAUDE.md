@@ -2,20 +2,19 @@
 
 ## What this is
 
-An installable PWA for tracking local home poker games: real logins, friend
-groups, host-approved buy-ins, cash-outs, automatic settlement (nets +
-minimal payments) across the table, an all-time per-group leaderboard with
+An installable PWA for tracking local home poker games: real logins, host-approved buy-ins, cash-outs, automatic settlement (nets +
+minimal payments) across the table, an all-time leaderboard with
 winning/losing streaks, a full match history, and push notifications so a
 host doesn't have to be staring at the app to approve a buy-in. No real
-money moves through the app — it's a calculator for a cash game the group
-already plays, not a payment product. Amounts are in shekels (₪).
+money moves through the app — it's a calculator for a cash game the friends
+already play, not a payment product. Amounts are in shekels (₪).
 
 Identity model: every player logs into an **account** (username/password).
-Accounts join **groups** (a friend circle, via a shareable join code).
-**Tables** (a `Session`) are created inside a group, only that group's
-members can see or join them, and a group's leaderboard only ever sums
-settled tables from that group — so each friend group has its own
-independent balance standings, not one global leaderboard.
+The app is for one circle of friends, so there are **no groups**: every
+account sees every **table** (a `Session`), and there is one shared
+leaderboard/match history across all settled tables. (Groups existed
+before and were removed on purpose to keep the app simple — old stored
+sessions may still carry a stale `groupId` field; it is ignored.)
 
 Buy-in model: a player requests a buy-in for an amount; it sits `pending`
 until the host approves or denies it (the host's own requests auto-approve —
@@ -37,19 +36,15 @@ just ASCII, via a Unicode-aware regex.
   `discord-gambling` project.
 - `src/lib/store.ts` / `src/lib/libsql.ts` — copied near-verbatim from
   `discord-gambling`: a debounced-write JSON blob, backed by a file locally
-  or a `kv` table row in libSQL in production. Accounts, groups, sessions,
+  or a `kv` table row in libSQL in production. Accounts, sessions,
   and push subscriptions each get their **own** `JsonStore` instance/file
-  (see `config.accountsFile` / `groupsFile` / `dataFile` / `pushFile`) — four
+  (see `config.accountsFile` / `dataFile` / `pushFile`) — three
   independent blobs, not one shared object.
 - `src/lib/accounts.ts` — registration/login. Passwords are hashed with
   `node:crypto`'s `scrypt` (no dependency) and stored as `salt:hash`; a
   logged-in account gets a random bearer token (`Authorization: Bearer …`)
   that the server maps back to an account id. Tokens don't expire — logout
   just deletes the token server-side.
-- `src/lib/groups.ts` — create/join a group (join by a 5-character code, same
-  charset as table codes), list the groups an account belongs to, and
-  `requireMember()` — the gate every group- and session-scoped route calls
-  before doing anything.
 - `src/lib/sessions.ts` — all table state mutation lives here: create/join a
   table, start it (`activateSession`), request a buy-in (`requestBuyIn` —
   auto-approves for the host, `pending` for everyone else), approve/deny one
@@ -81,19 +76,18 @@ just ASCII, via a Unicode-aware regex.
   routes under `/api/*` plus static-serving the built client with a
   SPA-style fallback to `index.html`. Every route except register/login
   calls `requireAuth()` (resolves the bearer token to an `Account`), and
-  every group- or session-scoped route also checks group membership before
-  touching any data. No WebSocket — the client just polls
+  any logged-in account may see or join any table. No WebSocket — the client just polls
   `GET /api/sessions/:id` every few seconds, which is plenty for a buy-in
   tracker (unlike `discord-gambling`'s live-hand poker room, nothing here is
   latency-sensitive); push notifications cover the "host isn't looking at
   the app right now" case instead.
-- `src/shared/types.ts` — the `Account` / `Group` / `Session` / `Player` /
+- `src/shared/types.ts` — the `Account` / `Session` / `Player` /
   `BuyIn` / `CashOut` / `SettlementResult` / `LeaderboardEntry` /
   `MatchSummary` / `HistoryHighlights` shapes, imported directly by the
   client (see below). **All money is in shekels, stored as integer
   agorot/cents, never floats** — field names stay `*Cents` regardless.
   `LeaderboardEntry.balanceCents` is the sum of that account's net across
-  every settled table in one group — the all-time group leaderboard shown
+  every settled table — the all-time leaderboard shown
   in the Leaderboard tab.
 - `client/` — Preact + Vite, built as a PWA via `vite-plugin-pwa`
   (`vite.config.ts`), using the `injectManifest` strategy (not the default
@@ -118,8 +112,7 @@ just ASCII, via a Unicode-aware regex.
     create-table UI at all.
   - `client/src/screens/` — `Login` (log in / sign up — no separate display
     name field), `Settings` (change name, log out — behind a confirm
-    dialog), `Groups` (list your groups, create one, join one by code),
-    `GroupScreen` (a group's table lobby — create/rejoin a table — plus its
+    dialog), `Home` (the screen right after login: start/rejoin a table, plus its
     `History` tab: all-time leaderboard with streak badges/highlights, and
     match history), `Lobby` (`setup` status — host starts the game once
     everyone's in), `Table` (live buy-in requests/approvals, cash-outs,

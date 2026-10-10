@@ -6,26 +6,21 @@ import { initials } from '../initials.js';
 import { avatarStyle } from '../avatarColor.js';
 import { TrophyIcon } from '../icons.js';
 
-interface Props {
-  groupId: string;
-}
-
 function streakBadge(type: 'win' | 'loss' | null, count: number) {
   if (!type || count < 2) return null;
   return <span class={`streak streak--${type}`}>{type === 'win' ? '🔥' : '🧊'} {count}</span>;
 }
 
-export function HistoryScreen({ groupId }: Props) {
+export function HistoryScreen() {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setData(null);
     api
-      .groupHistory(groupId)
+      .history()
       .then(setData)
       .catch((err) => setError((err as Error).message));
-  }, [groupId]);
+  }, []);
 
   return (
     <>

@@ -1,35 +1,32 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Group, Session } from '../../../src/shared/types.js';
+import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { HistoryScreen } from './History.js';
-import { LinkIcon, CheckIcon } from '../icons.js';
 import { autoSessionName } from '../sessionName.js';
 
 interface Props {
-  group: Group;
   onEnterSession: (session: Session, playerId: string) => void;
-  onBack: () => void;
 }
 
-export function GroupScreen({ group, onEnterSession, onBack }: Props) {
+/** The one home screen: start or rejoin a table, plus the all-time leaderboard. */
+export function Home({ onEnterSession }: Props) {
   const [tab, setTab] = useState<'tables' | 'leaderboard'>('tables');
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api
-      .groupSessions(group.id)
+      .sessions()
       .then((r) => setSessions(r.sessions))
       .catch((err) => setError((err as Error).message));
-  }, [group.id]);
+  }, []);
 
   async function createTable() {
     setBusy(true);
     setError(null);
     try {
-      const { session, playerId } = await api.createSession(group.id, autoSessionName());
+      const { session, playerId } = await api.createSession(autoSessionName());
       onEnterSession(session, playerId!);
     } catch (err) {
       setError((err as Error).message);
@@ -51,35 +48,10 @@ export function GroupScreen({ group, onEnterSession, onBack }: Props) {
     }
   }
 
-  async function copyCode() {
-    try {
-      await navigator.clipboard.writeText(group.joinCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable — the code is shown on screen regardless */
-    }
-  }
-
   const active = (sessions ?? []).filter((s) => s.status !== 'settled');
 
   return (
     <div class="card">
-      <button class="btn btn--ghost" onClick={onBack}>
-        ← All groups
-      </button>
-      <h2>{group.name}</h2>
-      <div class="joincode joincode--compact">
-        <div>
-          <div class="joincode__label">Group code</div>
-          <div class="joincode__value">{group.joinCode}</div>
-        </div>
-        <button class={`btn btn--small ${copied ? 'btn--copied' : ''}`} onClick={copyCode}>
-          {copied ? <CheckIcon size={13} /> : <LinkIcon size={13} />}
-          {copied ? 'Copied!' : 'Copy code'}
-        </button>
-      </div>
-
       <div class="tabs">
         <button class={`tab ${tab === 'tables' ? 'tab--active' : ''}`} onClick={() => setTab('tables')}>
           Tables
@@ -116,7 +88,7 @@ export function GroupScreen({ group, onEnterSession, onBack }: Props) {
           </button>
         </>
       ) : (
-        <HistoryScreen groupId={group.id} />
+        <HistoryScreen />
       )}
     </div>
   );
