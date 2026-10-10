@@ -11,7 +11,7 @@ function streakBadge(type: 'win' | 'loss' | null, count: number) {
   return <span class={`streak streak--${type}`}>{type === 'win' ? '🔥' : '🧊'} {count}</span>;
 }
 
-export function HistoryScreen() {
+export function LeaderboardScreen() {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,38 +80,6 @@ export function HistoryScreen() {
                     {entry.balanceCents > 0 ? '+' : ''}
                     {formatCents(entry.balanceCents)}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <h2>Match History</h2>
-          {data.matches.length === 0 ? (
-            <p class="muted">Nothing here yet.</p>
-          ) : (
-            <ul class="matches">
-              {data.matches.map((m) => (
-                <li key={m.id} class="matches__item">
-                  <div class="matches__head">
-                    <strong>{m.name}</strong>
-                    <span class="muted">{new Date(m.settledAt).toLocaleDateString()}</span>
-                  </div>
-                  <ul class="matches__players">
-                    {[...m.players]
-                      .sort((a, b) => b.netCents - a.netCents)
-                      .map((p) => (
-                        <li key={p.accountId}>
-                          <span class="avatar avatar--sm" style={avatarStyle(p.accountId)}>
-                            {initials(p.name)}
-                          </span>
-                          <span class="matches__playername">{p.name}</span>
-                          <span class={`results__net ${p.netCents > 0 ? 'positive' : p.netCents < 0 ? 'negative' : ''}`}>
-                            {p.netCents > 0 ? '+' : ''}
-                            {formatCents(p.netCents)}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
                 </li>
               ))}
             </ul>

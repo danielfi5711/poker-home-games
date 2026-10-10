@@ -11,15 +11,30 @@ import {
   usePolledSession,
 } from './api.js';
 import { Login } from './screens/Login.js';
-import { Home } from './screens/Home.js';
+import { TablesScreen } from './screens/Tables.js';
+import { LeaderboardScreen } from './screens/Leaderboard.js';
+import { GamesScreen } from './screens/Games.js';
 import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
-import { ChipIcon, BellIcon, GearIcon } from './icons.js';
+import { ChipIcon, BellIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon } from './icons.js';
 import { ensurePushSubscription } from './push.js';
 
 type View = 'login' | 'home' | 'session' | 'settings';
+type HomeTab = 'tables' | 'leaderboard' | 'games';
+
+const HOME_TABS: { id: HomeTab; label: string; icon: typeof CardsIcon }[] = [
+  { id: 'tables', label: 'Tables', icon: CardsIcon },
+  { id: 'leaderboard', label: 'Leaderboard', icon: TrophyIcon },
+  { id: 'games', label: 'Games', icon: ReceiptIcon },
+];
+
+/** `?tab=games` (e.g. from a "game is over" notification) opens straight to that tab. */
+function tabFromUrl(url: string): HomeTab | null {
+  const tab = new URL(url, location.origin).searchParams.get('tab');
+  return HOME_TABS.some((t) => t.id === tab) ? (tab as HomeTab) : null;
+}
 
 export function App() {
   const [booting, setBooting] = useState(true);
@@ -28,6 +43,20 @@ export function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [returnView, setReturnView] = useState<View>('home');
+  const [homeTab, setHomeTab] = useState<HomeTab>(() => tabFromUrl(location.href) ?? 'tables');
+
+  // A tapped notification focuses the already-open app and posts its URL here.
+  useEffect(() => {
+    const sw = navigator.serviceWorker;
+    if (!sw) return;
+    function onMessage(e: MessageEvent) {
+      const data = e.data as { type?: string; url?: string } | null;
+      const tab = data?.type === 'open' && data.url ? tabFromUrl(data.url) : null;
+      if (tab) openHomeTab(tab);
+    }
+    sw.addEventListener('message', onMessage);
+    return () => sw.removeEventListener('message', onMessage);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -55,7 +84,7 @@ export function App() {
         void ensurePushSubscription();
 
         const savedSession = loadSavedIdentity();
-        if (savedSession) {
+        if (savedSession && !tabFromUrl(location.href)) {
           setSessionId(savedSession.sessionId);
           setPlayerId(savedSession.playerId);
           setView('session');
@@ -92,6 +121,11 @@ export function App() {
     setSessionId(null);
     setPlayerId(null);
     setSession(null);
+    setView('home');
+  }
+
+  function openHomeTab(tab: HomeTab) {
+    setHomeTab(tab);
     setView('home');
   }
 
@@ -138,7 +172,7 @@ export function App() {
       <header class="topbar">
         <button
           class="topbar__brand"
-          onClick={() => setView(account ? 'home' : 'login')}
+          onClick={() => (account ? openHomeTab('tables') : setView('login'))}
         >
           <ChipIcon size={22} />
           <span class="topbar__brand-text">Poker Night</span>
@@ -173,7 +207,21 @@ export function App() {
       <main class="app__main">
         {view === 'login' && <Login onAuthed={onAuthed} />}
 
-        {view === 'home' && account && <Home onEnterSession={enterSession} />}
+        {view === 'home' && account && (
+          <div class="tabpanel" key={homeTab}>
+            {homeTab === 'tables' && <TablesScreen onEnterSession={enterSession} />}
+            {homeTab === 'leaderboard' && (
+              <div class="card">
+                <LeaderboardScreen />
+              </div>
+            )}
+            {homeTab === 'games' && (
+              <div class="card">
+                <GamesScreen myAccountId={account.id} />
+              </div>
+            )}
+          </div>
+        )}
 
         {view === 'session' && session && playerId && me && (
           <>
@@ -190,7 +238,16 @@ export function App() {
                 onLeave={leaveSession}
               />
             )}
-            {session.status === 'settled' && <SettlementScreen session={session} playerId={playerId} onLeave={leaveSession} />}
+            {session.status === 'settled' && (
+              <SettlementScreen
+                session={session}
+                playerId={playerId}
+                onLeave={() => {
+                  leaveSession();
+                  openHomeTab('games');
+                }}
+              />
+            )}
           </>
         )}
 
@@ -208,6 +265,25 @@ export function App() {
           <SettingsScreen account={account} onAccountChanged={setAccount} onLogout={logout} onBack={closeSettings} />
         )}
       </main>
+
+      {account && view !== 'login' && (
+        <nav class="bottomnav" aria-label="Main">
+          {HOME_TABS.map(({ id, label, icon: Icon }) => {
+            const active = view === 'home' && homeTab === id;
+            return (
+              <button
+                key={id}
+                class={`bottomnav__item ${active ? 'bottomnav__item--active' : ''}`}
+                onClick={() => openHomeTab(id)}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon size={22} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }

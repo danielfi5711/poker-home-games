@@ -14,6 +14,7 @@ import type {
   Player,
   Session,
   SettleResponse,
+  SettlementResult,
 } from '../shared/types.js';
 
 export class SessionError extends Error {
@@ -243,7 +244,26 @@ export function settleSession(id: string, accountId: string): SettleResponse {
     d.sessions[id].status = 'settled';
     d.sessions[id].settledAt = Date.now();
   });
+  notifySettled(session, settlement);
   return { session: requireSession(id), settlement };
+}
+
+/** Tell every player at the table what they owe or are owed, so nobody has to ask. */
+function notifySettled(session: Session, settlement: SettlementResult): void {
+  const shekels = (cents: number) => `₪${(cents / 100).toFixed(2)}`;
+  for (const player of Object.values(session.players)) {
+    const pays = settlement.transfers.filter((t) => t.fromPlayerId === player.id);
+    const gets = settlement.transfers.filter((t) => t.toPlayerId === player.id);
+    const lines = [
+      ...pays.map((t) => `Send ${shekels(t.amountCents)} to ${session.players[t.toPlayerId]?.name ?? '?'}`),
+      ...gets.map((t) => `${session.players[t.fromPlayerId]?.name ?? '?'} sends you ${shekels(t.amountCents)}`),
+    ];
+    notify(player.accountId, {
+      title: `"${session.name}" is over`,
+      body: lines.length > 0 ? lines.join('\n') : 'You broke even — nothing to pay.',
+      url: '/?tab=games',
+    });
+  }
 }
 
 export function allSessions(): Session[] {
@@ -268,7 +288,7 @@ export function history(): HistoryResponse {
   const matches: MatchSummary[] = [];
 
   for (const session of chronological) {
-    const { netsCents } = computeSettlement(session);
+    const { netsCents, transfers, discrepancyCents } = computeSettlement(session);
     const matchPlayers: MatchSummary['players'] = [];
 
     for (const player of Object.values(session.players)) {
@@ -326,7 +346,24 @@ export function history(): HistoryResponse {
       byAccount.set(player.accountId, entry);
     }
 
-    matches.push({ id: session.id, name: session.name, settledAt: session.settledAt ?? session.createdAt, players: matchPlayers });
+    const nameOf = (playerId: string) => {
+      const player = session.players[playerId];
+      return player ? (getAccount(player.accountId)?.displayName ?? player.name) : '?';
+    };
+    matches.push({
+      id: session.id,
+      name: session.name,
+      settledAt: session.settledAt ?? session.createdAt,
+      players: matchPlayers,
+      transfers: transfers.map((t) => ({
+        fromAccountId: session.players[t.fromPlayerId]?.accountId ?? '',
+        fromName: nameOf(t.fromPlayerId),
+        toAccountId: session.players[t.toPlayerId]?.accountId ?? '',
+        toName: nameOf(t.toPlayerId),
+        amountCents: t.amountCents,
+      })),
+      discrepancyCents,
+    });
   }
 
   matches.sort((a, b) => b.settledAt - a.settledAt);

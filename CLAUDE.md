@@ -60,6 +60,10 @@ just ASCII, via a Unicode-aware regex.
   recent match — a breakeven game resets it to `null`/0), `longestWinStreak`/
   `longestLossStreak`, and `biggestWinCents`/`biggestLossCents`, which also
   feed the `HistoryHighlights` ("🔥 on a 3-game win streak", "💰 biggest win").
+  Each `MatchSummary` also carries that game's `transfers` (by account and
+  name) for the Games tab. Settling a table (`settleSession`) push-notifies
+  every player at it with exactly whom they pay / who pays them.
+
 - `src/lib/push.ts` — Web Push (VAPID). Stores each account's push
   subscription(s) (one per device/browser) and sends a notification when a
   non-host requests a buy-in (to the host) or when the host responds (to the
@@ -112,9 +116,10 @@ just ASCII, via a Unicode-aware regex.
     create-table UI at all.
   - `client/src/screens/` — `Login` (log in / sign up — no separate display
     name field), `Settings` (change name, log out — behind a confirm
-    dialog), `Home` (the screen right after login: start/rejoin a table, plus its
-    `History` tab: all-time leaderboard with streak badges/highlights, and
-    match history), `Lobby` (`setup` status — host starts the game once
+    dialog), the three bottom-nav tabs shown right after login — `Tables`
+    (start/rejoin a table), `Leaderboard` (all-time standings with streak
+    badges/highlights) and `Games` (recent settled games, each expandable to
+    its per-player results and who-pays-whom transfers), `Lobby` (`setup` status — host starts the game once
     everyone's in), `Table` (live buy-in requests/approvals, cash-outs,
     `active` status), `AmountModal` (shared amount-entry sheet for buy-in
     requests and cash-outs), `ConfirmModal` (generic themed confirm dialog,

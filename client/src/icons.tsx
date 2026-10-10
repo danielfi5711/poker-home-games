@@ -165,3 +165,62 @@ export function TrophyIcon({ size = 20 }: IconProps) {
     </svg>
   );
 }
+
+export function CardsIcon({ size = 20 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="8" y="5" width="11" height="15" rx="2" transform="rotate(10 13.5 12.5)" />
+      <path d="M13 4.2 6.6 3.1a2 2 0 0 0-2.3 1.6L2.6 14.6a2 2 0 0 0 1.6 2.3l2.3.4" />
+      <path d="M13.6 10.6l1.4 1.9-1.9 1.4-1.4-1.9z" />
+    </svg>
+  );
+}
+
+export function ReceiptIcon({ size = 20 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+      <path d="M9 8h6" />
+      <path d="M9 12h6" />
+      <path d="M9 16h3" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon({ size = 16 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}

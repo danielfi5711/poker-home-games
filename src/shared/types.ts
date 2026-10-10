@@ -99,12 +99,25 @@ export interface MatchPlayerResult {
   netCents: number;
 }
 
+/** One payment needed to square up a settled match. */
+export interface MatchTransfer {
+  fromAccountId: string;
+  fromName: string;
+  toAccountId: string;
+  toName: string;
+  amountCents: number;
+}
+
 /** A settled match's per-player breakdown — the "match history" entry. */
 export interface MatchSummary {
   id: string;
   name: string;
   settledAt: number;
   players: MatchPlayerResult[];
+  /** Minimal set of payments that squares everyone up for this match. */
+  transfers: MatchTransfer[];
+  /** Nonzero when buy-ins and cash-outs didn't add up (see `SettlementResult`). */
+  discrepancyCents: number;
 }
 
 export interface HistoryHighlights {

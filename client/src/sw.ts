@@ -44,6 +44,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientsList) {
         if ('focus' in client) {
           await client.focus();
+          client.postMessage({ type: 'open', url });
           return;
         }
       }

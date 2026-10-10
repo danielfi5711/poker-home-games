@@ -31,9 +31,10 @@ are in shekels (₪).
    recorded as cashing out for ₪0. Settling computes each player's net and
    the minimum set of payments to square everyone up, and flags it if the
    buy-ins and cash-outs don't quite add up.
-6. That table folds into the **All-Time Leaderboard** (balance,
-   winning/losing streaks, biggest win/loss) and its **Match History** (every
-   settled game's full per-player breakdown).
+6. Everyone at the table gets a notification saying exactly whom to pay (or
+   who pays them) and how much. The game then shows up in the **Games** tab
+   (bottom bar) with its results and payments, and folds into the
+   **Leaderboard** tab (balance, winning/losing streaks, biggest win/loss).
 
 ## Push notifications
 
