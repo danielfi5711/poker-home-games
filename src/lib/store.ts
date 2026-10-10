@@ -20,9 +20,14 @@ export class JsonStore<T> {
   /** Every loaded store, so a shutdown can flush all pending writes at once. */
   private static readonly all = new Set<JsonStore<unknown>>();
 
-  /** Flush every store now — called on SIGTERM so a deploy/restart never drops a just-made change. */
+  /**
+   * Flush every store with an unwritten change — called on SIGTERM so a
+   * deploy/restart never drops a just-made change. Stores with nothing pending
+   * are left alone: during a deploy the new instance is already running, and
+   * re-writing this (older) copy would clobber whatever it has written since.
+   */
   static async flushAll(): Promise<void> {
-    await Promise.all([...JsonStore.all].map((s) => s.flush()));
+    await Promise.all([...JsonStore.all].filter((s) => s.writeTimer !== null).map((s) => s.flush()));
   }
 
   private data: T;

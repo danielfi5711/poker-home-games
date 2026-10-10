@@ -30,12 +30,37 @@ export class SessionError extends Error {
 
 interface Data {
   sessions: Record<string, Session>;
+  /** One-time data fixes already applied (see `runMigrations`). */
+  migrations?: string[];
 }
 
 let store: JsonStore<Data>;
 
 export async function initSessions(): Promise<void> {
   store = await JsonStore.load<Data>(config.dataFile, { sessions: {} });
+  runMigrations();
+}
+
+/** One-shot data fixes, each recorded by name so it never runs twice. */
+function runMigrations(): void {
+  const done = new Set(data().migrations ?? []);
+  const apply = (name: string, fix: (d: Data) => void) => {
+    if (done.has(name)) return;
+    save((d) => {
+      fix(d);
+      d.migrations = [...(d.migrations ?? []), name];
+    });
+    console.log(`Migration applied: ${name}`);
+  };
+
+  // 2026-10-10: the owner asked to clear the leaderboard (only test games so
+  // far). The leaderboard and Games tab are derived from settled tables, so
+  // drop those along with their payments.
+  apply('2026-10-10-clear-leaderboard', (d) => {
+    for (const [id, session] of Object.entries(d.sessions)) {
+      if (session.status === 'settled') delete d.sessions[id];
+    }
+  });
 }
 
 function data(): Data {
