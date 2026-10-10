@@ -1,8 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
-import { initials } from '../initials.js';
-import { avatarStyle } from '../avatarColor.js';
+import { Avatar, SectionLabel } from '../ui.js';
 
 interface Props {
   session: Session;
@@ -16,6 +15,7 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const players = Object.values(session.players).sort((a, b) => a.joinedAt - b.joinedAt);
+  const host = session.players[session.hostPlayerId];
 
   async function start() {
     setBusy(true);
@@ -31,35 +31,41 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
   }
 
   return (
-    <div class="card">
-      <h2>{session.name}</h2>
-      <p class="hint">Waiting in the lobby — the host starts the game once everyone's in.</p>
+    <div class="view">
+      <section class="lobbyhead">
+        <span class="pill pill--gold">Lobby</span>
+        <h1 class="lobbyhead__title">{session.name}</h1>
+        <span class="waitdots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        <p class="hint">{isHost ? 'Start the game once everyone has joined.' : `Waiting for ${host?.name ?? 'the host'} to start the game.`}</p>
+      </section>
 
-      <h3>Players ({players.length})</h3>
-      <ul class="playerlist">
+      <SectionLabel count={players.length}>At the table</SectionLabel>
+      <ul class="surface rows">
         {players.map((p) => (
-          <li key={p.id}>
-            <span class="avatar" style={avatarStyle(p.accountId)}>
-              {initials(p.name)}
+          <li key={p.id} class="row">
+            <Avatar id={p.accountId} name={p.name} />
+            <span class="row__main">
+              <span class="row__title">{p.name}</span>
             </span>
-            <span class="playerlist__name">{p.name}</span>
-            {p.id === session.hostPlayerId && <span class="badge badge--host">Host</span>}
+            {p.id === session.hostPlayerId && <span class="pill pill--gold">Host</span>}
           </li>
         ))}
       </ul>
 
       {error && <p class="error">{error}</p>}
 
-      {isHost ? (
-        <button class="btn btn--primary btn--big" onClick={start} disabled={busy}>
-          {busy ? 'Starting…' : 'Start game'}
+      {isHost && (
+        <button class="btn btn--primary btn--lg btn--block" onClick={start} disabled={busy}>
+          {busy ? 'Starting…' : `Start game · ${players.length} ${players.length === 1 ? 'player' : 'players'}`}
         </button>
-      ) : (
-        <p class="muted">Waiting for the host to start the game…</p>
       )}
 
-      <button class="btn btn--ghost" onClick={onLeave}>
-        Leave
+      <button class="btn btn--ghost btn--block" onClick={onLeave}>
+        Back to tables
       </button>
     </div>
   );

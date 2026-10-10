@@ -1,3 +1,5 @@
+import type { ComponentChildren } from 'preact';
+
 interface IconProps {
   size?: number;
 }
@@ -242,6 +244,125 @@ export function WalletIcon({ size = 20 }: IconProps) {
       <path d="M4 7v11a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3" />
       <path d="M4 7a2 2 0 0 0 2 2h13a1 1 0 0 1 1 1v3" />
       <path d="M20 13h-4a1.5 1.5 0 0 0 0 3h4z" />
+    </svg>
+  );
+}
+
+function Stroke({ size, children, width = 1.9 }: { size: number; children: ComponentChildren; width?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width={width}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+export function PlusIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size} width={2.2}>
+      <path d="M12 5v14M5 12h14" />
+    </Stroke>
+  );
+}
+
+export function ChevronRightIcon({ size = 16 }: IconProps) {
+  return (
+    <Stroke size={size} width={2.2}>
+      <path d="m9 6 6 6-6 6" />
+    </Stroke>
+  );
+}
+
+export function ArrowLeftIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size} width={2.1}>
+      <path d="M19 12H5M11 18l-6-6 6-6" />
+    </Stroke>
+  );
+}
+
+export function PhoneIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </Stroke>
+  );
+}
+
+export function UserIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </Stroke>
+  );
+}
+
+export function LogoutIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+      <path d="M10 17l-5-5 5-5M5 12h11" />
+    </Stroke>
+  );
+}
+
+export function CrownIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function CopyIcon({ size = 16 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+    </Stroke>
+  );
+}
+
+export function UsersIcon({ size = 16 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6" />
+    </Stroke>
+  );
+}
+
+/** Decorative stack of poker chips for hero cards. */
+export function ChipStackArt({ size = 130 }: IconProps) {
+  const chip = (cx: number, cy: number, fill: string, edge: string, key: string) => (
+    <g key={key}>
+      <ellipse cx={cx} cy={cy + 5} rx="34" ry="12" fill="rgba(0,0,0,.35)" />
+      <ellipse cx={cx} cy={cy + 3} rx="34" ry="12" fill={edge} />
+      <ellipse cx={cx} cy={cy} rx="34" ry="12" fill={fill} />
+      <ellipse cx={cx} cy={cy} rx="34" ry="12" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 9" opacity=".8" />
+      <ellipse cx={cx} cy={cy} rx="20" ry="7" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.5" />
+    </g>
+  );
+  return (
+    <svg width={size} height={size} viewBox="0 0 130 130" aria-hidden="true">
+      {chip(70, 104, '#c94040', '#8f2626', 'a')}
+      {chip(70, 92, '#2f6fd1', '#1f4c94', 'b')}
+      {chip(70, 80, '#1d1d1d', '#000', 'c')}
+      {chip(70, 68, '#e9c068', '#a9771f', 'd')}
+      {chip(78, 46, '#c94040', '#8f2626', 'e')}
+      {chip(84, 26, '#e9c068', '#a9771f', 'f')}
     </svg>
   );
 }

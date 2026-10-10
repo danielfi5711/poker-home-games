@@ -1,11 +1,11 @@
 import { useState } from 'preact/hooks';
 import type { Account } from '../../../src/shared/types.js';
 import { api } from '../api.js';
-import { avatarStyle } from '../avatarColor.js';
-import { initials } from '../initials.js';
 import { ConfirmModal } from './ConfirmModal.js';
 import { PhoneForm } from './PhoneForm.js';
 import { formatPhone } from '../phone.js';
+import { ArrowLeftIcon, LogoutIcon, PhoneIcon, UserIcon } from '../icons.js';
+import { Avatar, ScreenHead, SectionLabel } from '../ui.js';
 
 interface Props {
   account: Account;
@@ -15,21 +15,24 @@ interface Props {
 }
 
 export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: Props) {
-  const [editingName, setEditingName] = useState(false);
+  const [editing, setEditing] = useState<'name' | 'phone' | null>(null);
   const [newUsername, setNewUsername] = useState(account.username);
   const [currentPassword, setCurrentPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedNote, setSavedNote] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [phoneSaved, setPhoneSaved] = useState(false);
+
+  function flash(message: string) {
+    setSaved(message);
+    setTimeout(() => setSaved(null), 2500);
+  }
 
   function startEditingName() {
-    setNewUsername(account.username);
+    setNewUsername(account.displayName);
     setCurrentPassword('');
     setError(null);
-    setEditingName(true);
+    setEditing('name');
   }
 
   async function saveName(e: Event) {
@@ -39,9 +42,8 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
     try {
       const { account: updated } = await api.changeUsername(newUsername, currentPassword);
       onAccountChanged(updated);
-      setEditingName(false);
-      setSavedNote(true);
-      setTimeout(() => setSavedNote(false), 2500);
+      setEditing(null);
+      flash('Name updated.');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -50,89 +52,109 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
   }
 
   return (
-    <div class="card">
-      <button class="btn btn--ghost" onClick={onBack}>
-        ← Back
-      </button>
-      <h2>Settings</h2>
+    <div class="view">
+      <ScreenHead
+        title="Settings"
+        action={
+          <button class="iconbtn" onClick={onBack} aria-label="Back">
+            <ArrowLeftIcon />
+          </button>
+        }
+      />
 
-      <h3>Account</h3>
-      <div class="settings__account">
-        <span class="avatar" style={avatarStyle(account.id)}>
-          {initials(account.displayName)}
+      <section class="surface profile">
+        <Avatar id={account.id} name={account.displayName} size="xl" />
+        <span class="row__main">
+          <span class="profile__name">{account.displayName}</span>
+          <span class="row__sub" dir="ltr">
+            {account.phone ? formatPhone(account.phone) : 'No phone number'}
+          </span>
         </span>
-        <span class="settings__name">{account.displayName}</span>
+      </section>
+
+      {saved && <p class="saved">✓ {saved}</p>}
+
+      <SectionLabel>Account</SectionLabel>
+      <div class="surface">
+        <div class="setting">
+          <span class="setting__icon">
+            <UserIcon />
+          </span>
+          <span class="setting__main">
+            <span class="setting__label">Name</span>
+            <span class="setting__value">{account.displayName}</span>
+          </span>
+          {editing !== 'name' && (
+            <button class="btn btn--sm" onClick={startEditingName}>
+              Change
+            </button>
+          )}
+        </div>
+        {editing === 'name' && (
+          <div style={{ padding: '0 16px 16px' }}>
+            <form onSubmit={saveName}>
+              {error && <p class="error">{error}</p>}
+              <label class="field">
+                New name
+                <input value={newUsername} onInput={(e) => setNewUsername(e.currentTarget.value)} maxLength={24} required autoFocus dir="auto" />
+              </label>
+              <label class="field">
+                Current password
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onInput={(e) => setCurrentPassword(e.currentTarget.value)}
+                  placeholder="To confirm it's you"
+                  required
+                  autocomplete="current-password"
+                />
+              </label>
+              <div class="btnrow">
+                <button type="button" class="btn" onClick={() => setEditing(null)} disabled={busy}>
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn--primary" disabled={busy}>
+                  {busy ? 'Saving…' : 'Save name'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        <div class="setting">
+          <span class="setting__icon">
+            <PhoneIcon />
+          </span>
+          <span class="setting__main">
+            <span class="setting__label">Phone · friends pay you on Bit with it</span>
+            <span class="setting__value" dir="ltr" style={{ textAlign: 'start' }}>
+              {account.phone ? formatPhone(account.phone) : 'Not set'}
+            </span>
+          </span>
+          {editing !== 'phone' && (
+            <button class="btn btn--sm" onClick={() => setEditing('phone')}>
+              Change
+            </button>
+          )}
+        </div>
+        {editing === 'phone' && (
+          <div style={{ padding: '0 16px 16px' }}>
+            <PhoneForm
+              initial={account.phone ?? ''}
+              submitLabel="Save number"
+              onCancel={() => setEditing(null)}
+              onSaved={(updated) => {
+                onAccountChanged(updated);
+                setEditing(null);
+                flash('Phone number updated.');
+              }}
+            />
+          </div>
+        )}
       </div>
 
-      {savedNote && <p class="hint settings__saved">Name updated.</p>}
-
-      {!editingName ? (
-        <button class="btn" onClick={startEditingName}>
-          Change name
-        </button>
-      ) : (
-        <form onSubmit={saveName} class="settings__editform">
-          {error && <p class="error">{error}</p>}
-          <label class="field">
-            New name
-            <input
-              value={newUsername}
-              onInput={(e) => setNewUsername(e.currentTarget.value)}
-              maxLength={24}
-              required
-              autoFocus
-              dir="auto"
-            />
-          </label>
-          <label class="field">
-            Current password
-            <input
-              type="password"
-              value={currentPassword}
-              onInput={(e) => setCurrentPassword(e.currentTarget.value)}
-              placeholder="To confirm it's you"
-              required
-              autocomplete="current-password"
-            />
-          </label>
-          <div class="actions">
-            <button type="button" class="btn" onClick={() => setEditingName(false)} disabled={busy}>
-              Cancel
-            </button>
-            <button type="submit" class="btn btn--primary" disabled={busy}>
-              {busy ? 'Saving…' : 'Save name'}
-            </button>
-          </div>
-        </form>
-      )}
-
-      <h3>Phone number</h3>
-      <p class="hint">Friends pay you on Bit with this number.</p>
-      {phoneSaved && <p class="hint settings__saved">Phone number updated.</p>}
-      {!editingPhone ? (
-        <div class="settings__phone">
-          <span dir="ltr">{account.phone ? formatPhone(account.phone) : 'Not set'}</span>
-          <button class="btn btn--small" onClick={() => setEditingPhone(true)}>
-            Change
-          </button>
-        </div>
-      ) : (
-        <PhoneForm
-          initial={account.phone ?? ''}
-          submitLabel="Save number"
-          onCancel={() => setEditingPhone(false)}
-          onSaved={(updated) => {
-            onAccountChanged(updated);
-            setEditingPhone(false);
-            setPhoneSaved(true);
-            setTimeout(() => setPhoneSaved(false), 2500);
-          }}
-        />
-      )}
-
-      <h3>Session</h3>
-      <button class="btn btn--danger" onClick={() => setConfirmingLogout(true)}>
-        Log out
+      <button class="btn btn--danger btn--lg btn--block" onClick={() => setConfirmingLogout(true)}>
+        <LogoutIcon /> Log out
       </button>
 
       {confirmingLogout && (

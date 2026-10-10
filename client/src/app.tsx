@@ -20,7 +20,8 @@ import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
-import { ChipIcon, BellIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
+import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
+import { ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
 
 type View = 'login' | 'home' | 'session' | 'settings';
@@ -185,92 +186,70 @@ export function App() {
   const needsPhone = !!account && !account.phone && view !== 'login' && view !== 'settings';
   const badge = account && payments ? paymentsNeedingAction(payments, account.id) : 0;
 
+  const showNav = !!(account && account.phone && view !== 'login');
+
   if (booting) {
     return (
       <div class="app">
         <main class="app__main">
-          <p class="muted center">Loading…</p>
+          <Spinner label="Opening Poker Night…" />
         </main>
       </div>
     );
   }
 
   return (
-    <div class="app">
-      <header class="topbar">
-        <button
-          class="topbar__brand"
-          onClick={() => (account ? openHomeTab('tables') : setView('login'))}
-        >
-          <ChipIcon size={22} />
-          <span class="topbar__brand-text">Poker Night</span>
-        </button>
-        {account && (
-          <nav class="topbar__nav">
-            {session && (
-              <button
-                class={`topbar__link ${view === 'session' ? 'topbar__link--active' : ''}`}
-                onClick={() => setView('session')}
-              >
-                Table
-                {pendingCount > 0 && (
-                  <span class="topbar__bell">
-                    <BellIcon size={13} />
-                    <span class="topbar__bell-count">{pendingCount}</span>
-                  </span>
-                )}
+    <div class={`app ${showNav ? "app--nav" : ""}`}>
+      {view !== "login" && (
+        <header class="topbar">
+          <button class="brand" onClick={() => (account ? openHomeTab("tables") : setView("login"))}>
+            <ChipIcon size={26} />
+            <span class="brand__name">Poker Night</span>
+          </button>
+          {account && (
+            <div class="topbar__actions">
+              {session && session.status !== "settled" && view !== "session" && (
+                <button class="livechip" onClick={() => setView("session")}>
+                  <span class="livechip__dot" />
+                  Back to table
+                  {pendingCount > 0 && <span class="count">{pendingCount}</span>}
+                </button>
+              )}
+              <button class={`iconbtn ${view === "settings" ? "iconbtn--active" : ""}`} onClick={openSettings} aria-label="Settings">
+                <GearIcon size={19} />
               </button>
-            )}
-            <button
-              class={`topbar__link topbar__link--icon ${view === 'settings' ? 'topbar__link--active' : ''}`}
-              onClick={openSettings}
-              aria-label="Settings"
-            >
-              <GearIcon size={18} />
-            </button>
-          </nav>
-        )}
-      </header>
+            </div>
+          )}
+        </header>
+      )}
 
       <main class="app__main">
-        {view === 'login' && <Login onAuthed={onAuthed} />}
+        {view === "login" && <Login onAuthed={onAuthed} />}
 
         {needsPhone && account && (
-          <div class="card">
-            <h2 class="section-icon">
-              <WalletIcon size={20} />
-              Add your phone number
-            </h2>
-            <p class="hint">Friends pay you on Bit with it after a game, so the app needs it before you continue.</p>
-            <PhoneForm submitLabel="Continue" onSaved={setAccount} />
+          <div class="view">
+            <ScreenHead title="One more thing" sub="Add your phone number so friends can pay you on Bit after a game." />
+            <div class="surface surface--pad">
+              <PhoneForm submitLabel="Continue" onSaved={setAccount} />
+            </div>
           </div>
         )}
 
-        {!needsPhone && view === 'home' && account && (
-          <div class="tabpanel" key={homeTab}>
-            {homeTab === 'tables' && <TablesScreen onEnterSession={enterSession} />}
-            {homeTab === 'leaderboard' && (
-              <div class="card">
-                <LeaderboardScreen />
-              </div>
-            )}
-            {homeTab === 'games' && (
-              <div class="card">
-                <GamesScreen myAccountId={account.id} />
-              </div>
-            )}
-            {homeTab === 'payments' && (
+        {!needsPhone && view === "home" && account && (
+          <div key={homeTab}>
+            {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
+            {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
+            {homeTab === "games" && <GamesScreen myAccountId={account.id} />}
+            {homeTab === "payments" && (
               <PaymentsScreen myAccountId={account.id} payments={payments} error={paymentsError} onChanged={refreshPayments} />
             )}
           </div>
         )}
 
-        {!needsPhone && view === 'session' && session && playerId && me && (
+        {!needsPhone && view === "session" && session && playerId && me && (
           <>
-            {session.status === 'setup' && (
-              <LobbyScreen session={session} isHost={isHost} onChanged={setSession} onLeave={leaveSession} />
-            )}
-            {session.status === 'active' && (
+            {session.status === "setup" && <LobbyScreen session={session} isHost={isHost} onChanged={setSession} onLeave={leaveSession} />}
+            {session.status === "active" && (
               <TableScreen
                 session={session}
                 playerId={playerId}
@@ -280,35 +259,35 @@ export function App() {
                 onLeave={leaveSession}
               />
             )}
-            {session.status === 'settled' && (
+            {session.status === "settled" && (
               <SettlementScreen
                 session={session}
                 playerId={playerId}
                 onLeave={() => {
                   leaveSession();
-                  openHomeTab('payments');
+                  openHomeTab("payments");
                 }}
               />
             )}
           </>
         )}
 
-        {!needsPhone && view === 'session' && sessionId && !session && !error && <p class="muted center">Loading game…</p>}
-        {!needsPhone && view === 'session' && error && (
-          <div class="card center">
-            <p>{error}</p>
-            <button class="btn" onClick={leaveSession}>
+        {!needsPhone && view === "session" && sessionId && !session && !error && <Spinner label="Loading game…" />}
+        {!needsPhone && view === "session" && error && (
+          <div class="view">
+            <p class="error">{error}</p>
+            <button class="btn btn--block" onClick={leaveSession}>
               Back to tables
             </button>
           </div>
         )}
 
-        {view === 'settings' && account && (
+        {view === "settings" && account && (
           <SettingsScreen account={account} onAccountChanged={setAccount} onLogout={logout} onBack={closeSettings} />
         )}
       </main>
 
-      {account && account.phone && view !== 'login' && (
+      {showNav && (
         <nav class="bottomnav" aria-label="Main">
           {HOME_TABS.map(({ id, label, icon: Icon }) => {
             const active = view === 'home' && homeTab === id;
@@ -321,7 +300,7 @@ export function App() {
               >
                 <span class="bottomnav__icon">
                   <Icon size={22} />
-                  {id === 'payments' && badge > 0 && <span class="bottomnav__badge">{badge}</span>}
+                  {id === 'payments' && badge > 0 && <span class="count bottomnav__badge">{badge}</span>}
                 </span>
                 <span>{label}</span>
               </button>

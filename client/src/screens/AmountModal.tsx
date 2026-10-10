@@ -1,5 +1,6 @@
-import { useState } from 'preact/hooks';
-import { parseShekelsToCents, formatCents } from '../money.js';
+import { useState } from "preact/hooks";
+import { parseShekelsToCents } from "../money.js";
+import { Sheet } from "../ui.js";
 
 interface Props {
   title: string;
@@ -11,17 +12,28 @@ interface Props {
   onConfirm: (amountCents: number) => Promise<void>;
 }
 
-export function AmountModal({ title, hint, confirmLabel, allowZero, onCancel, onConfirm }: Props) {
-  const [shekels, setShekels] = useState('');
+const QUICK = [50, 100, 200, 500];
+
+export function AmountModal({
+  title,
+  hint,
+  confirmLabel,
+  allowZero,
+  onCancel,
+  onConfirm,
+}: Props) {
+  const [shekels, setShekels] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const amountCents = parseShekelsToCents(shekels);
-  const valid = allowZero ? amountCents >= 0 && shekels.trim() !== '' : amountCents > 0;
+  const valid = allowZero
+    ? amountCents >= 0 && shekels.trim() !== ""
+    : amountCents > 0;
 
   async function submit(e: Event) {
     e.preventDefault();
-    if (!valid) return;
+    if (!valid || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -33,41 +45,52 @@ export function AmountModal({ title, hint, confirmLabel, allowZero, onCancel, on
   }
 
   return (
-    <div class="modal">
-      <div class="modal__panel">
-        <div class="modal__handle" />
-        <h2>{title}</h2>
-        <p class="hint">{hint}</p>
-        {error && <p class="error">{error}</p>}
+    <Sheet onClose={() => !busy && onCancel()}>
+      <h2 class="modal__title">{title}</h2>
+      <p class="hint">{hint}</p>
+      {error && <p class="error">{error}</p>}
 
-        <form onSubmit={submit}>
-          <label class="field">
-            Amount
-            <div class="amountfield">
-              <span class="amountfield__sign">₪</span>
-              <input
-                autoFocus
-                inputMode="decimal"
-                placeholder="0.00"
-                value={shekels}
-                onInput={(e) => setShekels(e.currentTarget.value)}
-                class="amountfield__input"
-              />
-            </div>
-          </label>
+      <form onSubmit={submit}>
+        <label class="amount">
+          <span class="amount__sign">₪</span>
+          <input
+            autoFocus
+            inputMode="decimal"
+            placeholder="0"
+            value={shekels}
+            onInput={(e) => setShekels(e.currentTarget.value)}
+            class="amount__input"
+            style={{ width: `${Math.max(1, shekels.length || 1) + 0.4}ch` }}
+            aria-label="Amount in shekels"
+          />
+        </label>
 
-          <div class="amountfield__preview">{formatCents(amountCents)}</div>
-
-          <div class="actions">
-            <button type="button" class="btn" onClick={onCancel} disabled={busy}>
-              Cancel
+        <div class="quick">
+          {(allowZero ? [0, ...QUICK.slice(0, 3)] : QUICK).map((n) => (
+            <button type="button" key={n} onClick={() => setShekels(String(n))}>
+              ₪{n}
             </button>
-            <button type="submit" class="btn btn--primary" disabled={busy || !valid}>
-              {busy ? 'Saving…' : confirmLabel}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          ))}
+        </div>
+
+        <div class="btnrow">
+          <button
+            type="button"
+            class="btn btn--lg"
+            onClick={onCancel}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn--primary btn--lg"
+            disabled={busy || !valid}
+          >
+            {busy ? "Saving…" : confirmLabel}
+          </button>
+        </div>
+      </form>
+    </Sheet>
   );
 }

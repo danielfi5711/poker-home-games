@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Account } from '../../../src/shared/types.js';
 import { api, saveToken } from '../api.js';
+import { ChipIcon } from '../icons.js';
 
 interface Props {
   onAuthed: (account: Account) => void;
@@ -29,51 +30,72 @@ export function Login({ onAuthed }: Props) {
     }
   }
 
+  function switchMode(next: 'login' | 'register') {
+    setMode(next);
+    setError(null);
+  }
+
   return (
-    <div class="card">
-      <div class="tabs">
-        <button class={`tab ${mode === 'login' ? 'tab--active' : ''}`} onClick={() => setMode('login')}>
-          Log in
-        </button>
-        <button class={`tab ${mode === 'register' ? 'tab--active' : ''}`} onClick={() => setMode('register')}>
-          Sign up
-        </button>
+    <div class="auth view">
+      <div class="auth__hero">
+        <div class="auth__logo">
+          <ChipIcon size={72} />
+        </div>
+        <h1 class="auth__title">
+          Poker <span>Night</span>
+        </h1>
+        <p class="auth__tag">Buy-ins, cash-outs and who pays whom — sorted for your home game.</p>
+        <div class="suits" aria-hidden="true">
+          <span>♠</span>
+          <span>♥</span>
+          <span>♣</span>
+          <span>♦</span>
+        </div>
       </div>
 
-      {error && <p class="error">{error}</p>}
+      <div class="surface auth__card">
+        <div class={`seg ${mode === 'register' ? 'seg--right' : ''}`}>
+          <span class="seg__thumb" />
+          <button type="button" aria-pressed={mode === 'login'} onClick={() => switchMode('login')}>
+            Log in
+          </button>
+          <button type="button" aria-pressed={mode === 'register'} onClick={() => switchMode('register')}>
+            Sign up
+          </button>
+        </div>
 
-      <form onSubmit={submit}>
-        <label class="field">
-          Username
-          <input
-            value={username}
-            onInput={(e) => setUsername(e.currentTarget.value)}
-            placeholder="yourname"
-            maxLength={24}
-            required
-            autocomplete="username"
-            dir="auto"
-          />
-        </label>
-        {mode === 'register' && <p class="hint">This is what friends see on the leaderboard and at the table.</p>}
+        {error && <p class="error">{error}</p>}
 
-        <label class="field">
-          Password
-          <input
-            type="password"
-            value={password}
-            onInput={(e) => setPassword(e.currentTarget.value)}
-            placeholder={mode === 'register' ? 'At least 6 characters' : 'Password'}
-            minLength={mode === 'register' ? 6 : undefined}
-            required
-            autocomplete={mode === 'login' ? 'current-password' : 'new-password'}
-          />
-        </label>
+        <form onSubmit={submit}>
+          <label class="field">
+            Username
+            <input
+              value={username}
+              onInput={(e) => setUsername(e.currentTarget.value)}
+              placeholder={mode === 'register' ? 'What friends call you' : 'yourname'}
+              maxLength={24}
+              required
+              autocomplete="username"
+              dir="auto"
+            />
+          </label>
 
-        {mode === 'register' && (
-          <>
+          <label class="field">
+            Password
+            <input
+              type="password"
+              value={password}
+              onInput={(e) => setPassword(e.currentTarget.value)}
+              placeholder={mode === 'register' ? 'At least 6 characters' : '••••••'}
+              minLength={mode === 'register' ? 6 : undefined}
+              required
+              autocomplete={mode === 'login' ? 'current-password' : 'new-password'}
+            />
+          </label>
+
+          {mode === 'register' && (
             <label class="field">
-              Phone number
+              Phone number <span class="muted">· friends pay you on Bit with it</span>
               <input
                 type="tel"
                 inputMode="tel"
@@ -85,14 +107,13 @@ export function Login({ onAuthed }: Props) {
                 autocomplete="tel"
               />
             </label>
-            <p class="hint">Friends use it to pay you on Bit after a game.</p>
-          </>
-        )}
+          )}
 
-        <button class="btn btn--primary" type="submit" disabled={busy}>
-          {busy ? (mode === 'login' ? 'Logging in…' : 'Creating account…') : mode === 'login' ? 'Log in' : 'Create account'}
-        </button>
-      </form>
+          <button class="btn btn--primary btn--lg btn--block" type="submit" disabled={busy}>
+            {busy ? (mode === 'login' ? 'Logging in…' : 'Creating account…') : mode === 'login' ? 'Log in' : 'Create account'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

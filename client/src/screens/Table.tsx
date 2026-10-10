@@ -2,11 +2,10 @@ import { useState } from 'preact/hooks';
 import type { BuyIn, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
-import { initials } from '../initials.js';
-import { avatarStyle } from '../avatarColor.js';
 import { AmountModal } from './AmountModal.js';
 import { SettleSheet } from './SettleSheet.js';
-import { BellIcon } from '../icons.js';
+import { BellIcon, PlusIcon } from '../icons.js';
+import { Avatar, Money, SectionLabel } from '../ui.js';
 
 interface Props {
   session: Session;
@@ -46,112 +45,136 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
     }
   }
 
+  const pot = players.reduce((sum, p) => sum + approvedTotal(p.buyIns), 0);
+  const stillPlaying = players.filter((p) => !p.cashOut).length;
+
   return (
-    <div class="card">
-      <h2>{session.name}</h2>
+    <div class="view">
+      <section class="tablehead">
+        <div class="tablehead__top">
+          <span class="row__main">
+            <h1 class="tablehead__name">{session.name}</h1>
+            <span class="row__sub">
+              {stillPlaying} of {players.length} still playing
+            </span>
+          </span>
+          <span class="pill pill--up">
+            <span class="dot-live" /> Live
+          </span>
+        </div>
+        <div class="stats">
+          <div class="stat stat--gold">
+            <span class="stat__label">Pot</span>
+            <span class="stat__value">{formatCents(pot)}</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">You're in</span>
+            <span class="stat__value">{formatCents(approvedTotal(me.buyIns))}</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Players</span>
+            <span class="stat__value">{players.length}</span>
+          </div>
+        </div>
+      </section>
 
       {isHost && pendingRequests.length > 0 && (
-        <div class="requests">
-          <h3 class="section-icon">
-            <BellIcon size={16} />
-            Buy-in requests ({pendingRequests.length})
-          </h3>
-          <ul class="requests__list">
-            {pendingRequests.map(({ player, buyIn }) => (
-              <li key={buyIn.id} class="requests__row">
-                <span class="avatar avatar--sm" style={avatarStyle(player.accountId)}>
-                  {initials(player.name)}
-                </span>
-                <span class="requests__text">
-                  <strong>{player.name}</strong> wants to buy in for <strong>{formatCents(buyIn.amountCents)}</strong>
-                </span>
-                <span class="requests__actions">
-                  <button
-                    class="btn btn--small btn--danger"
-                    onClick={() => respond(buyIn.id, false)}
-                    disabled={respondingTo === buyIn.id}
-                  >
-                    Deny
-                  </button>
-                  <button
-                    class="btn btn--small btn--success"
-                    onClick={() => respond(buyIn.id, true)}
-                    disabled={respondingTo === buyIn.id}
-                  >
-                    Approve
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <section class="requests">
+          <h2 class="requests__title">
+            <BellIcon size={15} />
+            {pendingRequests.length === 1 ? "Buy-in request" : `${pendingRequests.length} buy-in requests`}
+          </h2>
+          {pendingRequests.map(({ player, buyIn }) => (
+            <div key={buyIn.id} class="request">
+              <Avatar id={player.accountId} name={player.name} size="sm" />
+              <span class="request__text">
+                <strong>{player.name}</strong> · <Money cents={buyIn.amountCents} />
+              </span>
+              <span class="request__actions">
+                <button class="btn btn--sm btn--danger" onClick={() => respond(buyIn.id, false)} disabled={respondingTo === buyIn.id}>
+                  Deny
+                </button>
+                <button class="btn btn--sm btn--success" onClick={() => respond(buyIn.id, true)} disabled={respondingTo === buyIn.id}>
+                  Approve
+                </button>
+              </span>
+            </div>
+          ))}
+        </section>
       )}
 
-      <ul class="playerlist playerlist--table">
+      {myPending.length > 0 && (
+        <p class="warning">
+          Your {myPending.length === 1 ? "request" : "requests"} for {myPending.map((b) => formatCents(b.amountCents)).join(", ")}{" "}
+          {myPending.length === 1 ? "is" : "are"} waiting for the host to approve.
+        </p>
+      )}
+
+      <SectionLabel count={players.length}>Players</SectionLabel>
+      <ul class="surface rows">
         {players.map((p) => {
           const total = approvedTotal(p.buyIns);
-          const pending = p.buyIns.filter((b) => b.status === 'pending');
+          const pending = p.buyIns.filter((b) => b.status === "pending");
+          const net = p.cashOut ? p.cashOut.amountCents - total : null;
           return (
-            <li key={p.id} class={p.id === playerId ? 'playerlist__row--me' : ''}>
-              <div class="playerlist__head">
-                <span class="avatar" style={avatarStyle(p.accountId)}>
-                  {initials(p.name)}
-                </span>
-                <span class="playerlist__name">
+            <li key={p.id} class={`row ${p.id === playerId ? "row--me" : ""}`}>
+              <Avatar id={p.accountId} name={p.name} />
+              <span class="row__main">
+                <span class="row__title">
                   {p.name}
-                  {p.id === playerId ? ' (you)' : ''}
+                  {p.id === playerId && <span class="muted"> · you</span>}
                 </span>
-                {p.id === session.hostPlayerId && <span class="badge badge--host">Host</span>}
-                {p.cashOut ? <span class="badge badge--done">Cashed out</span> : <span class="badge badge--live">Playing</span>}
-              </div>
-              <div class="playerlist__meta">
-                <span class="playerlist__buyin">Bought in {formatCents(total)}</span>
-                {pending.length > 0 && (
-                  <span class="playerlist__pending">
-                    {pending.map((b) => formatCents(b.amountCents)).join(', ')} awaiting approval
-                  </span>
+                <span class="seat__status">
+                  <span class="row__sub">In {formatCents(total)}</span>
+                  {p.id === session.hostPlayerId && <span class="pill pill--gold">Host</span>}
+                  {pending.length > 0 && <span class="pill pill--info">+{pending.map((b) => formatCents(b.amountCents)).join(", ")} pending</span>}
+                </span>
+              </span>
+              <span class="row__end">
+                {p.cashOut ? (
+                  <>
+                    <span class="row__sub">Out {formatCents(p.cashOut.amountCents)}</span>
+                    <Money cents={net!} signed />
+                  </>
+                ) : isHost && p.id !== playerId ? (
+                  <button class="btn btn--sm" onClick={() => setCashOutFor(p.id)}>
+                    Cash out
+                  </button>
+                ) : (
+                  <span class="pill pill--up">Playing</span>
                 )}
-                {p.cashOut && <span class="playerlist__status">Cashed out {formatCents(p.cashOut.amountCents)}</span>}
-              </div>
-              {isHost && p.id !== playerId && !p.cashOut && (
-                <button class="btn btn--small playerlist__cashout" onClick={() => setCashOutFor(p.id)}>
-                  Cash out {p.name}
-                </button>
-              )}
+              </span>
             </li>
           );
         })}
       </ul>
 
-      {myPending.length > 0 && (
-        <p class="hint">
-          Your {myPending.length === 1 ? 'request' : 'requests'} for{' '}
-          {myPending.map((b) => formatCents(b.amountCents)).join(', ')} {myPending.length === 1 ? 'is' : 'are'} waiting on the host.
-        </p>
-      )}
-
-      <div class="actions actions--stack">
-        <button class="btn btn--primary btn--big" onClick={() => setFlow('buyin')}>
-          + Request a buy-in
-        </button>
-        {!me.cashOut && (
-          <button class="btn btn--big" onClick={() => setCashOutFor(playerId)}>
-            Cash out
-          </button>
-        )}
-      </div>
-
       {isHost && (
-        <div class="host-panel">
-          <button class="btn btn--primary" onClick={() => setSettleOpen(true)}>
-            Settle game
+        <div class="hostbar">
+          <button class="btn btn--lg btn--block" style={{ borderColor: "var(--gold-line)", color: "var(--gold-hi)" }} onClick={() => setSettleOpen(true)}>
+            End game &amp; settle up
           </button>
         </div>
       )}
 
-      <button class="btn btn--ghost" onClick={onLeave}>
-        Leave
+      <button class="btn btn--ghost btn--block" onClick={onLeave}>
+        Back to tables
       </button>
+
+      <div class="actionbar">
+        <button class="btn btn--primary btn--lg" onClick={() => setFlow("buyin")}>
+          <PlusIcon size={17} /> Buy in
+        </button>
+        {!me.cashOut ? (
+          <button class="btn btn--lg" onClick={() => setCashOutFor(playerId)}>
+            Cash out
+          </button>
+        ) : (
+          <button class="btn btn--lg" disabled>
+            Cashed out {formatCents(me.cashOut.amountCents)}
+          </button>
+        )}
+      </div>
 
       {settleOpen && (
         <SettleSheet session={session} onChanged={onChanged} onSettled={onSettled} onCancel={() => setSettleOpen(false)} />
@@ -159,7 +182,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
 
       {flow === 'buyin' && (
         <AmountModal
-          title="Request a buy-in"
+          title="Buy in"
           hint={isHost ? 'As the host, your own buy-ins are approved automatically.' : "The host will need to approve this before it counts."}
           confirmLabel={isHost ? 'Add buy-in' : 'Send request'}
           onCancel={() => setFlow(null)}

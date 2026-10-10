@@ -66,15 +66,15 @@ export function InstallGate({ children }: { children: ComponentChildren }) {
 
   return (
     <div class="installgate">
-      <div class="installgate__card">
+      <div class="surface installgate__card">
         <img src="/icons/icon-192.png" width={80} height={80} class="installgate__icon" alt="" />
-        <h1>Poker Night</h1>
+        <h1 class="auth__title">Poker <span>Night</span></h1>
         <p class="muted">
           This only runs as an installed app — add it to your home screen to open it.
         </p>
 
         {deferredPrompt && (
-          <button class="btn btn--primary btn--big" onClick={handleInstallClick} disabled={installing}>
+          <button class="btn btn--primary btn--lg btn--block" onClick={handleInstallClick} disabled={installing}>
             {installing ? 'Installing…' : 'Install App'}
           </button>
         )}

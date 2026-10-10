@@ -30,7 +30,7 @@ export function PhoneForm({ initial = '', submitLabel, onSaved, onCancel }: Prop
   }
 
   return (
-    <form onSubmit={submit} class="settings__editform">
+    <form onSubmit={submit}>
       {error && <p class="error">{error}</p>}
       <label class="field">
         Phone number
@@ -46,7 +46,7 @@ export function PhoneForm({ initial = '', submitLabel, onSaved, onCancel }: Prop
           autoFocus
         />
       </label>
-      <div class="actions">
+      <div class="btnrow">
         {onCancel && (
           <button type="button" class="btn" onClick={onCancel} disabled={busy}>
             Cancel

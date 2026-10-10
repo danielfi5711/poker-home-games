@@ -1,3 +1,5 @@
+import { Sheet } from "../ui.js";
+
 interface Props {
   title: string;
   body: string;
@@ -8,22 +10,29 @@ interface Props {
   onConfirm: () => void;
 }
 
-export function ConfirmModal({ title, body, confirmLabel, danger, onCancel, onConfirm }: Props) {
+export function ConfirmModal({
+  title,
+  body,
+  confirmLabel,
+  danger,
+  onCancel,
+  onConfirm,
+}: Props) {
   return (
-    <div class="modal">
-      <div class="modal__panel">
-        <div class="modal__handle" />
-        <h2>{title}</h2>
-        <p class="hint">{body}</p>
-        <div class="actions">
-          <button class="btn" onClick={onCancel}>
-            Cancel
-          </button>
-          <button class={`btn ${danger ? 'btn--danger' : 'btn--primary'}`} onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
+    <Sheet onClose={() => onCancel()}>
+      <h2 class="modal__title">{title}</h2>
+      <p class="hint">{body}</p>
+      <div class="btnrow">
+        <button class="btn btn--lg" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          class={`btn btn--lg ${danger ? "btn--danger" : "btn--primary"}`}
+          onClick={onConfirm}
+        >
+          {confirmLabel}
+        </button>
       </div>
-    </div>
+    </Sheet>
   );
 }
