@@ -46,6 +46,8 @@ export interface Session {
   hostPlayerId: string;
   players: Record<string, Player>;
   settledAt: number | null;
+  /** Last time the host had the lobby open — an unstarted table whose host is gone gets closed. */
+  hostSeenAt?: number;
   /** Created when the game is settled — one per who-pays-whom transfer. Absent on older games. */
   payments?: Payment[];
 }

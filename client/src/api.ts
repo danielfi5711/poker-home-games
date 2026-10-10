@@ -100,6 +100,7 @@ export const api = {
   createSession: (name: string) => req<SessionResponse>('POST', '/sessions', { name }),
 
   join: (id: string) => req<SessionResponse>('POST', `/sessions/${id}/join`),
+  leave: (id: string) => req<{ closed: boolean }>('POST', `/sessions/${id}/leave`),
   get: (id: string) => req<{ session: Session }>('GET', `/sessions/${id}`),
   activate: (id: string) => req<{ session: Session }>('POST', `/sessions/${id}/activate`),
   requestBuyIn: (id: string, playerId: string, amountCents: number) =>

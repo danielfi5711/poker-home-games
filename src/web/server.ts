@@ -17,6 +17,7 @@ import {
   allSessions,
   settleSession,
   paymentsFor,
+  leaveSession,
   startPayment,
   respondPayment,
 } from '../lib/sessions.js';
@@ -242,10 +243,16 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (parts[0] === 'api' && parts[1] === 'sessions' && parts[2]) {
       const id = parts[2];
 
-      // GET /api/sessions/:id
+      // GET /api/sessions/:id (the host polling an open lobby also marks them present)
       if (req.method === 'GET' && parts.length === 3) {
-        requireAuth(req);
-        return sendJson(res, 200, { session: getSession(id) });
+        const account = requireAuth(req);
+        return sendJson(res, 200, { session: getSession(id, account.id) });
+      }
+
+      // POST /api/sessions/:id/leave — the host leaving an unstarted table closes it
+      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'leave') {
+        const account = requireAuth(req);
+        return sendJson(res, 200, leaveSession(id, account.id));
       }
 
       // POST /api/sessions/:id/join

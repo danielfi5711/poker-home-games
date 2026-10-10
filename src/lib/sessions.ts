@@ -74,7 +74,7 @@ function save(mutator: (data: Data) => void): void {
 
 function requireSession(id: string): Session {
   const session = data().sessions[id.toUpperCase()];
-  if (!session) throw new SessionError(`No game found for code "${id}".`, 404);
+  if (!session) throw new SessionError('This table is gone — the host closed it.', 404);
   return session;
 }
 
@@ -134,8 +134,54 @@ export function createSession(name: string, host: Account): { session: Session; 
   return { session, playerId: hostPlayer.id };
 }
 
-export function getSession(id: string): Session {
+/** How long an unstarted table survives without its host having the lobby open. */
+const ABANDONED_LOBBY_MS = 15 * 60_000;
+/** Only persist host presence this often, so an open lobby isn't a database write every poll. */
+const HOST_SEEN_WRITE_MS = 60_000;
+
+export function getSession(id: string, viewerAccountId?: string): Session {
+  const session = requireSession(id);
+  const host = session.players[session.hostPlayerId];
+  if (session.status === 'setup' && viewerAccountId && host?.accountId === viewerAccountId) {
+    const now = Date.now();
+    if (now - (session.hostSeenAt ?? 0) > HOST_SEEN_WRITE_MS) {
+      save((d) => {
+        d.sessions[session.id].hostSeenAt = now;
+      });
+    }
+  }
   return requireSession(id);
+}
+
+function closeTable(session: Session, reason: string): void {
+  save((d) => {
+    delete d.sessions[session.id];
+  });
+  for (const p of Object.values(session.players)) {
+    if (p.id === session.hostPlayerId) continue;
+    notify(p.accountId, { title: `"${session.name}" was closed`, body: reason, url: '/?tab=tables' });
+  }
+}
+
+/** The host left the lobby before starting — the table goes away with them. */
+export function leaveSession(id: string, accountId: string): { closed: boolean } {
+  const session = requireSession(id);
+  const host = session.players[session.hostPlayerId];
+  if (session.status !== 'setup' || host?.accountId !== accountId) return { closed: false };
+  closeTable(session, `${host.name} left before the game started.`);
+  return { closed: true };
+}
+
+/** Closes unstarted tables whose host hasn't had the lobby open for a while (app closed, wandered off). */
+export function closeAbandonedLobbies(): void {
+  const cutoff = Date.now() - ABANDONED_LOBBY_MS;
+  for (const session of Object.values(data().sessions)) {
+    if (session.status !== 'setup') continue;
+    if ((session.hostSeenAt ?? session.createdAt) > cutoff) continue;
+    const host = session.players[session.hostPlayerId];
+    closeTable(session, `${host?.name ?? 'The host'} never started the game.`);
+    console.log(`Closed abandoned lobby ${session.id}`);
+  }
 }
 
 /** Joining is idempotent — reopening a table you're already seated at returns your existing seat. */

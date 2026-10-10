@@ -51,7 +51,10 @@ just ASCII, via a Unicode-aware regex.
 - `src/lib/sessions.ts` — all table state mutation lives here: create/join a
   table, start it (`activateSession`), request a buy-in (`requestBuyIn` —
   auto-approves for the host, `pending` for everyone else), approve/deny one
-  (`respondToBuyIn`, host-only), record a cash-out (a player for themselves, or the host for anyone who
+  (`respondToBuyIn`, host-only), close an unstarted table when its host leaves
+  (`leaveSession`) or hasn't had the lobby open for 15 min (`closeAbandonedLobbies`,
+  every 60s; presence = `hostSeenAt`, refreshed at most once a minute by the
+  host's own lobby polling), record a cash-out (a player for themselves, or the host for anyone who
   didn't — that player is push-notified), and settle (host-only,
   doesn't require every player to have cashed out). Ownership is enforced
   server-side: buy-ins and cash-outs must be posted by the account that owns

@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { Avatar, SectionLabel } from '../ui.js';
+import { ConfirmModal } from './ConfirmModal.js';
 
 interface Props {
   session: Session;
@@ -13,6 +14,7 @@ interface Props {
 export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   const players = Object.values(session.players).sort((a, b) => a.joinedAt - b.joinedAt);
   const host = session.players[session.hostPlayerId];
@@ -40,7 +42,7 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
           <span />
           <span />
         </span>
-        <p class="hint">{isHost ? 'Start the game once everyone has joined.' : `Waiting for ${host?.name ?? 'the host'} to start the game.`}</p>
+        <p class="hint">{isHost ? 'Start the game once everyone has joined. Leaving before you start closes the table.' : `Waiting for ${host?.name ?? 'the host'} to start the game.`}</p>
       </section>
 
       <SectionLabel count={players.length}>At the table</SectionLabel>
@@ -64,9 +66,39 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
         </button>
       )}
 
-      <button class="btn btn--ghost btn--block" onClick={onLeave}>
-        Back to tables
-      </button>
+      {isHost ? (
+        <button class="btn btn--ghost btn--block" onClick={() => setConfirmClose(true)} disabled={busy}>
+          Close table
+        </button>
+      ) : (
+        <button class="btn btn--ghost btn--block" onClick={onLeave}>
+          Back to tables
+        </button>
+      )}
+
+      {confirmClose && (
+        <ConfirmModal
+          title="Close this table?"
+          body={
+            players.length > 1
+              ? `The game hasn't started, so leaving closes the table for everyone — ${players.length - 1} ${players.length === 2 ? 'player' : 'players'} will be told.`
+              : "The game hasn't started, so leaving closes the table."
+          }
+          confirmLabel="Close table"
+          danger
+          onCancel={() => setConfirmClose(false)}
+          onConfirm={async () => {
+            setConfirmClose(false);
+            setBusy(true);
+            try {
+              await api.leave(session.id);
+            } catch {
+              /* already gone — leave regardless */
+            }
+            onLeave();
+          }}
+        />
+      )}
     </div>
   );
 }
