@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PaymentView } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
@@ -18,9 +18,14 @@ const BIT_PLAY_STORE = `https://play.google.com/store/apps/details?id=${BIT_ANDR
 const BIT_APP_STORE = 'https://apps.apple.com/il/app/id1182007739';
 
 /**
- * Bit has no public link that pre-fills the recipient or amount, so the best
- * we can do is launch the app: an Android intent (falls back to the Play Store
- * if Bit isn't installed), or the App Store page on iOS, which has "Open".
+ * Bit has no public link that pre-fills the recipient or amount (only business
+ * accounts get that, via payment providers), so the best we can do is launch
+ * the app: an Android intent (falls back to the Play Store if Bit isn't
+ * installed), or the App Store page on iOS, which has "Open". Bit's iOS URL
+ * scheme isn't documented, and a wrong guess shows an "invalid address" alert,
+ * so iOS stays on the App Store page. The pay sheet makes up for the missing
+ * pre-fill: the number is copied before Bit opens, and when the player comes
+ * back to the app a sheet offers to copy the amount.
  */
 function openBit(): void {
   if (/Android/i.test(navigator.userAgent)) {
@@ -43,9 +48,17 @@ export function paymentsNeedingAction(payments: PaymentView[], myAccountId: stri
 
 const sum = (list: PaymentView[]) => list.reduce((n, p) => n + p.amountCents, 0);
 
+/** The amount as Bit's amount field wants it pasted: "120", "12.5" — no ₪, no commas. */
+const plainAmount = (cents: number) => String(cents / 100);
+
+type Copied = 'phone' | 'amount' | null;
+
 export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Props) {
   const [paying, setPaying] = useState<PaymentView | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Shown when the player switches back from Bit — usually to grab the amount.
+  const [returned, setReturned] = useState<PaymentView | null>(null);
+  const [copied, setCopied] = useState<Copied>(null);
+  const sentToBit = useRef<PaymentView | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -59,20 +72,32 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
     (a, b) => Number(b.status === 'awaiting_confirmation') - Number(a.status === 'awaiting_confirmation'),
   );
 
-  async function copyPhone(p: PaymentView) {
-    if (!p.toPhone) return;
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== 'visible' || !sentToBit.current) return;
+      setCopied(null);
+      setReturned(sentToBit.current);
+      sentToBit.current = null;
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  async function copy(what: 'phone' | 'amount', p: PaymentView) {
+    const text = what === 'phone' ? p.toPhone : plainAmount(p.amountCents);
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(p.toPhone);
-      setCopied(true);
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
     } catch {
-      /* clipboard blocked — the number is shown large anyway */
+      /* clipboard blocked — both values are shown large anyway */
     }
   }
 
   async function startPay(p: PaymentView) {
-    setCopied(false);
+    setCopied(null);
     setPaying(p);
-    await copyPhone(p);
+    await copy('phone', p);
   }
 
   async function openBitFor(p: PaymentView) {
@@ -85,6 +110,9 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
       return;
     }
     setPaying(null);
+    // Re-copy right before leaving, in case the player copied the amount meanwhile.
+    await copy('phone', p);
+    sentToBit.current = p;
     openBit();
   }
 
@@ -227,24 +255,51 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
       {paying && (
         <Sheet onClose={() => setPaying(null)}>
           <h2 class="modal__title">Pay {paying.toName}</h2>
-          <div class="paysheet">
-            <span class="balance__label">Send on Bit</span>
-            <Money cents={paying.amountCents} size="xl" />
-            {paying.toPhone ? (
-              <button
-                class="paysheet__phone"
-                style={{ border: 'none', cursor: 'pointer', color: 'inherit' }}
-                onClick={() => copyPhone(paying)}
-              >
-                <span dir="ltr">{formatPhone(paying.toPhone)}</span>
-                <CopyIcon size={15} />
-              </button>
-            ) : (
-              <span class="muted">{paying.toName} hasn't added a phone number yet</span>
-            )}
-            {copied && <span class="copied">✓ Number copied — paste it in Bit</span>}
-          </div>
-          <p class="hint center">{paying.toName} will be asked to confirm a minute after you open Bit.</p>
+          <ol class="paysteps">
+            <li class="paystep">
+              <span class="paystep__n">1</span>
+              <span class="paystep__body">
+                <span class="paystep__text">
+                  In Bit, tap <strong>Send</strong> (העברה) and paste {paying.toName}'s number
+                </span>
+                {paying.toPhone ? (
+                  <button
+                    class={`copychip ${copied === 'phone' ? 'copychip--done' : ''}`}
+                    onClick={() => copy('phone', paying)}
+                  >
+                    <span dir="ltr">{formatPhone(paying.toPhone)}</span>
+                    {copied === 'phone' ? <CheckIcon size={15} /> : <CopyIcon size={15} />}
+                  </button>
+                ) : (
+                  <span class="muted">{paying.toName} hasn't added a phone number yet</span>
+                )}
+              </span>
+            </li>
+            <li class="paystep">
+              <span class="paystep__n">2</span>
+              <span class="paystep__body">
+                <span class="paystep__text">Enter the amount</span>
+                <button
+                  class={`copychip copychip--amount ${copied === 'amount' ? 'copychip--done' : ''}`}
+                  onClick={() => copy('amount', paying)}
+                >
+                  {formatCents(paying.amountCents)}
+                  {copied === 'amount' ? <CheckIcon size={15} /> : <CopyIcon size={15} />}
+                </button>
+              </span>
+            </li>
+            <li class="paystep">
+              <span class="paystep__n">3</span>
+              <span class="paystep__body">
+                <span class="paystep__text">
+                  Tap send — {paying.toName} will be asked to confirm a minute later
+                </span>
+              </span>
+            </li>
+          </ol>
+          <p class="hint center">
+            {copied === 'phone' ? '✓ Number copied. ' : ''}Tap a number to copy it.
+          </p>
           <div class="btnrow">
             <button class="btn" onClick={() => setPaying(null)}>
               Cancel
@@ -252,6 +307,45 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
             <button class="btn bitbtn" onClick={() => openBitFor(paying)}>
               <span class="bitbtn__mark">bit</span>
               Open Bit
+            </button>
+          </div>
+        </Sheet>
+      )}
+
+      {returned && (
+        <Sheet onClose={() => setReturned(null)}>
+          <h2 class="modal__title">Paying {returned.toName}</h2>
+          <div class="paysheet">
+            <span class="balance__label">Amount to send</span>
+            <Money cents={returned.amountCents} size="xl" />
+            {copied && (
+              <span class="copied">✓ {copied === 'amount' ? 'Amount' : 'Number'} copied — paste it in Bit</span>
+            )}
+          </div>
+          <div class="btnrow">
+            <button class="btn" onClick={() => copy('amount', returned)}>
+              <CopyIcon size={15} /> Copy amount
+            </button>
+            {returned.toPhone && (
+              <button class="btn" onClick={() => copy('phone', returned)}>
+                <CopyIcon size={15} /> Copy number
+              </button>
+            )}
+          </div>
+          <div class="btnrow">
+            <button class="btn btn--ghost" onClick={() => setReturned(null)}>
+              <CheckIcon size={15} /> I sent it
+            </button>
+            <button
+              class="btn bitbtn"
+              onClick={() => {
+                sentToBit.current = returned;
+                setReturned(null);
+                openBit();
+              }}
+            >
+              <span class="bitbtn__mark">bit</span>
+              Back to Bit
             </button>
           </div>
         </Sheet>

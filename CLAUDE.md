@@ -106,7 +106,12 @@ just ASCII, via a Unicode-aware regex.
   it). `sweepPaymentConfirmations()` (every 15s, started in `src/index.ts`)
   sends the receiver the "did it arrive?" push once the due time passes —
   persisted, so restarts don't lose it. "Not yet" resets to `unpaid` and
-  pushes the payer. Bit can't be pre-filled or verified, hence this flow.
+  pushes the payer. Bit can't be pre-filled or verified, hence this flow
+  (pre-filled Bit links exist only for business accounts via payment
+  providers). To compensate, the client's pay sheet (`screens/Payments.tsx`)
+  is a 3-step guide with tap-to-copy number/amount chips; the number is
+  copied before Bit opens, and on `visibilitychange` back to the app a
+  "Paying X" sheet offers Copy amount / Back to Bit.
   `Account.phone` (Israeli mobile, normalized `05XXXXXXXX`) is required at
   register and settable via `PUT /api/auth/phone`; older accounts have
   `null` and the client blocks on a phone form until set.
