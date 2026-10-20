@@ -5,6 +5,7 @@ import { formatCents } from '../money.js';
 import { formatPhone } from '../phone.js';
 import { ArrowRightIcon, CheckIcon, CopyIcon, WalletIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, SectionLabel, Spinner, Sheet } from '../ui.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   myAccountId: string;
@@ -131,7 +132,7 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
 
   return (
     <div class="view">
-      <ScreenHead title="Payments" sub="Settle up after the game — confirmed by whoever gets paid." />
+      <ScreenHead title={tr.payments.title} sub={tr.payments.sub} />
       {error && <p class="error">{error}</p>}
       {actionError && <p class="error">{actionError}</p>}
       {!payments && !error && <Spinner />}
@@ -140,24 +141,24 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
         <>
           <div class="balance">
             <div class="balance__box balance__box--owe">
-              <span class="balance__label">You owe</span>
+              <span class="balance__label">{tr.payments.youOwe}</span>
               <Money cents={sum(toPay)} size="lg" class={toPay.length ? 'money--down' : 'money--even'} />
             </div>
             <div class="balance__box balance__box--get">
-              <span class="balance__label">You're owed</span>
+              <span class="balance__label">{tr.payments.youreOwed}</span>
               <Money cents={sum(toGet)} size="lg" class={toGet.length ? 'money--up' : 'money--even'} />
             </div>
           </div>
 
           {toPay.length === 0 && toGet.length === 0 && (
-            <Empty icon={<WalletIcon size={24} />} title="All square">
-              Nobody owes anybody right now.
+            <Empty icon={<WalletIcon size={24} />} title={tr.payments.allSquare}>
+              {tr.payments.allSquareSub}
             </Empty>
           )}
 
           {toPay.length > 0 && (
             <>
-              <SectionLabel count={toPay.length}>You need to pay</SectionLabel>
+              <SectionLabel count={toPay.length}>{tr.payments.needToPay}</SectionLabel>
               {toPay.map((p) => (
                 <div key={p.id} class="surface paycard">
                   <div class="paycard__top">
@@ -170,12 +171,12 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
                   </div>
                   {p.status === 'awaiting_confirmation' && (
                     <span class="pill pill--gold" style={{ alignSelf: 'flex-start' }}>
-                      Waiting for {p.toName} to confirm
+                      {tr.payments.waitingToConfirm(p.toName)}
                     </span>
                   )}
                   <button class="btn btn--lg btn--block bitbtn" onClick={() => startPay(p)}>
                     <span class="bitbtn__mark">bit</span>
-                    {p.status === 'awaiting_confirmation' ? 'Pay again' : `Pay ${formatCents(p.amountCents)}`}
+                    {p.status === 'awaiting_confirmation' ? tr.payments.payAgain : tr.payments.pay(formatCents(p.amountCents))}
                   </button>
                 </div>
               ))}
@@ -184,7 +185,7 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
 
           {toGet.length > 0 && (
             <>
-              <SectionLabel count={toGet.length}>You need to get</SectionLabel>
+              <SectionLabel count={toGet.length}>{tr.payments.needToGet}</SectionLabel>
               {toGetSorted.map((p) => {
                 const ask = p.status === 'awaiting_confirmation';
                 return (
@@ -200,20 +201,20 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
                     {ask ? (
                       <>
                         <p class="paycard__question">
-                          Did {p.fromName} send you {formatCents(p.amountCents)} on Bit?
+                          {tr.payments.didTheySend(p.fromName, formatCents(p.amountCents))}
                         </p>
                         <div class="btnrow">
                           <button class="btn btn--danger" onClick={() => respond(p, false)} disabled={busyId === p.id}>
-                            Not yet
+                            {tr.payments.notYet}
                           </button>
                           <button class="btn btn--success" onClick={() => respond(p, true)} disabled={busyId === p.id}>
-                            <CheckIcon size={15} /> Got it
+                            <CheckIcon size={15} /> {tr.payments.gotIt}
                           </button>
                         </div>
                       </>
                     ) : (
                       <span class="pill" style={{ alignSelf: 'flex-start' }}>
-                        Waiting for {p.fromName} to pay
+                        {tr.payments.waitingToPay(p.fromName)}
                       </span>
                     )}
                   </div>
@@ -225,18 +226,18 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
           {done.length > 0 && (
             <>
               <button class="btn btn--ghost btn--block" onClick={() => setShowDone(!showDone)} aria-expanded={showDone}>
-                {showDone ? 'Hide' : 'Show'} completed ({done.length})
+                {showDone ? tr.payments.hideDone(done.length) : tr.payments.showDone(done.length)}
               </button>
               {showDone && (
                 <div class="stack stack--tight">
                   {done.map((p) => (
                     <div key={p.id} class="transfer">
                       <span class="transfer__names">
-                        <strong>{p.fromAccountId === myAccountId ? 'You' : p.fromName}</strong>
+                        <strong>{p.fromAccountId === myAccountId ? tr.common.you : p.fromName}</strong>
                         <span class="transfer__arrow">
                           <ArrowRightIcon size={14} />
                         </span>
-                        <strong>{p.toAccountId === myAccountId ? 'You' : p.toName}</strong>
+                        <strong>{p.toAccountId === myAccountId ? tr.common.you : p.toName}</strong>
                         <span class="muted">· {p.sessionName}</span>
                       </span>
                       <Money cents={p.amountCents} />
@@ -254,14 +255,12 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
 
       {paying && (
         <Sheet onClose={() => setPaying(null)}>
-          <h2 class="modal__title">Pay {paying.toName}</h2>
+          <h2 class="modal__title">{tr.payments.payName(paying.toName)}</h2>
           <ol class="paysteps">
             <li class="paystep">
               <span class="paystep__n">1</span>
               <span class="paystep__body">
-                <span class="paystep__text">
-                  In Bit, tap <strong>Send</strong> (העברה) and paste {paying.toName}'s number
-                </span>
+                <span class="paystep__text">{tr.payments.step1(paying.toName)}</span>
                 {paying.toPhone ? (
                   <button
                     class={`copychip ${copied === 'phone' ? 'copychip--done' : ''}`}
@@ -271,14 +270,14 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
                     {copied === 'phone' ? <CheckIcon size={15} /> : <CopyIcon size={15} />}
                   </button>
                 ) : (
-                  <span class="muted">{paying.toName} hasn't added a phone number yet</span>
+                  <span class="muted">{tr.payments.noPhone(paying.toName)}</span>
                 )}
               </span>
             </li>
             <li class="paystep">
               <span class="paystep__n">2</span>
               <span class="paystep__body">
-                <span class="paystep__text">Enter the amount</span>
+                <span class="paystep__text">{tr.payments.step2}</span>
                 <button
                   class={`copychip copychip--amount ${copied === 'amount' ? 'copychip--done' : ''}`}
                   onClick={() => copy('amount', paying)}
@@ -291,22 +290,20 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
             <li class="paystep">
               <span class="paystep__n">3</span>
               <span class="paystep__body">
-                <span class="paystep__text">
-                  Tap send — {paying.toName} will be asked to confirm a minute later
-                </span>
+                <span class="paystep__text">{tr.payments.step3(paying.toName)}</span>
               </span>
             </li>
           </ol>
           <p class="hint center">
-            {copied === 'phone' ? '✓ Number copied. ' : ''}Tap a number to copy it.
+            {copied === 'phone' ? tr.payments.numberCopied : ''}{tr.payments.tapToCopy}
           </p>
           <div class="btnrow">
             <button class="btn" onClick={() => setPaying(null)}>
-              Cancel
+              {tr.common.cancel}
             </button>
             <button class="btn bitbtn" onClick={() => openBitFor(paying)}>
               <span class="bitbtn__mark">bit</span>
-              Open Bit
+              {tr.payments.openBit}
             </button>
           </div>
         </Sheet>
@@ -314,27 +311,27 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
 
       {returned && (
         <Sheet onClose={() => setReturned(null)}>
-          <h2 class="modal__title">Paying {returned.toName}</h2>
+          <h2 class="modal__title">{tr.payments.paying(returned.toName)}</h2>
           <div class="paysheet">
-            <span class="balance__label">Amount to send</span>
+            <span class="balance__label">{tr.payments.amountToSend}</span>
             <Money cents={returned.amountCents} size="xl" />
             {copied && (
-              <span class="copied">✓ {copied === 'amount' ? 'Amount' : 'Number'} copied — paste it in Bit</span>
+              <span class="copied">{copied === 'amount' ? tr.payments.amountCopied : tr.payments.numberCopiedPaste}</span>
             )}
           </div>
           <div class="btnrow">
             <button class="btn" onClick={() => copy('amount', returned)}>
-              <CopyIcon size={15} /> Copy amount
+              <CopyIcon size={15} /> {tr.payments.copyAmount}
             </button>
             {returned.toPhone && (
               <button class="btn" onClick={() => copy('phone', returned)}>
-                <CopyIcon size={15} /> Copy number
+                <CopyIcon size={15} /> {tr.payments.copyNumber}
               </button>
             )}
           </div>
           <div class="btnrow">
             <button class="btn btn--ghost" onClick={() => setReturned(null)}>
-              <CheckIcon size={15} /> I sent it
+              <CheckIcon size={15} /> {tr.payments.iSentIt}
             </button>
             <button
               class="btn bitbtn"
@@ -345,7 +342,7 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
               }}
             >
               <span class="bitbtn__mark">bit</span>
-              Back to Bit
+              {tr.payments.backToBit}
             </button>
           </div>
         </Sheet>

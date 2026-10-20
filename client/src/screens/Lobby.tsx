@@ -3,6 +3,7 @@ import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { Avatar, SectionLabel } from '../ui.js';
 import { ConfirmModal } from './ConfirmModal.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   session: Session;
@@ -35,17 +36,17 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
   return (
     <div class="view">
       <section class="lobbyhead">
-        <span class="pill pill--gold">Lobby</span>
+        <span class="pill pill--gold">{tr.lobby.lobby}</span>
         <h1 class="lobbyhead__title">{session.name}</h1>
         <span class="waitdots" aria-hidden="true">
           <span />
           <span />
           <span />
         </span>
-        <p class="hint">{isHost ? 'Start the game once everyone has joined. Leaving before you start closes the table.' : `Waiting for ${host?.name ?? 'the host'} to start the game.`}</p>
+        <p class="hint">{isHost ? tr.lobby.hostHint : tr.lobby.waitingFor(host?.name ?? null)}</p>
       </section>
 
-      <SectionLabel count={players.length}>At the table</SectionLabel>
+      <SectionLabel count={players.length}>{tr.lobby.atTheTable}</SectionLabel>
       <ul class="surface rows">
         {players.map((p) => (
           <li key={p.id} class="row">
@@ -53,7 +54,7 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
             <span class="row__main">
               <span class="row__title">{p.name}</span>
             </span>
-            {p.id === session.hostPlayerId && <span class="pill pill--gold">Host</span>}
+            {p.id === session.hostPlayerId && <span class="pill pill--gold">{tr.common.host}</span>}
           </li>
         ))}
       </ul>
@@ -62,29 +63,29 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
 
       {isHost && (
         <button class="btn btn--primary btn--lg btn--block" onClick={start} disabled={busy}>
-          {busy ? 'Starting…' : `Start game · ${players.length} ${players.length === 1 ? 'player' : 'players'}`}
+          {busy ? tr.lobby.starting : tr.lobby.startGame(players.length)}
         </button>
       )}
 
       {isHost ? (
         <button class="btn btn--ghost btn--block" onClick={() => setConfirmClose(true)} disabled={busy}>
-          Close table
+          {tr.lobby.closeTable}
         </button>
       ) : (
         <button class="btn btn--ghost btn--block" onClick={onLeave}>
-          Back to tables
+          {tr.common.backToTables}
         </button>
       )}
 
       {confirmClose && (
         <ConfirmModal
-          title="Close this table?"
+          title={tr.lobby.closeTitle}
           body={
             players.length > 1
-              ? `The game hasn't started, so leaving closes the table for everyone — ${players.length - 1} ${players.length === 2 ? 'player' : 'players'} will be told.`
-              : "The game hasn't started, so leaving closes the table."
+              ? tr.lobby.closeBodyOthers(players.length - 1)
+              : tr.lobby.closeBodyAlone
           }
-          confirmLabel="Close table"
+          confirmLabel={tr.lobby.closeTable}
           danger
           onCancel={() => setConfirmClose(false)}
           onConfirm={async () => {

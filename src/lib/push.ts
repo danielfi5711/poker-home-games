@@ -1,6 +1,8 @@
 import webpush from 'web-push';
 import { config } from '../config.js';
 import { JsonStore } from './store.js';
+import { langOf } from './accounts.js';
+import { pushText, type PushText } from './i18n.js';
 import type { PushSubscriptionJSON } from '../shared/types.js';
 
 interface Data {
@@ -51,8 +53,12 @@ export interface NotifyPayload {
   url: string;
 }
 
-/** Fire-and-forget: a push failure never blocks the buy-in/approval request that triggered it. */
-export function notify(accountId: string, payload: NotifyPayload): void {
+/**
+ * Fire-and-forget: a push failure never blocks the buy-in/approval request that triggered it.
+ * `build` gets the recipient's language so the notification reads in it.
+ */
+export function notify(accountId: string, build: (t: PushText) => NotifyPayload): void {
+  const payload = build(pushText(langOf(accountId)));
   if (!pushEnabled()) {
     console.log(`[push disabled] would notify ${accountId}: ${payload.title} — ${payload.body}`);
     return;

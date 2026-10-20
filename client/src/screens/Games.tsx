@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { ArrowRightIcon, ChevronDownIcon, CrownIcon, ReceiptIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, Spinner } from '../ui.js';
+import { locale, tr } from '../i18n.js';
 
 interface Props {
   myAccountId: string;
@@ -27,13 +28,13 @@ export function GamesScreen({ myAccountId }: Props) {
 
   return (
     <div class="view">
-      <ScreenHead title="Games" sub="Every finished game, its results and payments." />
+      <ScreenHead title={tr.games.title} sub={tr.games.sub} />
       {error && <p class="error">{error}</p>}
       {!data && !error && <Spinner />}
 
       {data && data.matches.length === 0 && (
-        <Empty icon={<ReceiptIcon size={24} />} title="No finished games yet">
-          Once a host settles a game, its results and payments show up here.
+        <Empty icon={<ReceiptIcon size={24} />} title={tr.games.empty}>
+          {tr.games.emptySub}
         </Empty>
       )}
 
@@ -53,11 +54,11 @@ interface CardProps {
 
 const statusPill = (status: string | null) =>
   status === 'confirmed' ? (
-    <span class="pill pill--up paylabel">Paid ✓</span>
+    <span class="pill pill--up paylabel">{tr.games.paid}</span>
   ) : status === 'awaiting_confirmation' ? (
-    <span class="pill pill--gold paylabel">Waiting</span>
+    <span class="pill pill--gold paylabel">{tr.games.waiting}</span>
   ) : status === 'unpaid' ? (
-    <span class="pill pill--down paylabel">Unpaid</span>
+    <span class="pill pill--down paylabel">{tr.games.unpaid}</span>
   ) : null;
 
 function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
@@ -71,7 +72,7 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
       <button class="game__head" onClick={onToggle} aria-expanded={open}>
         <span class="game__date">
           <span class="game__day">{date.getDate()}</span>
-          <span class="game__month">{date.toLocaleDateString('en-US', { month: 'short' })}</span>
+          <span class="game__month">{date.toLocaleDateString(locale(), { month: 'short' })}</span>
         </span>
         <span class="row__main">
           <span class="row__title">{match.name}</span>
@@ -81,10 +82,10 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
                 <span style={{ color: 'var(--gold)' }}>
                   <CrownIcon size={11} />
                 </span>{' '}
-                {winner.name} +{formatCents(winner.netCents)} · {match.players.length} players
+                {winner.name} +{formatCents(winner.netCents)} · {tr.common.players(match.players.length)}
               </>
             ) : (
-              `${match.players.length} players`
+              tr.common.players(match.players.length)
             )}
           </span>
         </span>
@@ -102,7 +103,7 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
                 <Avatar id={p.accountId} name={p.name} size="sm" />
                 <span class="minirow__name">
                   {p.name}
-                  {p.accountId === myAccountId ? ' (you)' : ''}
+                  {p.accountId === myAccountId ? tr.common.youParen : ''}
                 </span>
                 <Money cents={p.netCents} signed />
               </div>
@@ -113,24 +114,24 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
 
           <div class="game__section" style={{ paddingTop: '12px' }}>
             <span class="label" style={{ margin: '0 0 2px' }}>
-              Who pays whom
+              {tr.settlement.whoPaysWhom}
             </span>
             {match.discrepancyCents !== 0 && (
-              <p class="warning">Buy-ins and cash-outs were off by {formatCents(Math.abs(match.discrepancyCents))}.</p>
+              <p class="warning">{tr.games.offBy(formatCents(Math.abs(match.discrepancyCents)))}</p>
             )}
             {match.transfers.length === 0 ? (
-              <p class="muted">Nobody owes anybody — everyone broke even.</p>
+              <p class="muted">{tr.settlement.allEven}</p>
             ) : (
               match.transfers.map((t, i) => {
                 const mine = t.fromAccountId === myAccountId || t.toAccountId === myAccountId;
                 return (
                   <div key={i} class={`transfer ${mine ? 'transfer--me' : ''}`}>
                     <span class="transfer__names">
-                      <strong>{t.fromAccountId === myAccountId ? 'You' : t.fromName}</strong>
+                      <strong>{t.fromAccountId === myAccountId ? tr.common.you : t.fromName}</strong>
                       <span class="transfer__arrow">
                         <ArrowRightIcon size={14} />
                       </span>
-                      <strong>{t.toAccountId === myAccountId ? 'You' : t.toName}</strong>
+                      <strong>{t.toAccountId === myAccountId ? tr.common.you : t.toName}</strong>
                     </span>
                     <Money cents={t.amountCents} />
                     {statusPill(t.status)}

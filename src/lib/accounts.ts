@@ -2,7 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { config } from '../config.js';
 import { JsonStore } from './store.js';
 import { newId } from './id.js';
-import type { Account } from '../shared/types.js';
+import type { Account, Lang } from '../shared/types.js';
 
 export class AuthError extends Error {
   constructor(
@@ -13,8 +13,10 @@ export class AuthError extends Error {
   }
 }
 
-interface StoredAccount extends Account {
+interface StoredAccount extends Omit<Account, 'lang'> {
   passwordHash: string;
+  /** Missing on accounts made before languages existed — read as 'en'. */
+  lang?: Lang;
 }
 
 interface AuthToken {
@@ -49,6 +51,7 @@ function toPublic(account: StoredAccount): Account {
     username: account.username,
     displayName: account.displayName,
     phone: account.phone ?? null,
+    lang: account.lang ?? 'en', // accounts made before languages existed
     createdAt: account.createdAt,
   };
 }
@@ -76,7 +79,7 @@ function normalizeUsername(username: string): string {
 // not Latin-only), numbers, single internal spaces, "_", "." or "-"; must
 // start and end on a letter/number so it can't be all punctuation/spaces.
 const USERNAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} _.-]{1,22}[\p{L}\p{N}]$/u;
-const USERNAME_FORMAT_MESSAGE =
+export const USERNAME_FORMAT_MESSAGE =
   'Name must be 3-24 characters: letters (any language), numbers, spaces, "_", "." or "-" — and can\'t start or end with a space or symbol.';
 
 /**
@@ -99,7 +102,7 @@ function validateUsernameFormat(normalized: string): void {
   }
 }
 
-export function register(username: string, password: string, phoneRaw: string): { token: string; account: Account } {
+export function register(username: string, password: string, phoneRaw: string, lang: Lang = 'en'): { token: string; account: Account } {
   const normalized = normalizeUsername(username);
   validateUsernameFormat(normalized);
   if (password.length < 6) throw new AuthError('Password must be at least 6 characters.', 400);
@@ -112,6 +115,7 @@ export function register(username: string, password: string, phoneRaw: string): 
     // displayName always matches the username (as typed, not lowercased) — no separate field.
     displayName: username.trim().replace(/\s+/g, ' ').slice(0, 40),
     phone,
+    lang,
     passwordHash: hashPassword(password),
     createdAt: Date.now(),
   };
@@ -173,6 +177,20 @@ export function setPhone(accountId: string, phoneRaw: string): Account {
     d.accounts[accountId].phone = phone;
   });
   return toPublic(data().accounts[accountId]);
+}
+
+export function setLang(accountId: string, lang: Lang): Account {
+  const account = data().accounts[accountId];
+  if (!account) throw new AuthError('Account not found.', 404);
+  save((d) => {
+    d.accounts[accountId].lang = lang;
+  });
+  return toPublic(data().accounts[accountId]);
+}
+
+/** For push notifications: the language a given account reads. */
+export function langOf(accountId: string): Lang {
+  return data().accounts[accountId]?.lang ?? 'en';
 }
 
 export function logout(token: string): void {

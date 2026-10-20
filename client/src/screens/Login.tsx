@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import type { Account } from '../../../src/shared/types.js';
 import { api, saveToken } from '../api.js';
 import { ChipIcon } from '../icons.js';
+import { tr } from '../i18n.js';
+import { AppTitle, LangSwitch } from '../ui.js';
 
 interface Props {
   onAuthed: (account: Account) => void;
@@ -41,10 +43,8 @@ export function Login({ onAuthed }: Props) {
         <div class="auth__logo">
           <ChipIcon size={72} />
         </div>
-        <h1 class="auth__title">
-          Poker <span>Night</span>
-        </h1>
-        <p class="auth__tag">Buy-ins, cash-outs and who pays whom — sorted for your home game.</p>
+        <AppTitle />
+        <p class="auth__tag">{tr.login.tagline}</p>
         <div class="suits" aria-hidden="true">
           <span>♠</span>
           <span>♥</span>
@@ -57,10 +57,10 @@ export function Login({ onAuthed }: Props) {
         <div class={`seg ${mode === 'register' ? 'seg--right' : ''}`}>
           <span class="seg__thumb" />
           <button type="button" aria-pressed={mode === 'login'} onClick={() => switchMode('login')}>
-            Log in
+            {tr.login.logIn}
           </button>
           <button type="button" aria-pressed={mode === 'register'} onClick={() => switchMode('register')}>
-            Sign up
+            {tr.login.signUp}
           </button>
         </div>
 
@@ -68,11 +68,11 @@ export function Login({ onAuthed }: Props) {
 
         <form onSubmit={submit}>
           <label class="field">
-            Username
+            {tr.login.username}
             <input
               value={username}
               onInput={(e) => setUsername(e.currentTarget.value)}
-              placeholder={mode === 'register' ? 'What friends call you' : 'yourname'}
+              placeholder={mode === 'register' ? tr.login.usernamePlaceholderNew : tr.login.usernamePlaceholder}
               maxLength={24}
               required
               autocomplete="username"
@@ -81,12 +81,12 @@ export function Login({ onAuthed }: Props) {
           </label>
 
           <label class="field">
-            Password
+            {tr.login.password}
             <input
               type="password"
               value={password}
               onInput={(e) => setPassword(e.currentTarget.value)}
-              placeholder={mode === 'register' ? 'At least 6 characters' : '••••••'}
+              placeholder={mode === 'register' ? tr.login.passwordPlaceholderNew : '••••••'}
               minLength={mode === 'register' ? 6 : undefined}
               required
               autocomplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -95,7 +95,7 @@ export function Login({ onAuthed }: Props) {
 
           {mode === 'register' && (
             <label class="field">
-              Phone number <span class="muted">· friends pay you on Bit with it</span>
+              {tr.login.phone} <span class="muted">{tr.login.phoneWhy}</span>
               <input
                 type="tel"
                 inputMode="tel"
@@ -110,10 +110,12 @@ export function Login({ onAuthed }: Props) {
           )}
 
           <button class="btn btn--primary btn--lg btn--block" type="submit" disabled={busy}>
-            {busy ? (mode === 'login' ? 'Logging in…' : 'Creating account…') : mode === 'login' ? 'Log in' : 'Create account'}
+            {busy ? (mode === 'login' ? tr.login.loggingIn : tr.login.creating) : mode === 'login' ? tr.login.logIn : tr.login.create}
           </button>
         </form>
       </div>
+
+      <LangSwitch />
     </div>
   );
 }

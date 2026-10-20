@@ -1,6 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { ShareIcon } from './icons.js';
+import { tr, useLang } from './i18n.js';
+import { AppTitle, LangSwitch } from './ui.js';
 
 function isStandalone(): boolean {
   const displayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -28,6 +30,7 @@ export function InstallGate({ children }: { children: ComponentChildren }) {
   const [installed, setInstalled] = useState(isStandalone());
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installing, setInstalling] = useState(false);
+  useLang(); // InstallGate sits above App, so it re-renders the whole tree on a language change
 
   useEffect(() => {
     const mql = window.matchMedia('(display-mode: standalone)');
@@ -68,42 +71,36 @@ export function InstallGate({ children }: { children: ComponentChildren }) {
     <div class="installgate">
       <div class="surface installgate__card">
         <img src="/icons/icon-192.png" width={80} height={80} class="installgate__icon" alt="" />
-        <h1 class="auth__title">Poker <span>Night</span></h1>
-        <p class="muted">
-          This only runs as an installed app — add it to your home screen to open it.
-        </p>
+        <AppTitle />
+        <LangSwitch />
+        <p class="muted">{tr.install.body}</p>
 
         {deferredPrompt && (
           <button class="btn btn--primary btn--lg btn--block" onClick={handleInstallClick} disabled={installing}>
-            {installing ? 'Installing…' : 'Install App'}
+            {installing ? tr.install.installing : tr.install.install}
           </button>
         )}
 
         {!deferredPrompt && ios && (
           <ol class="installgate__steps">
             <li>
-              Tap the <strong>Share</strong> button{' '}
+              {tr.install.iosStep1Before} <strong>{tr.install.share}</strong>{' '}
               <span class="installgate__shareicon">
                 <ShareIcon size={14} />
               </span>{' '}
-              in Safari's toolbar
+              {tr.install.iosStep1After}
             </li>
             <li>
-              Scroll down and tap <strong>Add to Home Screen</strong>
+              {tr.install.iosStep2Before} <strong>{tr.install.addToHome}</strong>
             </li>
             <li>
-              Tap <strong>Add</strong>, then open <strong>Poker Night</strong> from your home screen
+              {tr.install.iosStep3Tap} <strong>{tr.install.add}</strong>
+              {tr.install.iosStep3Open} <strong>{tr.appName}</strong> {tr.install.iosStep3After}
             </li>
           </ol>
         )}
 
-        {!deferredPrompt && !ios && (
-          <p class="hint">
-            Open this page on your phone in Chrome or Safari, then use the browser menu to
-            "Add to Home Screen" / "Install app." (Desktop browsers that don't support installing a PWA
-            can't open this app.)
-          </p>
-        )}
+        {!deferredPrompt && !ios && <p class="hint">{tr.install.otherBrowsers}</p>}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { ArrowRightIcon } from '../icons.js';
 import { Avatar, Money, SectionLabel, Spinner } from '../ui.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   session: Session;
@@ -30,13 +31,13 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
   return (
     <div class="view">
       <section class="finale">
-        <span class="finale__label">{session.name} · Final</span>
+        <span class="finale__label">{session.name} · {tr.settlement.final}</span>
         {settlement ? (
           <>
             <Money cents={myNet} signed size="xl" />
             <p class="hint">
-              {myNet > 0 ? 'Nice — you won tonight.' : myNet < 0 ? 'Rough night. Next time.' : 'You broke even.'}
-              {myTransfers.length > 0 && ' Your payments are in the Payments tab.'}
+              {myNet > 0 ? tr.settlement.won : myNet < 0 ? tr.settlement.lost : tr.settlement.even}
+              {myTransfers.length > 0 && tr.settlement.seePayments}
             </p>
           </>
         ) : (
@@ -50,11 +51,11 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
         <>
           {settlement.discrepancyCents !== 0 && (
             <p class="warning">
-              Buy-ins and cash-outs are off by {formatCents(Math.abs(settlement.discrepancyCents))} — payments below are the best available split.
+              {tr.settlement.offBy(formatCents(Math.abs(settlement.discrepancyCents)))}
             </p>
           )}
 
-          <SectionLabel>Results</SectionLabel>
+          <SectionLabel>{tr.settlement.results}</SectionLabel>
           <ul class="surface rows">
             {ranked.map((p, i) => (
               <li key={p.id} class={`row ${p.id === playerId ? 'row--me' : ''}`}>
@@ -63,7 +64,7 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
                 <span class="row__main">
                   <span class="row__title">
                     {p.name}
-                    {p.id === playerId && <span class="muted"> · you</span>}
+                    {p.id === playerId && <span class="muted">{tr.common.youSuffix}</span>}
                   </span>
                 </span>
                 <Money cents={settlement.netsCents[p.id] ?? 0} signed size="lg" />
@@ -71,9 +72,9 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
             ))}
           </ul>
 
-          <SectionLabel>Who pays whom</SectionLabel>
+          <SectionLabel>{tr.settlement.whoPaysWhom}</SectionLabel>
           {settlement.transfers.length === 0 ? (
-            <p class="muted">Nobody owes anybody — everyone broke even.</p>
+            <p class="muted">{tr.settlement.allEven}</p>
           ) : (
             <div class="stack stack--tight">
               {settlement.transfers.map((t, i) => {
@@ -81,11 +82,11 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
                 return (
                   <div key={i} class={`transfer ${mine ? 'transfer--me' : ''}`}>
                     <span class="transfer__names">
-                      <strong>{t.fromPlayerId === playerId ? 'You' : session.players[t.fromPlayerId]?.name}</strong>
+                      <strong>{t.fromPlayerId === playerId ? tr.common.you : session.players[t.fromPlayerId]?.name}</strong>
                       <span class="transfer__arrow">
                         <ArrowRightIcon size={14} />
                       </span>
-                      <strong>{t.toPlayerId === playerId ? 'You' : session.players[t.toPlayerId]?.name}</strong>
+                      <strong>{t.toPlayerId === playerId ? tr.common.you : session.players[t.toPlayerId]?.name}</strong>
                     </span>
                     <Money cents={t.amountCents} />
                   </div>
@@ -97,7 +98,7 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
       )}
 
       <button class="btn btn--primary btn--lg btn--block" onClick={onLeave}>
-        {myTransfers.length > 0 ? 'Go to payments' : 'Done'}
+        {myTransfers.length > 0 ? tr.settlement.goToPayments : tr.settlement.done}
       </button>
     </div>
   );

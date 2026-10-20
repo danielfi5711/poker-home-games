@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { parseShekelsToCents } from '../money.js';
+import { formatCents, parseShekelsToCents } from '../money.js';
+import { tr } from '../i18n.js';
 import { Sheet } from '../ui.js';
 
 interface Props {
@@ -57,11 +58,11 @@ export function AmountModal({ title, hint, confirmLabel, allowZero, maxCents, qu
             onInput={(e) => setShekels(e.currentTarget.value)}
             class="amount__input"
             style={{ width: `${Math.max(1, shekels.length || 1) + 0.4}ch` }}
-            aria-label="Amount in shekels"
+            aria-label={tr.amount.ariaLabel}
           />
         </label>
 
-        {tooBig && <p class="error">That's over the ₪{maxCents! / 100} limit for one buy-in.</p>}
+        {tooBig && <p class="error">{tr.amount.overLimit(formatCents(maxCents!))}</p>}
 
         <div class="quick">
           {(quick ?? (allowZero ? [0, ...QUICK.slice(0, 3)] : QUICK)).map((n) => (
@@ -73,10 +74,10 @@ export function AmountModal({ title, hint, confirmLabel, allowZero, maxCents, qu
 
         <div class="btnrow">
           <button type="button" class="btn btn--lg" onClick={onCancel} disabled={busy}>
-            Cancel
+            {tr.common.cancel}
           </button>
           <button type="submit" class="btn btn--primary btn--lg" disabled={busy || !valid}>
-            {busy ? 'Saving…' : confirmLabel}
+            {busy ? tr.common.saving : confirmLabel}
           </button>
         </div>
       </form>

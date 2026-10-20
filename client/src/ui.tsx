@@ -3,6 +3,7 @@ import { createPortal } from 'preact/compat';
 import { avatarStyle } from './avatarColor.js';
 import { initials } from './initials.js';
 import { formatCents } from './money.js';
+import { setLang, tr, useLang } from './i18n.js';
 
 /** Shared visual building blocks so every screen speaks the same design language. */
 
@@ -72,7 +73,7 @@ export function Empty({ icon, title, children }: { icon: ComponentChildren; titl
   );
 }
 
-export function Spinner({ label = 'Loading…' }: { label?: string }) {
+export function Spinner({ label = tr.common.loading }: { label?: string }) {
   return (
     <div class="loading" role="status">
       <span class="loading__chip" />
@@ -95,5 +96,31 @@ export function Sheet({ onClose, children }: { onClose?: () => void; children: C
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** English / עברית toggle. Each option is written in its own language, so it's findable from either. */
+export function LangSwitch() {
+  const current = useLang();
+  return (
+    <div class={`seg ${current === 'he' ? 'seg--right' : ''}`} role="group" aria-label="Language / שפה">
+      <span class="seg__thumb" />
+      <button type="button" aria-pressed={current === 'en'} onClick={() => setLang('en')} lang="en">
+        English
+      </button>
+      <button type="button" aria-pressed={current === 'he'} onClick={() => setLang('he')} lang="he">
+        עברית
+      </button>
+    </div>
+  );
+}
+
+/** "Poker Night" / "ערב פוקר" with the second word in gold. */
+export function AppTitle() {
+  const [first, second] = tr.appName.split(' ');
+  return (
+    <h1 class="auth__title">
+      {first} <span>{second}</span>
+    </h1>
   );
 }

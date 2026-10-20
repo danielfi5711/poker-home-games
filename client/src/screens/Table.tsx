@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { AmountModal } from './AmountModal.js';
 import { SettleSheet } from './SettleSheet.js';
+import { tr } from '../i18n.js';
 import { BellIcon, PlusIcon } from '../icons.js';
 import { Avatar, Money, SectionLabel } from '../ui.js';
 
@@ -56,24 +57,24 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
           <span class="row__main">
             <h1 class="tablehead__name">{session.name}</h1>
             <span class="row__sub">
-              {stillPlaying} of {players.length} still playing
+              {tr.table.stillPlaying(stillPlaying, players.length)}
             </span>
           </span>
           <span class="pill pill--up">
-            <span class="dot-live" /> Live
+            <span class="dot-live" /> {tr.common.live}
           </span>
         </div>
         <div class="stats">
           <div class="stat stat--gold">
-            <span class="stat__label">Pot</span>
+            <span class="stat__label">{tr.table.pot}</span>
             <span class="stat__value">{formatCents(pot)}</span>
           </div>
           <div class="stat">
-            <span class="stat__label">You're in</span>
+            <span class="stat__label">{tr.table.youreIn}</span>
             <span class="stat__value">{formatCents(approvedTotal(me.buyIns))}</span>
           </div>
           <div class="stat">
-            <span class="stat__label">Players</span>
+            <span class="stat__label">{tr.table.players}</span>
             <span class="stat__value">{players.length}</span>
           </div>
         </div>
@@ -83,7 +84,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
         <section class="requests">
           <h2 class="requests__title">
             <BellIcon size={15} />
-            {pendingRequests.length === 1 ? "Buy-in request" : `${pendingRequests.length} buy-in requests`}
+            {tr.table.requests(pendingRequests.length)}
           </h2>
           {pendingRequests.map(({ player, buyIn }) => (
             <div key={buyIn.id} class="request">
@@ -93,10 +94,10 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
               </span>
               <span class="request__actions">
                 <button class="btn btn--sm btn--danger" onClick={() => respond(buyIn.id, false)} disabled={respondingTo === buyIn.id}>
-                  Deny
+                  {tr.table.deny}
                 </button>
                 <button class="btn btn--sm btn--success" onClick={() => respond(buyIn.id, true)} disabled={respondingTo === buyIn.id}>
-                  Approve
+                  {tr.table.approve}
                 </button>
               </span>
             </div>
@@ -105,13 +106,10 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       )}
 
       {myPending.length > 0 && (
-        <p class="warning">
-          Your {myPending.length === 1 ? "request" : "requests"} for {myPending.map((b) => formatCents(b.amountCents)).join(", ")}{" "}
-          {myPending.length === 1 ? "is" : "are"} waiting for the host to approve.
-        </p>
+        <p class="warning">{tr.table.myPending(myPending.map((b) => formatCents(b.amountCents)))}</p>
       )}
 
-      <SectionLabel count={players.length}>Players</SectionLabel>
+      <SectionLabel count={players.length}>{tr.table.players}</SectionLabel>
       <ul class="surface rows">
         {players.map((p) => {
           const total = approvedTotal(p.buyIns);
@@ -123,26 +121,26 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
               <span class="row__main">
                 <span class="row__title">
                   {p.name}
-                  {p.id === playerId && <span class="muted"> · you</span>}
+                  {p.id === playerId && <span class="muted">{tr.common.youSuffix}</span>}
                 </span>
                 <span class="seat__status">
-                  <span class="row__sub">In {formatCents(total)}</span>
-                  {p.id === session.hostPlayerId && <span class="pill pill--gold">Host</span>}
-                  {pending.length > 0 && <span class="pill pill--info">+{pending.map((b) => formatCents(b.amountCents)).join(", ")} pending</span>}
+                  <span class="row__sub">{tr.table.inAmount(formatCents(total))}</span>
+                  {p.id === session.hostPlayerId && <span class="pill pill--gold">{tr.common.host}</span>}
+                  {pending.length > 0 && <span class="pill pill--info">{tr.table.pending(pending.map((b) => formatCents(b.amountCents)))}</span>}
                 </span>
               </span>
               <span class="row__end">
                 {p.cashOut ? (
                   <>
-                    <span class="row__sub">Out {formatCents(p.cashOut.amountCents)}</span>
+                    <span class="row__sub">{tr.table.outAmount(formatCents(p.cashOut.amountCents))}</span>
                     <Money cents={net!} signed />
                   </>
                 ) : isHost && p.id !== playerId ? (
                   <button class="btn btn--sm" onClick={() => setCashOutFor(p.id)}>
-                    Cash out
+                    {tr.table.cashOut}
                   </button>
                 ) : (
-                  <span class="pill pill--up">Playing</span>
+                  <span class="pill pill--up">{tr.table.playing}</span>
                 )}
               </span>
             </li>
@@ -153,26 +151,26 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       {isHost && (
         <div class="hostbar">
           <button class="btn btn--lg btn--block" style={{ borderColor: "var(--gold-line)", color: "var(--gold-hi)" }} onClick={() => setSettleOpen(true)}>
-            End game &amp; settle up
+            {tr.table.endAndSettle}
           </button>
         </div>
       )}
 
       <button class="btn btn--ghost btn--block" onClick={onLeave}>
-        Back to tables
+        {tr.common.backToTables}
       </button>
 
       <div class="actionbar">
         <button class="btn btn--primary btn--lg" onClick={() => setFlow("buyin")}>
-          <PlusIcon size={17} /> Buy in
+          <PlusIcon size={17} /> {tr.table.buyIn}
         </button>
         {!me.cashOut ? (
           <button class="btn btn--lg" onClick={() => setCashOutFor(playerId)}>
-            Cash out
+            {tr.table.cashOut}
           </button>
         ) : (
           <button class="btn btn--lg" disabled>
-            Cashed out {formatCents(me.cashOut.amountCents)}
+            {tr.table.cashedOut(formatCents(me.cashOut.amountCents))}
           </button>
         )}
       </div>
@@ -183,14 +181,15 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
 
       {flow === 'buyin' && (
         <AmountModal
-          title="Buy in"
+          title={tr.table.buyIn}
           hint={
-            (isHost ? 'As the host, your buy-ins are approved automatically.' : 'The host approves it before it counts.') +
-            ' Max ₪50 per buy-in.'
+            (isHost ? tr.table.buyInHintHost : tr.table.buyInHintPlayer) +
+            ' ' +
+            tr.table.maxPerBuyIn(formatCents(MAX_BUY_IN_CENTS))
           }
           maxCents={MAX_BUY_IN_CENTS}
           quick={[10, 20, 30, 50]}
-          confirmLabel={isHost ? 'Add buy-in' : 'Send request'}
+          confirmLabel={isHost ? tr.table.addBuyIn : tr.table.sendRequest}
           onCancel={() => setFlow(null)}
           onConfirm={async (amountCents) => {
             const { session: updated } = await api.requestBuyIn(session.id, playerId, amountCents);
@@ -202,13 +201,13 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
 
       {cashOutFor && session.players[cashOutFor] && (
         <AmountModal
-          title={cashOutFor === playerId ? 'Cash out' : `Cash out ${session.players[cashOutFor].name}`}
+          title={cashOutFor === playerId ? tr.table.cashOut : tr.table.cashOutName(session.players[cashOutFor].name)}
           hint={
             cashOutFor === playerId
-              ? "Enter what you're leaving the table with — it's fine to enter ₪0."
-              : `Enter how much ${session.players[cashOutFor].name} left the table with — ₪0 if they busted. They'll get a notification.`
+              ? tr.table.cashOutHintSelf
+              : tr.table.cashOutHintOther(session.players[cashOutFor].name)
           }
-          confirmLabel="Confirm cash-out"
+          confirmLabel={tr.table.confirmCashOut}
           allowZero
           onCancel={() => setCashOutFor(null)}
           onConfirm={async (amountCents) => {

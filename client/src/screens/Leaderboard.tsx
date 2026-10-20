@@ -3,6 +3,7 @@ import type { HistoryResponse, LeaderboardEntry } from '../../../src/shared/type
 import { api } from '../api.js';
 import { CrownIcon, TrophyIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
+import { tr } from '../i18n.js';
 
 function streakBadge(type: 'win' | 'loss' | null, count: number) {
   if (!type || count < 2) return null;
@@ -47,13 +48,13 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
 
   return (
     <div class="view">
-      <ScreenHead title="Leaderboard" sub="All-time results across every game." />
+      <ScreenHead title={tr.leaderboard.title} sub={tr.leaderboard.sub} />
       {error && <p class="error">{error}</p>}
       {!data && !error && <Spinner />}
 
       {data && board.length === 0 && (
-        <Empty icon={<TrophyIcon size={24} />} title="No results yet">
-          Finish a game and the standings show up here.
+        <Empty icon={<TrophyIcon size={24} />} title={tr.leaderboard.empty}>
+          {tr.leaderboard.emptySub}
         </Empty>
       )}
 
@@ -74,10 +75,10 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
               <span class="row__main">
                 <span class="row__title">
                   {entry.name}
-                  {entry.accountId === myAccountId && <span class="muted"> · you</span>}
+                  {entry.accountId === myAccountId && <span class="muted">{tr.common.youSuffix}</span>}
                 </span>
                 <span class="row__sub">
-                  {entry.sessionsPlayed} {entry.sessionsPlayed === 1 ? 'game' : 'games'}
+                  {tr.leaderboard.games(entry.sessionsPlayed)}
                 </span>
               </span>
               <span class="row__end">
@@ -91,28 +92,28 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
 
       {anyHighlight && (
         <>
-          <SectionLabel>Highlights</SectionLabel>
+          <SectionLabel>{tr.leaderboard.highlights}</SectionLabel>
           <div class="highlights">
             {h.hottest && (
               <div class="highlight">
                 <span class="highlight__icon">🔥</span>
-                <span class="highlight__label">Hot streak</span>
+                <span class="highlight__label">{tr.leaderboard.hotStreak}</span>
                 <span class="highlight__who">{h.hottest.name}</span>
-                <span class="muted">{h.hottest.streakCount} wins in a row</span>
+                <span class="muted">{tr.leaderboard.winsInARow(h.hottest.streakCount)}</span>
               </div>
             )}
             {h.coldest && (
               <div class="highlight">
                 <span class="highlight__icon">🧊</span>
-                <span class="highlight__label">Cold streak</span>
+                <span class="highlight__label">{tr.leaderboard.coldStreak}</span>
                 <span class="highlight__who">{h.coldest.name}</span>
-                <span class="muted">{h.coldest.streakCount} losses in a row</span>
+                <span class="muted">{tr.leaderboard.lossesInARow(h.coldest.streakCount)}</span>
               </div>
             )}
             {h.biggestWin && (
               <div class="highlight">
                 <span class="highlight__icon">💰</span>
-                <span class="highlight__label">Biggest win</span>
+                <span class="highlight__label">{tr.leaderboard.biggestWin}</span>
                 <span class="highlight__who">{h.biggestWin.name}</span>
                 <Money cents={h.biggestWin.amountCents} signed size="sm" />
               </div>
@@ -120,7 +121,7 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
             {h.biggestLoss && (
               <div class="highlight">
                 <span class="highlight__icon">📉</span>
-                <span class="highlight__label">Biggest loss</span>
+                <span class="highlight__label">{tr.leaderboard.biggestLoss}</span>
                 <span class="highlight__who">{h.biggestLoss.name}</span>
                 <Money cents={h.biggestLoss.amountCents} signed size="sm" />
               </div>

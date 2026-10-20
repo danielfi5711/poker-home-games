@@ -3,6 +3,7 @@ import type { BuyIn, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents, parseShekelsToCents } from '../money.js';
 import { Avatar, Sheet } from '../ui.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   session: Session;
@@ -73,14 +74,11 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
 
   return (
     <Sheet onClose={() => !busy && onCancel()}>
-      <h2 class="modal__title">Settle up</h2>
-      <p class="hint">Enter what each player left the table with — ₪0 if they busted. Money in has to match money out.</p>
+      <h2 class="modal__title">{tr.settle.title}</h2>
+      <p class="hint">{tr.settle.hint}</p>
 
       {pendingCount > 0 && (
-        <p class="warning">
-          {pendingCount} buy-in {pendingCount === 1 ? 'request is' : 'requests are'} still waiting — approve or deny{' '}
-          {pendingCount === 1 ? 'it' : 'them'} first.
-        </p>
+        <p class="warning">{tr.settle.pendingWarning(pendingCount)}</p>
       )}
 
       <ul class="settle__list">
@@ -89,7 +87,7 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
             <Avatar id={p.accountId} name={p.name} size="sm" />
             <span class="settle__who">
               <strong>{p.name}</strong>
-              <span class="muted">In {formatCents(approvedTotal(p.buyIns))}</span>
+              <span class="muted">{tr.settle.inAmount(formatCents(approvedTotal(p.buyIns)))}</span>
             </span>
             <span class="settle__input">
               <span>₪</span>
@@ -98,7 +96,7 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
                 placeholder="?"
                 value={values[p.id]}
                 onInput={(e) => setValue(p.id, e.currentTarget.value)}
-                aria-label={`${p.name} cash-out`}
+                aria-label={tr.settle.cashOutAria(p.name)}
               />
             </span>
           </li>
@@ -107,25 +105,27 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
 
       {canFill && (
         <button class="btn btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setValue(missing[0]!.id, centsToInput(remainder))}>
-          Fill {missing[0]!.name} with the rest — {formatCents(remainder)}
+          {tr.settle.fillRest(missing[0]!.name, formatCents(remainder))}
         </button>
       )}
 
       <div class={`settle__totals ${missing.length === 0 ? (balanced ? 'settle__totals--ok' : 'settle__totals--off') : ''}`}>
         <span>
-          Money in<strong>{formatCents(totalIn)}</strong>
+          {tr.settle.moneyIn}<strong>{formatCents(totalIn)}</strong>
         </span>
         <span>
-          Money out<strong>{formatCents(totalOut)}</strong>
+          {tr.settle.moneyOut}<strong>{formatCents(totalOut)}</strong>
         </span>
         <span>
-          Status
+          {tr.settle.status}
           <strong>
             {missing.length > 0
-              ? `${missing.length} missing`
+              ? tr.settle.missing(missing.length)
               : balanced
-                ? 'Balanced ✓'
-                : `${diff > 0 ? 'Over' : 'Short'} ${formatCents(Math.abs(diff))}`}
+                ? tr.settle.balanced
+                : diff > 0
+                  ? tr.settle.over(formatCents(diff))
+                  : tr.settle.short(formatCents(-diff))}
           </strong>
         </span>
       </div>
@@ -133,7 +133,7 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
       {ready && !balanced && (
         <label class="settle__accept">
           <input type="checkbox" checked={acceptMismatch} onChange={(e) => setAcceptMismatch(e.currentTarget.checked)} />
-          The chips really don't add up — settle anyway, off by {formatCents(Math.abs(diff))}.
+          {tr.settle.acceptMismatch(formatCents(Math.abs(diff)))}
         </label>
       )}
 
@@ -141,10 +141,10 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
 
       <div class="btnrow">
         <button class="btn btn--lg" onClick={onCancel} disabled={busy}>
-          Cancel
+          {tr.common.cancel}
         </button>
         <button class="btn btn--primary btn--lg" onClick={settle} disabled={busy || !ready || (!balanced && !acceptMismatch)}>
-          {busy ? 'Settling…' : 'Settle game'}
+          {busy ? tr.settle.settling : tr.settle.settle}
         </button>
       </div>
     </Sheet>

@@ -2,7 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
-import { AuthError, accountForToken, changeUsername, login, logout, register, setPhone } from '../lib/accounts.js';
+import { AuthError, accountForToken, changeUsername, login, logout, register, setLang, setPhone } from '../lib/accounts.js';
+import { translateError } from '../lib/i18n.js';
 import {
   SessionError,
   requestBuyIn,
@@ -23,7 +24,7 @@ import {
 } from '../lib/sessions.js';
 import { subscribe, vapidPublicKey } from '../lib/push.js';
 import { libsqlEnabled } from '../lib/libsql.js';
-import type { Account } from '../shared/types.js';
+import { isLang, type Account, type Lang } from '../shared/types.js';
 
 const PUBLIC_DIR = join(process.cwd(), 'dist', 'public');
 /** Photos are compressed client-side before upload, but allow headroom. */
@@ -121,6 +122,12 @@ function bearerToken(req: IncomingMessage): string | null {
   return header.slice('Bearer '.length).trim() || null;
 }
 
+/** The client's UI language, sent on every API request — error messages come back in it. */
+function requestLang(req: IncomingMessage): Lang {
+  const header = req.headers['x-lang'];
+  return isLang(header) ? header : 'en';
+}
+
 function requireAuth(req: IncomingMessage): Account {
   const token = bearerToken(req);
   const account = token ? accountForToken(token) : null;
@@ -137,7 +144,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     // POST /api/auth/register
     if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'register') {
       const body = await readJsonBody(req);
-      const result = register(str(body, 'username'), str(body, 'password'), str(body, 'phone'));
+      const result = register(str(body, 'username'), str(body, 'password'), str(body, 'phone'), requestLang(req));
       return sendJson(res, 201, result);
     }
 
@@ -174,6 +181,15 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       const account = requireAuth(req);
       const body = await readJsonBody(req);
       return sendJson(res, 200, { account: setPhone(account.id, str(body, 'phone')) });
+    }
+
+    // PUT /api/auth/lang
+    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'lang') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const lang = body?.lang;
+      if (!isLang(lang)) throw new AuthError('Unsupported language.', 400);
+      return sendJson(res, 200, { account: setLang(account.id, lang) });
     }
 
     // --- Push notifications ----------------------------------------------------
@@ -308,13 +324,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     }
   } catch (err) {
     if (err instanceof SessionError || err instanceof AuthError) {
-      return sendJson(res, err.status, { error: err.message });
+      return sendJson(res, err.status, { error: translateError(err.message, requestLang(req)) });
     }
     console.error(err);
-    return sendJson(res, 500, { error: 'Something went wrong.' });
+    return sendJson(res, 500, { error: translateError('Something went wrong.', requestLang(req)) });
   }
 
-  sendJson(res, 404, { error: 'Not found' });
+  sendJson(res, 404, { error: translateError('Not found', requestLang(req)) });
 }
 
 export function startWebServer(): void {

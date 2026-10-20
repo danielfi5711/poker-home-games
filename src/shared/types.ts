@@ -92,7 +92,16 @@ export interface Account {
   displayName: string;
   /** Israeli mobile, normalized to 05XXXXXXXX — friends pay you on Bit with it. Null on accounts made before it was required. */
   phone: string | null;
+  /** UI language — also the language of this account's push notifications. */
+  lang: Lang;
   createdAt: number;
+}
+
+export type Lang = 'en' | 'he';
+export const LANGS: readonly Lang[] = ['en', 'he'];
+
+export function isLang(v: unknown): v is Lang {
+  return v === 'en' || v === 'he';
 }
 
 export interface Transfer {

@@ -58,8 +58,8 @@
   --t: 260ms;
   --t-slow: 460ms;
 
-  --font-display: 'Sora', 'Segoe UI', sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Sora', 'Rubik', 'Segoe UI', sans-serif;
+  --font-body: 'Inter', 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --nav-h: 74px;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -465,11 +465,11 @@ input {
 
 .avstack {
   display: inline-flex;
-  padding-left: 7px;
+  padding-inline-start: 7px;
 }
 
 .avstack .av {
-  margin-left: -7px;
+  margin-inline-start: -7px;
 }
 
 /* ---------- buttons ---------- */
@@ -664,12 +664,16 @@ form {
   position: absolute;
   top: 4px;
   bottom: 4px;
-  left: 4px;
+  inset-inline-start: 4px;
   width: calc(50% - 4px);
   border-radius: 10px;
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
   transition: transform var(--t) var(--ease);
+}
+
+[dir='rtl'] .seg--right .seg__thumb {
+  transform: translateX(-100%);
 }
 
 .seg--right .seg__thumb {
@@ -881,7 +885,7 @@ form {
 .bottomnav__badge {
   position: absolute;
   top: -6px;
-  right: -11px;
+  inset-inline-end: -11px;
   box-shadow: 0 0 0 2.5px rgba(12, 34, 24, 1);
   animation: pop var(--t-slow) var(--spring) both;
 }
@@ -1117,7 +1121,7 @@ form {
 
 .hero__chips {
   position: absolute;
-  right: -18px;
+  inset-inline-end: -18px;
   top: -14px;
   opacity: 0.9;
   pointer-events: none;
@@ -2119,4 +2123,16 @@ form {
     padding-left: 20px;
     padding-right: 20px;
   }
+}
+
+/* ---------- right-to-left (Hebrew) ---------- */
+
+/* Arrows that point "forward" / "back" mirror with the reading direction. */
+[dir='rtl'] .dir-icon {
+  transform: scaleX(-1);
+}
+
+/* Hebrew has no letter case; the uppercase+tracking used for English labels just spreads it out. */
+[dir='rtl'] * {
+  letter-spacing: normal;
 }

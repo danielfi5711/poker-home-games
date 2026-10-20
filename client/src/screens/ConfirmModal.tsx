@@ -1,4 +1,5 @@
 import { Sheet } from '../ui.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   title: string;
@@ -17,7 +18,7 @@ export function ConfirmModal({ title, body, confirmLabel, danger, onCancel, onCo
       <p class="hint">{body}</p>
       <div class="btnrow">
         <button class="btn btn--lg" onClick={onCancel}>
-          Cancel
+          {tr.common.cancel}
         </button>
         <button class={`btn btn--lg ${danger ? 'btn--danger' : 'btn--primary'}`} onClick={onConfirm}>
           {confirmLabel}

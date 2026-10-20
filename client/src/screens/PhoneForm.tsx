@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Account } from '../../../src/shared/types.js';
 import { api } from '../api.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   initial?: string;
@@ -33,7 +34,7 @@ export function PhoneForm({ initial = '', submitLabel, onSaved, onCancel }: Prop
     <form onSubmit={submit}>
       {error && <p class="error">{error}</p>}
       <label class="field">
-        Phone number
+        {tr.phone.label}
         <input
           type="tel"
           inputMode="tel"
@@ -49,11 +50,11 @@ export function PhoneForm({ initial = '', submitLabel, onSaved, onCancel }: Prop
       <div class="btnrow">
         {onCancel && (
           <button type="button" class="btn" onClick={onCancel} disabled={busy}>
-            Cancel
+            {tr.common.cancel}
           </button>
         )}
         <button type="submit" class="btn btn--primary" disabled={busy}>
-          {busy ? 'Saving…' : submitLabel}
+          {busy ? tr.common.saving : submitLabel}
         </button>
       </div>
     </form>

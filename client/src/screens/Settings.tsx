@@ -5,7 +5,8 @@ import { ConfirmModal } from './ConfirmModal.js';
 import { PhoneForm } from './PhoneForm.js';
 import { formatPhone } from '../phone.js';
 import { ArrowLeftIcon, LogoutIcon, PhoneIcon, UserIcon } from '../icons.js';
-import { Avatar, ScreenHead, SectionLabel } from '../ui.js';
+import { Avatar, LangSwitch, ScreenHead, SectionLabel } from '../ui.js';
+import { tr } from '../i18n.js';
 
 interface Props {
   account: Account;
@@ -43,7 +44,7 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
       const { account: updated } = await api.changeUsername(newUsername, currentPassword);
       onAccountChanged(updated);
       setEditing(null);
-      flash('Name updated.');
+      flash(tr.settings.nameUpdated);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -54,9 +55,9 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
   return (
     <div class="view">
       <ScreenHead
-        title="Settings"
+        title={tr.settings.title}
         action={
-          <button class="iconbtn" onClick={onBack} aria-label="Back">
+          <button class="iconbtn" onClick={onBack} aria-label={tr.common.back}>
             <ArrowLeftIcon />
           </button>
         }
@@ -66,27 +67,27 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
         <Avatar id={account.id} name={account.displayName} size="xl" />
         <span class="row__main">
           <span class="profile__name">{account.displayName}</span>
-          <span class="row__sub" dir="ltr">
-            {account.phone ? formatPhone(account.phone) : 'No phone number'}
+          <span class="row__sub">
+            {account.phone ? <bdi dir="ltr">{formatPhone(account.phone)}</bdi> : tr.settings.noPhone}
           </span>
         </span>
       </section>
 
       {saved && <p class="saved">✓ {saved}</p>}
 
-      <SectionLabel>Account</SectionLabel>
+      <SectionLabel>{tr.settings.account}</SectionLabel>
       <div class="surface">
         <div class="setting">
           <span class="setting__icon">
             <UserIcon />
           </span>
           <span class="setting__main">
-            <span class="setting__label">Name</span>
+            <span class="setting__label">{tr.settings.name}</span>
             <span class="setting__value">{account.displayName}</span>
           </span>
           {editing !== 'name' && (
             <button class="btn btn--sm" onClick={startEditingName}>
-              Change
+              {tr.settings.change}
             </button>
           )}
         </div>
@@ -95,26 +96,26 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
             <form onSubmit={saveName}>
               {error && <p class="error">{error}</p>}
               <label class="field">
-                New name
+                {tr.settings.newName}
                 <input value={newUsername} onInput={(e) => setNewUsername(e.currentTarget.value)} maxLength={24} required autoFocus dir="auto" />
               </label>
               <label class="field">
-                Current password
+                {tr.settings.currentPassword}
                 <input
                   type="password"
                   value={currentPassword}
                   onInput={(e) => setCurrentPassword(e.currentTarget.value)}
-                  placeholder="To confirm it's you"
+                  placeholder={tr.settings.confirmItsYou}
                   required
                   autocomplete="current-password"
                 />
               </label>
               <div class="btnrow">
                 <button type="button" class="btn" onClick={() => setEditing(null)} disabled={busy}>
-                  Cancel
+                  {tr.common.cancel}
                 </button>
                 <button type="submit" class="btn btn--primary" disabled={busy}>
-                  {busy ? 'Saving…' : 'Save name'}
+                  {busy ? tr.common.saving : tr.settings.saveName}
                 </button>
               </div>
             </form>
@@ -126,14 +127,14 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
             <PhoneIcon />
           </span>
           <span class="setting__main">
-            <span class="setting__label">Phone · friends pay you on Bit with it</span>
-            <span class="setting__value" dir="ltr" style={{ textAlign: 'start' }}>
-              {account.phone ? formatPhone(account.phone) : 'Not set'}
+            <span class="setting__label">{tr.settings.phoneLabel}</span>
+            <span class="setting__value">
+              {account.phone ? <bdi dir="ltr">{formatPhone(account.phone)}</bdi> : tr.settings.notSet}
             </span>
           </span>
           {editing !== 'phone' && (
             <button class="btn btn--sm" onClick={() => setEditing('phone')}>
-              Change
+              {tr.settings.change}
             </button>
           )}
         </div>
@@ -141,27 +142,30 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
           <div style={{ padding: '0 16px 16px' }}>
             <PhoneForm
               initial={account.phone ?? ''}
-              submitLabel="Save number"
+              submitLabel={tr.settings.saveNumber}
               onCancel={() => setEditing(null)}
               onSaved={(updated) => {
                 onAccountChanged(updated);
                 setEditing(null);
-                flash('Phone number updated.');
+                flash(tr.settings.phoneUpdated);
               }}
             />
           </div>
         )}
       </div>
 
+      <SectionLabel>{tr.settings.language}</SectionLabel>
+      <LangSwitch />
+
       <button class="btn btn--danger btn--lg btn--block" onClick={() => setConfirmingLogout(true)}>
-        <LogoutIcon /> Log out
+        <LogoutIcon /> {tr.settings.logOut}
       </button>
 
       {confirmingLogout && (
         <ConfirmModal
-          title="Log out?"
-          body="You'll need your username and password to log back in."
-          confirmLabel="Log out"
+          title={tr.settings.logOutTitle}
+          body={tr.settings.logOutBody}
+          confirmLabel={tr.settings.logOut}
           danger
           onCancel={() => setConfirmingLogout(false)}
           onConfirm={() => {

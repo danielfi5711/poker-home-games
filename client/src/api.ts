@@ -3,6 +3,7 @@ import type {
   Account,
   AuthResponse,
   HistoryResponse,
+  Lang,
   Payment,
   PaymentsResponse,
   PushSubscriptionJSON,
@@ -12,6 +13,7 @@ import type {
   SettlementResult,
   VapidKeyResponse,
 } from '../../src/shared/types.js';
+import { lang, tr } from './i18n.js';
 
 const BASE = '/api';
 const TOKEN_KEY = 'poker.authToken';
@@ -57,7 +59,7 @@ export class ApiError extends Error {
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = loadToken();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { 'x-lang': lang };
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
 
@@ -69,7 +71,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError('Could not reach the server.', 0);
+    throw new ApiError(tr.common.networkError, 0);
   }
   const data = await res.json().catch(() => ({}) as Record<string, unknown>);
   if (!res.ok) {
@@ -83,6 +85,7 @@ export const api = {
   register: (username: string, password: string, phone: string) =>
     req<AuthResponse>('POST', '/auth/register', { username, password, phone }),
   setPhone: (phone: string) => req<{ account: Account }>('PUT', '/auth/phone', { phone }),
+  setLang: (lang: Lang) => req<{ account: Account }>('PUT', '/auth/lang', { lang }),
   login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
   logout: () => req<{ ok: true }>('POST', '/auth/logout'),
   me: () => req<{ account: Account }>('GET', '/auth/me'),

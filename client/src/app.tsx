@@ -23,15 +23,16 @@ import { SettingsScreen } from './screens/Settings.js';
 import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
 import { ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
+import { tr, useLang } from './i18n.js';
 
 type View = 'login' | 'home' | 'session' | 'settings';
 type HomeTab = 'tables' | 'leaderboard' | 'games' | 'payments';
 
-const HOME_TABS: { id: HomeTab; label: string; icon: typeof CardsIcon }[] = [
-  { id: 'tables', label: 'Tables', icon: CardsIcon },
-  { id: 'leaderboard', label: 'Leaderboard', icon: TrophyIcon },
-  { id: 'games', label: 'Games', icon: ReceiptIcon },
-  { id: 'payments', label: 'Payments', icon: WalletIcon },
+const HOME_TABS: { id: HomeTab; icon: typeof CardsIcon }[] = [
+  { id: 'tables', icon: CardsIcon },
+  { id: 'leaderboard', icon: TrophyIcon },
+  { id: 'games', icon: ReceiptIcon },
+  { id: 'payments', icon: WalletIcon },
 ];
 
 /** `?tab=games` (e.g. from a "game is over" notification) opens straight to that tab. */
@@ -50,6 +51,20 @@ export function App() {
   const [homeTab, setHomeTab] = useState<HomeTab>(() => tabFromUrl(location.href) ?? 'tables');
   const [payments, setPayments] = useState<PaymentView[] | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+
+  const lang = useLang();
+
+  // The server needs the account's language for push notifications. The
+  // device's choice wins: it's what the player sees and picked last.
+  useEffect(() => {
+    if (!account || account.lang === lang) return;
+    api
+      .setLang(lang)
+      .then((r) => setAccount(r.account))
+      .catch(() => {
+        /* retried on the next language change or launch */
+      });
+  }, [account?.id, account?.lang, lang]);
 
   function refreshPayments() {
     api
@@ -192,7 +207,7 @@ export function App() {
     return (
       <div class="app">
         <main class="app__main">
-          <Spinner label="Opening Poker Night…" />
+          <Spinner label={tr.app.opening} />
         </main>
       </div>
     );
@@ -204,18 +219,18 @@ export function App() {
         <header class="topbar">
           <button class="brand" onClick={() => (account ? openHomeTab("tables") : setView("login"))}>
             <ChipIcon size={26} />
-            <span class="brand__name">Poker Night</span>
+            <span class="brand__name">{tr.appName}</span>
           </button>
           {account && (
             <div class="topbar__actions">
               {session && session.status !== "settled" && view !== "session" && (
                 <button class="livechip" onClick={() => setView("session")}>
                   <span class="livechip__dot" />
-                  Back to table
+                  {tr.app.backToTable}
                   {pendingCount > 0 && <span class="count">{pendingCount}</span>}
                 </button>
               )}
-              <button class={`iconbtn ${view === "settings" ? "iconbtn--active" : ""}`} onClick={openSettings} aria-label="Settings">
+              <button class={`iconbtn ${view === "settings" ? "iconbtn--active" : ""}`} onClick={openSettings} aria-label={tr.app.settings}>
                 <GearIcon size={19} />
               </button>
             </div>
@@ -228,9 +243,9 @@ export function App() {
 
         {needsPhone && account && (
           <div class="view">
-            <ScreenHead title="One more thing" sub="Add your phone number so friends can pay you on Bit after a game." />
+            <ScreenHead title={tr.app.oneMoreThing} sub={tr.app.addPhoneSub} />
             <div class="surface surface--pad">
-              <PhoneForm submitLabel="Continue" onSaved={setAccount} />
+              <PhoneForm submitLabel={tr.app.continue} onSaved={setAccount} />
             </div>
           </div>
         )}
@@ -272,12 +287,12 @@ export function App() {
           </>
         )}
 
-        {!needsPhone && view === "session" && sessionId && !session && !error && <Spinner label="Loading game…" />}
+        {!needsPhone && view === "session" && sessionId && !session && !error && <Spinner label={tr.app.loadingGame} />}
         {!needsPhone && view === "session" && error && (
           <div class="view">
             <p class="error">{error}</p>
             <button class="btn btn--block" onClick={leaveSession}>
-              Back to tables
+              {tr.common.backToTables}
             </button>
           </div>
         )}
@@ -289,7 +304,7 @@ export function App() {
 
       {showNav && (
         <nav class="bottomnav" aria-label="Main">
-          {HOME_TABS.map(({ id, label, icon: Icon }) => {
+          {HOME_TABS.map(({ id, icon: Icon }) => {
             const active = view === 'home' && homeTab === id;
             return (
               <button
@@ -302,7 +317,7 @@ export function App() {
                   <Icon size={22} />
                   {id === 'payments' && badge > 0 && <span class="count bottomnav__badge">{badge}</span>}
                 </span>
-                <span>{label}</span>
+                <span>{tr.app.tabs[id]}</span>
               </button>
             );
           })}

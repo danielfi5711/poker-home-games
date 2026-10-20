@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { autoSessionName } from '../sessionName.js';
+import { tr } from '../i18n.js';
 import { CardsIcon, ChevronRightIcon, ChipStackArt, PlusIcon } from '../icons.js';
 import { AvatarStack, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
 
@@ -59,30 +60,30 @@ export function TablesScreen({ onEnterSession }: Props) {
 
   return (
     <div class="view">
-      <ScreenHead title="Tables" sub="Start tonight's game or jump back in." />
+      <ScreenHead title={tr.tables.title} sub={tr.tables.sub} />
 
       <section class="hero">
         <span class="hero__chips">
           <ChipStackArt size={140} />
         </span>
-        <span class="hero__eyebrow">New game</span>
+        <span class="hero__eyebrow">{tr.tables.newGame}</span>
         <h2 class="hero__title">{autoSessionName()}</h2>
-        <p class="hero__sub">You'll be the host — friends see it here and tap to join.</p>
+        <p class="hero__sub">{tr.tables.heroSub}</p>
         <button class="btn btn--primary btn--lg btn--block" onClick={createTable} disabled={busy}>
           <PlusIcon size={18} />
-          {busy ? 'Starting…' : 'Start a table'}
+          {busy ? tr.tables.starting : tr.tables.start}
         </button>
       </section>
 
       {error && <p class="error">{error}</p>}
 
-      <SectionLabel count={sessions ? open.length : undefined}>Happening now</SectionLabel>
+      <SectionLabel count={sessions ? open.length : undefined}>{tr.tables.happeningNow}</SectionLabel>
 
       {!sessions && !error && <Spinner />}
 
       {sessions && open.length === 0 && (
-        <Empty icon={<CardsIcon size={24} />} title="No tables right now">
-          Start one above — everyone with the app will see it.
+        <Empty icon={<CardsIcon size={24} />} title={tr.tables.noTables}>
+          {tr.tables.noTablesSub}
         </Empty>
       )}
 
@@ -95,27 +96,27 @@ export function TablesScreen({ onEnterSession }: Props) {
               <span class="tablecard__name">{s.name}</span>
               {live ? (
                 <span class="pill pill--up">
-                  <span class="dot-live" /> Live
+                  <span class="dot-live" /> {tr.common.live}
                 </span>
               ) : (
-                <span class="pill pill--gold">In the lobby</span>
+                <span class="pill pill--gold">{tr.tables.inLobby}</span>
               )}
             </div>
             <div class="tablecard__bottom">
               <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <AvatarStack people={players.map((p) => ({ id: p.accountId, name: p.name }))} />
                 <span class="muted" style={{ fontSize: '13px' }}>
-                  {players.length} {players.length === 1 ? 'player' : 'players'}
+                  {tr.common.players(players.length)}
                 </span>
               </span>
               {live ? (
                 <span class="tablecard__pot">
-                  <span class="tablecard__potlabel">On the table</span>
+                  <span class="tablecard__potlabel">{tr.tables.onTheTable}</span>
                   <Money cents={potCents(s)} size="lg" />
                 </span>
               ) : (
                 <span class="tablecard__cta">
-                  Join <ChevronRightIcon size={15} />
+                  {tr.tables.join} <ChevronRightIcon size={15} />
                 </span>
               )}
             </div>

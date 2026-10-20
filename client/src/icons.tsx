@@ -81,6 +81,7 @@ export function ArrowRightIcon({ size = 16 }: IconProps) {
       stroke-linecap="round"
       stroke-linejoin="round"
       aria-hidden="true"
+      class="dir-icon"
     >
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
@@ -248,7 +249,7 @@ export function WalletIcon({ size = 20 }: IconProps) {
   );
 }
 
-function Stroke({ size, children, width = 1.9 }: { size: number; children: ComponentChildren; width?: number }) {
+function Stroke({ size, children, width = 1.9, class: cls }: { size: number; children: ComponentChildren; width?: number; class?: string }) {
   return (
     <svg
       width={size}
@@ -260,6 +261,7 @@ function Stroke({ size, children, width = 1.9 }: { size: number; children: Compo
       stroke-linecap="round"
       stroke-linejoin="round"
       aria-hidden="true"
+      class={cls}
     >
       {children}
     </svg>
@@ -276,7 +278,7 @@ export function PlusIcon({ size = 18 }: IconProps) {
 
 export function ChevronRightIcon({ size = 16 }: IconProps) {
   return (
-    <Stroke size={size} width={2.2}>
+    <Stroke size={size} width={2.2} class="dir-icon">
       <path d="m9 6 6 6-6 6" />
     </Stroke>
   );
@@ -284,7 +286,7 @@ export function ChevronRightIcon({ size = 16 }: IconProps) {
 
 export function ArrowLeftIcon({ size = 18 }: IconProps) {
   return (
-    <Stroke size={size} width={2.1}>
+    <Stroke size={size} width={2.1} class="dir-icon">
       <path d="M19 12H5M11 18l-6-6 6-6" />
     </Stroke>
   );

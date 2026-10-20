@@ -154,6 +154,28 @@ just ASCII, via a Unicode-aware regex.
   Only free/unlimited because the repo is **public**; see the README for the
   private-repo tradeoff if that ever changes.
 
+## Languages (English / Hebrew)
+
+- `client/src/i18n.ts` holds every UI string: `en` is the source, `he` is
+  typed `Strings` (= `typeof en`) so a missing key is a type error. Import the
+  live binding `tr` and read `tr.section.key` (functions for anything with
+  names/amounts/counts). Never hard-code UI text in a screen.
+- `setLang()` stores the choice in `localStorage` (`poker.lang`; default =
+  device language), sets `<html lang/dir>` (Hebrew = `rtl`) and re-renders via
+  `useLang()` in `App` and `InstallGate`. The switch (`LangSwitch` in
+  `ui.tsx`) is on the login screen, install gate and Settings.
+- RTL: use logical CSS (`inset-inline-*`, `margin-inline-*`), give
+  direction arrows `class="dir-icon"` (mirrored in RTL), wrap phone numbers
+  in `<bdi dir="ltr">`. Hebrew glyphs come from Rubik (Sora/Inter have none).
+- Hebrew copy is gender-neutral about other players (a name doesn't tell
+  us), uses noun/infinitive forms for buttons; buy-in = "קנייה",
+  cash-out = "פדיון", settle up = "התחשבנות".
+- Server: every request sends `X-Lang`; errors are still thrown in English
+  and translated on the way out (`translateError` in `src/lib/i18n.ts` — add
+  the Hebrew there when adding an error). `Account.lang` (synced by `App`
+  via `PUT /api/auth/lang`) picks each recipient's push language:
+  `notify(accountId, (t) => ({ title, body, url }))` with `t = pushText(lang)`.
+
 ## Conventions
 
 - ESM + `NodeNext` resolution on the server: **relative imports need `.js`

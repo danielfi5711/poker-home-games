@@ -4,6 +4,7 @@ import { newId, newJoinCode } from './id.js';
 import { computeSettlement } from './settlement.js';
 import { getAccount } from './accounts.js';
 import { notify } from './push.js';
+import type { PushText } from './i18n.js';
 import type {
   Account,
   BuyIn,
@@ -153,13 +154,13 @@ export function getSession(id: string, viewerAccountId?: string): Session {
   return requireSession(id);
 }
 
-function closeTable(session: Session, reason: string): void {
+function closeTable(session: Session, reason: (t: PushText) => string): void {
   save((d) => {
     delete d.sessions[session.id];
   });
   for (const p of Object.values(session.players)) {
     if (p.id === session.hostPlayerId) continue;
-    notify(p.accountId, { title: `"${session.name}" was closed`, body: reason, url: '/?tab=tables' });
+    notify(p.accountId, (t) => ({ title: t.tableClosedTitle(session.name), body: reason(t), url: '/?tab=tables' }));
   }
 }
 
@@ -168,7 +169,7 @@ export function leaveSession(id: string, accountId: string): { closed: boolean }
   const session = requireSession(id);
   const host = session.players[session.hostPlayerId];
   if (session.status !== 'setup' || host?.accountId !== accountId) return { closed: false };
-  closeTable(session, `${host.name} left before the game started.`);
+  closeTable(session, (t) => t.hostLeft(host.name));
   return { closed: true };
 }
 
@@ -179,7 +180,7 @@ export function closeAbandonedLobbies(): void {
     if (session.status !== 'setup') continue;
     if ((session.hostSeenAt ?? session.createdAt) > cutoff) continue;
     const host = session.players[session.hostPlayerId];
-    closeTable(session, `${host?.name ?? 'The host'} never started the game.`);
+    closeTable(session, (t) => t.neverStarted(host?.name ?? null));
     console.log(`Closed abandoned lobby ${session.id}`);
   }
 }
@@ -240,11 +241,11 @@ export function requestBuyIn(id: string, playerId: string, accountId: string, am
   if (!isHost) {
     const host = session.players[session.hostPlayerId];
     if (host) {
-      notify(host.accountId, {
-        title: `${player.name} wants to buy in`,
-        body: `${player.name} is requesting a ₪${(amountCents / 100).toFixed(2)} buy-in at "${session.name}".`,
+      notify(host.accountId, (t) => ({
+        title: t.buyInRequestTitle(player.name),
+        body: t.buyInRequestBody(player.name, shekels(amountCents), session.name),
         url: `/?session=${session.id}`,
-      });
+      }));
     }
   }
 
@@ -274,13 +275,12 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
     buyIn.respondedAt = Date.now();
   });
 
-  notify(target.player.accountId, {
-    title: approve ? 'Buy-in approved' : 'Buy-in denied',
-    body: approve
-      ? `Your ₪${(target.buyIn.amountCents / 100).toFixed(2)} buy-in at "${session.name}" was approved.`
-      : `Your ₪${(target.buyIn.amountCents / 100).toFixed(2)} buy-in request at "${session.name}" was denied.`,
+  const amount = shekels(target.buyIn.amountCents);
+  notify(target.player.accountId, (t) => ({
+    title: approve ? t.buyInApprovedTitle : t.buyInDeniedTitle,
+    body: approve ? t.buyInApprovedBody(amount, session.name) : t.buyInDeniedBody(amount, session.name),
     url: `/?session=${session.id}`,
-  });
+  }));
 
   return requireSession(id);
 }
@@ -300,11 +300,11 @@ export function recordCashOut(id: string, playerId: string, accountId: string, a
   });
 
   if (byHost) {
-    notify(player.accountId, {
-      title: 'The host cashed you out',
-      body: `You were cashed out for ₪${(amountCents / 100).toFixed(2)} at "${session.name}".`,
+    notify(player.accountId, (t) => ({
+      title: t.cashedOutTitle,
+      body: t.cashedOutBody(shekels(amountCents), session.name),
       url: `/?session=${session.id}`,
-    });
+    }));
   }
   return requireSession(id);
 }
@@ -421,11 +421,11 @@ export function respondPayment(paymentId: string, accountId: string, received: b
       p.confirmAskDueAt = null;
       p.confirmedAt = Date.now();
     });
-    notify(payment.fromAccountId, {
-      title: 'Payment confirmed ✓',
-      body: `${payment.toName} got your ${shekels(payment.amountCents)} for "${payment.sessionName}".`,
+    notify(payment.fromAccountId, (t) => ({
+      title: t.paymentConfirmedTitle,
+      body: t.paymentConfirmedBody(payment.toName, shekels(payment.amountCents), payment.sessionName),
       url: '/?tab=payments',
-    });
+    }));
     return updated;
   }
 
@@ -433,11 +433,11 @@ export function respondPayment(paymentId: string, accountId: string, received: b
     p.status = 'unpaid';
     p.confirmAskDueAt = null;
   });
-  notify(payment.fromAccountId, {
-    title: 'You still need to pay',
-    body: `${payment.toName} hasn't received your ${shekels(payment.amountCents)} for "${payment.sessionName}" yet.`,
+  notify(payment.fromAccountId, (t) => ({
+    title: t.stillNeedToPayTitle,
+    body: t.stillNeedToPayBody(payment.toName, shekels(payment.amountCents), payment.sessionName),
     url: '/?tab=payments',
-  });
+  }));
   return updated;
 }
 
@@ -453,11 +453,11 @@ export function sweepPaymentConfirmations(): void {
       updatePayment(session.id, payment.id, (p) => {
         p.confirmAskDueAt = null;
       });
-      notify(payment.toAccountId, {
-        title: `Did ${payment.fromName} pay you?`,
-        body: `${payment.fromName} went to send you ${shekels(payment.amountCents)} on Bit for "${payment.sessionName}". Tap to confirm.`,
+      notify(payment.toAccountId, (t) => ({
+        title: t.didTheyPayTitle(payment.fromName),
+        body: t.didTheyPayBody(payment.fromName, shekels(payment.amountCents), payment.sessionName),
         url: '/?tab=payments',
-      });
+      }));
     }
   }
 }
@@ -467,14 +467,16 @@ function notifySettled(session: Session, settlement: SettlementResult): void {
   for (const player of Object.values(session.players)) {
     const pays = settlement.transfers.filter((t) => t.fromPlayerId === player.id);
     const gets = settlement.transfers.filter((t) => t.toPlayerId === player.id);
-    const lines = [
-      ...pays.map((t) => `Send ${shekels(t.amountCents)} to ${session.players[t.toPlayerId]?.name ?? '?'}`),
-      ...gets.map((t) => `${session.players[t.fromPlayerId]?.name ?? '?'} sends you ${shekels(t.amountCents)}`),
-    ];
-    notify(player.accountId, {
-      title: `"${session.name}" is over`,
-      body: lines.length > 0 ? lines.join('\n') : 'You broke even — nothing to pay.',
-      url: lines.length > 0 ? '/?tab=payments' : '/?tab=games',
+    notify(player.accountId, (t) => {
+      const lines = [
+        ...pays.map((x) => t.youSend(shekels(x.amountCents), session.players[x.toPlayerId]?.name ?? '?')),
+        ...gets.map((x) => t.youGet(session.players[x.fromPlayerId]?.name ?? '?', shekels(x.amountCents))),
+      ];
+      return {
+        title: t.gameOverTitle(session.name),
+        body: lines.length > 0 ? lines.join('\n') : t.brokeEven,
+        url: lines.length > 0 ? '/?tab=payments' : '/?tab=games',
+      };
     });
   }
 }
