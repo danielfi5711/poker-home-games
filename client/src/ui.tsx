@@ -73,12 +73,14 @@ export function Empty({ icon, title, children }: { icon: ComponentChildren; titl
   );
 }
 
+/** Centered on the screen (portaled into <body>, so an animated screen container can't pin it to the top). */
 export function Spinner({ label = tr.common.loading }: { label?: string }) {
-  return (
+  return createPortal(
     <div class="loading" role="status">
       <span class="loading__chip" />
       <span>{label}</span>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

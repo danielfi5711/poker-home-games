@@ -798,11 +798,14 @@ form {
 }
 
 .loading {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 40px 0;
   color: var(--ink-3);
   font-size: 14px;
 }
