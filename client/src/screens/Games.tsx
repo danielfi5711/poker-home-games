@@ -19,10 +19,7 @@ export function GamesScreen({ myAccountId }: Props) {
   useEffect(() => {
     api
       .history()
-      .then((d) => {
-        setData(d);
-        setOpenId(d.matches[0]?.id ?? null); // newest game starts expanded
-      })
+      .then(setData)
       .catch((err) => setError((err as Error).message));
   }, []);
 
