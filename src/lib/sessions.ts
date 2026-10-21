@@ -560,8 +560,10 @@ interface StreakAccumulator extends LeaderboardEntry {
 
 export function history(): HistoryResponse {
   const cutoff = Date.now() - config.historyWindowDays * 24 * 60 * 60 * 1000;
+  // A game with a single player isn't a real game (usually a test or a table nobody joined): leave it out of
+  // the Games tab and the leaderboard both.
   const settled = Object.values(data().sessions).filter(
-    (s) => s.status === 'settled' && (s.settledAt ?? 0) >= cutoff,
+    (s) => s.status === 'settled' && (s.settledAt ?? 0) >= cutoff && Object.keys(s.players).length > 1,
   );
   // Oldest-first so streaks accumulate in actual chronological order; the
   // running streak after the loop is, by definition, the *current* one.

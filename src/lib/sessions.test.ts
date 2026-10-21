@@ -182,3 +182,16 @@ test('the receiver can confirm a payment the payer never marked as paid', () => 
   // Nothing to do once it's confirmed.
   assert.equal(sessions.markPaid(t.paymentId, t.guest.id).status, 'confirmed');
 });
+
+test('a settled game with only one player is left out of the history', () => {
+  const host = newAccount('solo');
+  const { session, playerId } = sessions.createSession('Solo', host);
+  sessions.activateSession(session.id, host.id);
+  sessions.requestBuyIn(session.id, playerId, host.id, 10_00);
+  sessions.recordCashOut(session.id, playerId, host.id, 10_00);
+  sessions.settleSession(session.id, host.id);
+  assert.ok(!sessions.history().matches.some((m) => m.id === session.id));
+
+  const t = settledWithDebt();
+  assert.ok(sessions.history().matches.some((m) => m.id === t.id));
+});
