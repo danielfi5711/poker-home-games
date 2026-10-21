@@ -48,18 +48,22 @@ export function AmountModal({ title, hint, confirmLabel, allowZero, maxCents, qu
       {error && <p class="error">{error}</p>}
 
       <form onSubmit={submit}>
-        <label class="amount">
+        {/* Amounts read left-to-right even in Hebrew. The field is sized by a hidden copy of the text
+            (.amount__field), so the whole amount always shows; long ones step down a size. */}
+        <label class={`amount${shekels.length > 9 ? ' amount--xs' : shekels.length > 6 ? ' amount--sm' : ''}`} dir="ltr">
           <span class="amount__sign">₪</span>
-          <input
-            autoFocus
-            inputMode="decimal"
-            placeholder="0"
-            value={shekels}
-            onInput={(e) => setShekels(e.currentTarget.value)}
-            class="amount__input"
-            style={{ width: `${Math.max(1, shekels.length || 1) + 0.4}ch` }}
-            aria-label={tr.amount.ariaLabel}
-          />
+          <span class="amount__field" data-value={shekels || '0'}>
+            <input
+              autoFocus
+              inputMode="decimal"
+              placeholder="0"
+              size={1}
+              value={shekels}
+              onInput={(e) => setShekels(e.currentTarget.value)}
+              class="amount__input"
+              aria-label={tr.amount.ariaLabel}
+            />
+          </span>
         </label>
 
         {tooBig && <p class="error">{tr.amount.overLimit(formatCents(maxCents!))}</p>}
