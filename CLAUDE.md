@@ -113,7 +113,10 @@ just ASCII, via a Unicode-aware regex.
   it). `sweepPaymentConfirmations()` (every 15s, started in `src/index.ts`)
   sends the receiver the "did it arrive?" push once the due time passes —
   persisted, so restarts don't lose it. "Not yet" resets to `unpaid` and
-  pushes the payer. Bit can't be pre-filled or verified, hence this flow
+  pushes the payer. The payer can also tap "I've paid" (`markPaid`, `POST
+  /api/payments/:id/paid`, also fired by the back-from-Bit "I sent it"), which
+  asks the receiver immediately instead of after 60s; and the receiver can tap
+  "Got it" at any time, even on an `unpaid` payment (cash, forgot to tap). Bit can't be pre-filled or verified, hence this flow
   (pre-filled Bit links exist only for business accounts via payment
   providers). To compensate, the client's pay sheet (`screens/Payments.tsx`)
   is a 3-step guide with tap-to-copy number/amount chips; the number is

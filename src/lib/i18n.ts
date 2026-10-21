@@ -63,6 +63,8 @@ const en = {
   paymentConfirmedBody: (to: string, amount: string, table: string) => `${to} got your ${amount} for "${table}".`,
   stillNeedToPayTitle: 'You still need to pay',
   stillNeedToPayBody: (to: string, amount: string, table: string) => `${to} hasn't received your ${amount} for "${table}" yet.`,
+  saysPaidTitle: (from: string) => `${from} says they paid you`,
+  saysPaidBody: (from: string, amount: string, table: string) => `${from} sent you ${amount} for "${table}". Did it arrive? Tap to confirm.`,
   didTheyPayTitle: (from: string) => `Did ${from} pay you?`,
   didTheyPayBody: (from: string, amount: string, table: string) =>
     `${from} went to send you ${amount} on Bit for "${table}". Tap to confirm.`,
@@ -91,6 +93,8 @@ const he: typeof en = {
   paymentConfirmedBody: (to, amount, table) => `התשלום של ${amount} ל-${to} עבור "${table}" התקבל.`,
   stillNeedToPayTitle: 'עדיין צריך לשלם',
   stillNeedToPayBody: (to, amount, table) => `התשלום של ${amount} ל-${to} עבור "${table}" עדיין לא התקבל.`,
+  saysPaidTitle: (from) => `תשלום מ-${from} סומן כנשלח`,
+  saysPaidBody: (from, amount, table) => `${amount} מ-${from} עבור "${table}". הכסף הגיע? לחיצה לאישור.`,
   didTheyPayTitle: (from) => `קיבלת תשלום מ-${from}?`,
   didTheyPayBody: (from, amount, table) => `${amount} מ-${from} בביט עבור "${table}". לחיצה לאישור.`,
   gameOverTitle: (table) => `המשחק "${table}" הסתיים`,

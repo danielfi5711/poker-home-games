@@ -21,6 +21,7 @@ import {
   paymentsFor,
   leaveSession,
   startPayment,
+  markPaid,
   respondPayment,
 } from '../lib/sessions.js';
 import { subscribe, vapidPublicKey } from '../lib/push.js';
@@ -225,6 +226,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (req.method === 'POST' && parts.length === 4 && parts[1] === 'payments' && parts[3] === 'start') {
       const account = requireAuth(req);
       return sendJson(res, 200, { payment: startPayment(parts[2], account.id) });
+    }
+
+    // POST /api/payments/:id/paid — payer says they've paid; the receiver is asked to confirm right away
+    if (req.method === 'POST' && parts.length === 4 && parts[1] === 'payments' && parts[3] === 'paid') {
+      const account = requireAuth(req);
+      return sendJson(res, 200, { payment: markPaid(parts[2], account.id) });
     }
 
     // POST /api/payments/:id/respond — receiver confirms (or not) the money arrived

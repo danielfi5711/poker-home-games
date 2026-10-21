@@ -97,6 +97,7 @@ export const api = {
 
   payments: () => req<PaymentsResponse>('GET', '/payments'),
   startPayment: (id: string) => req<{ payment: Payment }>('POST', `/payments/${id}/start`),
+  markPaid: (id: string) => req<{ payment: Payment }>('POST', `/payments/${id}/paid`),
   respondPayment: (id: string, received: boolean) => req<{ payment: Payment }>('POST', `/payments/${id}/respond`, { received }),
   history: () => req<HistoryResponse>('GET', '/history'),
   sessions: () => req<{ sessions: Session[] }>('GET', '/sessions'),

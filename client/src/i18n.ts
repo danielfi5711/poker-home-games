@@ -234,7 +234,7 @@ const en = {
   },
   payments: {
     title: 'Payments',
-    sub: 'Settle up after the game — confirmed by whoever gets paid.',
+    sub: 'Settle up after the game — confirmed by whoever gets paid, any time.',
     youOwe: 'You owe',
     youreOwed: "You're owed",
     allSquare: 'All square',
@@ -244,7 +244,7 @@ const en = {
     payAgain: 'Pay again',
     pay: (amount: string) => `Pay ${amount}`,
     needToGet: 'You need to get',
-    didTheySend: (name: string, amount: string) => `Did ${name} send you ${amount} on Bit?`,
+    didTheySend: (name: string, amount: string) => `Did ${name} send you ${amount}?`,
     notYet: 'Not yet',
     gotIt: 'Got it',
     waitingToPay: (name: string) => `Waiting for ${name} to pay`,
@@ -265,6 +265,7 @@ const en = {
     copyAmount: 'Copy amount',
     copyNumber: 'Copy number',
     iSentIt: 'I sent it',
+    iPaid: "I've paid — ask them to confirm",
     backToBit: 'Back to Bit',
   },
 };
@@ -500,7 +501,7 @@ const he: Strings = {
     payAgain: 'תשלום שוב',
     pay: (amount) => `תשלום ${amount}`,
     needToGet: 'צריך לקבל',
-    didTheySend: (name, amount) => `קיבלת ${amount} בביט מ-${name}?`,
+    didTheySend: (name, amount) => `קיבלת ${amount} מ-${name}?`,
     notYet: 'עוד לא',
     gotIt: 'קיבלתי',
     waitingToPay: (name) => `מחכים לתשלום של ${name}`,
@@ -521,6 +522,7 @@ const he: Strings = {
     copyAmount: 'העתקת הסכום',
     copyNumber: 'העתקת המספר',
     iSentIt: 'שלחתי',
+    iPaid: 'שילמתי — לבקש אישור',
     backToBit: 'חזרה לביט',
   },
 };

@@ -117,6 +117,19 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
     openBit();
   }
 
+  async function markPaid(p: PaymentView) {
+    setBusyId(p.id);
+    setActionError(null);
+    try {
+      await api.markPaid(p.id);
+      onChanged();
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function respond(p: PaymentView, received: boolean) {
     setBusyId(p.id);
     setActionError(null);
@@ -178,6 +191,12 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
                     <span class="bitbtn__mark">bit</span>
                     {p.status === 'awaiting_confirmation' ? tr.payments.payAgain : tr.payments.pay(formatCents(p.amountCents))}
                   </button>
+                  {/* Once the receiver has been asked (confirmAskDueAt cleared), there's nothing left to say. */}
+                  {!(p.status === 'awaiting_confirmation' && p.confirmAskDueAt === null) && (
+                    <button class="btn btn--block" onClick={() => markPaid(p)} disabled={busyId === p.id}>
+                      <CheckIcon size={15} /> {tr.payments.iPaid}
+                    </button>
+                  )}
                 </div>
               ))}
             </>
@@ -213,9 +232,12 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
                         </div>
                       </>
                     ) : (
-                      <span class="pill" style={{ alignSelf: 'flex-start' }}>
-                        {tr.payments.waitingToPay(p.fromName)}
-                      </span>
+                      <div class="paycard__wait">
+                        <span class="pill">{tr.payments.waitingToPay(p.fromName)}</span>
+                        <button class="btn btn--sm btn--success" onClick={() => respond(p, true)} disabled={busyId === p.id}>
+                          <CheckIcon size={13} /> {tr.payments.gotIt}
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
@@ -330,7 +352,13 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
             )}
           </div>
           <div class="btnrow">
-            <button class="btn btn--ghost" onClick={() => setReturned(null)}>
+            <button
+              class="btn btn--ghost"
+              onClick={() => {
+                void markPaid(returned);
+                setReturned(null);
+              }}
+            >
               <CheckIcon size={15} /> {tr.payments.iSentIt}
             </button>
             <button

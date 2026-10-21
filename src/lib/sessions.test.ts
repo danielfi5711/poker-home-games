@@ -142,3 +142,43 @@ test("nobody but the owner or the host can cancel a waiting request, and denied 
   sessions.respondToBuyIn(t.id, pending.id, t.host.id, false);
   assert.throws(() => sessions.removeBuyIn(t.id, pending.id, t.host.id), /already handled/);
 });
+
+/** A settled table where the guest owes the host ₪20; returns that payment's id. */
+function settledWithDebt() {
+  const t = table();
+  sessions.requestBuyIn(t.id, t.hostSeat, t.host.id, 50_00);
+  sessions.requestBuyIn(t.id, t.guestSeat, t.guest.id, 50_00);
+  sessions.respondToBuyIn(t.id, lastBuyIn(t.id, t.guestSeat).id, t.host.id, true);
+  sessions.recordCashOut(t.id, t.hostSeat, t.host.id, 70_00);
+  sessions.recordCashOut(t.id, t.guestSeat, t.guest.id, 30_00);
+  sessions.settleSession(t.id, t.host.id);
+  const [payment] = sessions.paymentsFor(t.guest.id);
+  assert.equal(payment?.amountCents, 20_00);
+  return { ...t, paymentId: payment!.id };
+}
+
+const paymentOf = (accountId: string, id: string) => sessions.paymentsFor(accountId).find((p) => p.id === id)!;
+
+test('the payer saying they paid asks the receiver straight away; the receiver then confirms', () => {
+  const t = settledWithDebt();
+  assert.throws(() => sessions.markPaid(t.paymentId, t.host.id), /Only the payer/);
+
+  sessions.markPaid(t.paymentId, t.guest.id);
+  let p = paymentOf(t.guest.id, t.paymentId);
+  assert.equal(p.status, 'awaiting_confirmation');
+  assert.equal(p.confirmAskDueAt, null); // asked now, not after the Bit delay
+
+  sessions.respondPayment(t.paymentId, t.host.id, true);
+  p = paymentOf(t.guest.id, t.paymentId);
+  assert.equal(p.status, 'confirmed');
+});
+
+test('the receiver can confirm a payment the payer never marked as paid', () => {
+  const t = settledWithDebt();
+  assert.equal(paymentOf(t.host.id, t.paymentId).status, 'unpaid');
+  assert.throws(() => sessions.respondPayment(t.paymentId, t.guest.id, true), /being paid/);
+  sessions.respondPayment(t.paymentId, t.host.id, true);
+  assert.equal(paymentOf(t.host.id, t.paymentId).status, 'confirmed');
+  // Nothing to do once it's confirmed.
+  assert.equal(sessions.markPaid(t.paymentId, t.guest.id).status, 'confirmed');
+});

@@ -453,7 +453,31 @@ export function startPayment(paymentId: string, accountId: string): Payment {
   });
 }
 
-/** The receiver says whether the money actually arrived. */
+/**
+ * The payer says they've sent the money (however they paid): ask the receiver right away rather than
+ * waiting out the "Pay with Bit" delay. Saying it again re-asks.
+ */
+export function markPaid(paymentId: string, accountId: string): Payment {
+  const { session, payment } = findPayment(paymentId);
+  if (payment.fromAccountId !== accountId) throw new SessionError('Only the payer can do that.', 403);
+  if (payment.status === 'confirmed') return payment;
+  const updated = updatePayment(session.id, paymentId, (p) => {
+    p.status = 'awaiting_confirmation';
+    p.payTappedAt ??= Date.now();
+    p.confirmAskDueAt = null;
+  });
+  notify(payment.toAccountId, (t) => ({
+    title: t.saysPaidTitle(payment.fromName),
+    body: t.saysPaidBody(payment.fromName, shekels(payment.amountCents), payment.sessionName),
+    url: '/?tab=payments',
+  }));
+  return updated;
+}
+
+/**
+ * The receiver says whether the money actually arrived. They can confirm at any point — even if the
+ * payer never said they paid (paid in cash, forgot to tap) — which closes the payment.
+ */
 export function respondPayment(paymentId: string, accountId: string, received: boolean): Payment {
   const { session, payment } = findPayment(paymentId);
   if (payment.toAccountId !== accountId) throw new SessionError('Only the person being paid can confirm.', 403);
