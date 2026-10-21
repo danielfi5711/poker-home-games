@@ -143,6 +143,7 @@ const en = {
         : `Your requests for ${amounts.join(', ')} are waiting for the host to approve.`,
     inAmount: (amount: string) => `In ${amount}`,
     outAmount: (amount: string) => `Out ${amount}`,
+    outSoFar: (amount: string) => `Out ${amount} so far`,
     pending: (amounts: string[]) => `+${amounts.join(', ')} pending`,
     cashOut: 'Cash out',
     playing: 'Playing',
@@ -172,6 +173,7 @@ const en = {
         ? '1 buy-in request is still waiting — approve or deny it first.'
         : `${n} buy-in requests are still waiting — approve or deny them first.`,
     inAmount: (amount: string) => `In ${amount}`,
+    earlierOut: (amount: string) => ` · ${amount} out earlier`,
     cashOutAria: (name: string) => `${name} cash-out`,
     fillRest: (name: string, amount: string) => `Fill ${name} with the rest — ${amount}`,
     moneyIn: 'Money in',
@@ -392,6 +394,7 @@ const he: Strings = {
         : `הבקשות שלך על ${amounts.join(', ')} מחכות לאישור המארח.`,
     inAmount: (amount) => `נכנס ${amount}`,
     outAmount: (amount) => `יצא ${amount}`,
+    outSoFar: (amount) => `יצא עד עכשיו ${amount}`,
     pending: (amounts) => `+${amounts.join(', ')} ממתין`,
     cashOut: 'פדיון',
     playing: 'בשולחן',
@@ -418,6 +421,7 @@ const he: Strings = {
     pendingWarning: (n) =>
       n === 1 ? 'בקשת קנייה אחת עדיין ממתינה — יש לאשר או לדחות אותה קודם.' : `${n} בקשות קנייה עדיין ממתינות — יש לאשר או לדחות אותן קודם.`,
     inAmount: (amount) => `נכנס ${amount}`,
+    earlierOut: (amount) => ` · יצא קודם ${amount}`,
     cashOutAria: (name) => `פדיון של ${name}`,
     fillRest: (name, amount) => `למלא ל-${name} את היתרה — ${amount}`,
     moneyIn: 'נכנס',

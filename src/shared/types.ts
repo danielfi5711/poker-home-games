@@ -30,6 +30,14 @@ export interface Player {
   joinedAt: number;
   buyIns: BuyIn[];
   cashOut: CashOut | null;
+  /** Chips already taken off the table by earlier cash-outs. Set when a cashed-out player's buy-in is
+   *  approved: their `cashOut` moves here and is cleared, so they can cash out again. Absent on old seats. */
+  earlierCashOutsCents?: number;
+}
+
+/** Everything a player has taken off the table: earlier cash-outs plus the current one. */
+export function totalCashOutCents(player: Player): number {
+  return (player.earlierCashOutsCents ?? 0) + (player.cashOut?.amountCents ?? 0);
 }
 
 /** House rule: a single buy-in can be at most ₪50 (buy in again for more). Shared by server + client. */

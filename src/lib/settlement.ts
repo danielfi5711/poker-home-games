@@ -1,4 +1,4 @@
-import type { Session, SettlementResult, Transfer } from '../shared/types.js';
+import { totalCashOutCents, type Session, type SettlementResult, type Transfer } from '../shared/types.js';
 
 /**
  * Nets every player (cash-out − total buy-ins), then greedily matches the
@@ -20,9 +20,8 @@ export function computeSettlement(session: Session): SettlementResult {
     const totalBuyIns = player.buyIns
       .filter((b) => b.status === 'approved')
       .reduce((sum, b) => sum + b.amountCents, 0);
-    const cashOutCents = player.cashOut?.amountCents ?? 0;
     if (!player.cashOut) complete = false;
-    netsCents[player.id] = cashOutCents - totalBuyIns;
+    netsCents[player.id] = totalCashOutCents(player) - totalBuyIns;
   }
 
   const discrepancyCents = Object.values(netsCents).reduce((a, b) => a + b, 0);

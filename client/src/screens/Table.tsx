@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { BuyIn, Session } from '../../../src/shared/types.js';
-import { MAX_BUY_IN_CENTS } from '../../../src/shared/types.js';
+import { MAX_BUY_IN_CENTS, totalCashOutCents } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { AmountModal } from './AmountModal.js';
@@ -114,7 +114,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
         {players.map((p) => {
           const total = approvedTotal(p.buyIns);
           const pending = p.buyIns.filter((b) => b.status === "pending");
-          const net = p.cashOut ? p.cashOut.amountCents - total : null;
+          const net = p.cashOut ? totalCashOutCents(p) - total : null;
           return (
             <li key={p.id} class={`row ${p.id === playerId ? "row--me" : ""}`}>
               <Avatar id={p.accountId} name={p.name} />
@@ -125,6 +125,9 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
                 </span>
                 <span class="seat__status">
                   <span class="row__sub">{tr.table.inAmount(formatCents(total))}</span>
+                  {!p.cashOut && p.earlierCashOutsCents ? (
+                    <span class="row__sub">{tr.table.outSoFar(formatCents(p.earlierCashOutsCents))}</span>
+                  ) : null}
                   {p.id === session.hostPlayerId && <span class="pill pill--gold">{tr.common.host}</span>}
                   {pending.length > 0 && <span class="pill pill--info">{tr.table.pending(pending.map((b) => formatCents(b.amountCents)))}</span>}
                 </span>
@@ -132,7 +135,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
               <span class="row__end">
                 {p.cashOut ? (
                   <>
-                    <span class="row__sub">{tr.table.outAmount(formatCents(p.cashOut.amountCents))}</span>
+                    <span class="row__sub">{tr.table.outAmount(formatCents(totalCashOutCents(p)))}</span>
                     <Money cents={net!} signed />
                   </>
                 ) : isHost && p.id !== playerId ? (
@@ -170,7 +173,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
           </button>
         ) : (
           <button class="btn btn--lg" disabled>
-            {tr.table.cashedOut(formatCents(me.cashOut.amountCents))}
+            {tr.table.cashedOut(formatCents(totalCashOutCents(me)))}
           </button>
         )}
       </div>

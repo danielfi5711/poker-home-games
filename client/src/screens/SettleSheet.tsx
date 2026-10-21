@@ -36,7 +36,11 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
   const pendingCount = players.reduce((n, p) => n + p.buyIns.filter((b) => b.status === 'pending').length, 0);
   const totalIn = players.reduce((sum, p) => sum + approvedTotal(p.buyIns), 0);
   const entered = (id: string) => (values[id] ?? '').trim() !== '';
-  const totalOut = players.reduce((sum, p) => sum + (entered(p.id) ? parseShekelsToCents(values[p.id]!) : 0), 0);
+  // A player who cashed out, bought back in and is playing again has chips already banked from before.
+  const totalOut = players.reduce(
+    (sum, p) => sum + (p.earlierCashOutsCents ?? 0) + (entered(p.id) ? parseShekelsToCents(values[p.id]!) : 0),
+    0,
+  );
   const missing = players.filter((p) => !entered(p.id));
   const diff = totalOut - totalIn; // 0 = balanced
   const invalid = players.some((p) => entered(p.id) && (!Number.isFinite(Number(values[p.id])) || Number(values[p.id]) < 0));
@@ -87,7 +91,10 @@ export function SettleSheet({ session, onChanged, onSettled, onCancel }: Props) 
             <Avatar id={p.accountId} name={p.name} size="sm" />
             <span class="settle__who">
               <strong>{p.name}</strong>
-              <span class="muted">{tr.settle.inAmount(formatCents(approvedTotal(p.buyIns)))}</span>
+              <span class="muted">
+                {tr.settle.inAmount(formatCents(approvedTotal(p.buyIns)))}
+                {p.earlierCashOutsCents ? tr.settle.earlierOut(formatCents(p.earlierCashOutsCents)) : ''}
+              </span>
             </span>
             <span class="settle__input">
               <span>₪</span>

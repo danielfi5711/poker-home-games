@@ -23,7 +23,10 @@ player's total or the settlement math. A single buy-in is capped at ₪50
 (`MAX_BUY_IN_CENTS` in `src/shared/types.ts`, enforced by `requestBuyIn()` and
 the buy-in sheet) — buy in again for more. Cash-outs don't need approval — a
 player just records what they're leaving the table with (or the host enters
-it for them in the settle sheet). Settling requires a cash-out for every
+it for them in the settle sheet). A cashed-out player can buy back in: once that
+buy-in is approved, `reopenSeat()` moves their cash-out into
+`earlierCashOutsCents` and clears `cashOut`, so they can cash out again; money
+out is always `totalCashOutCents()` (earlier + current). Settling requires a cash-out for every
 player and no pending buy-ins — a missing cash-out used to count as ₪0,
 which made money vanish.
 

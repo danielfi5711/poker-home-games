@@ -235,7 +235,9 @@ export function requestBuyIn(id: string, playerId: string, accountId: string, am
   };
 
   save((d) => {
-    d.sessions[id].players[playerId].buyIns.push(buyIn);
+    const p = d.sessions[id].players[playerId];
+    p.buyIns.push(buyIn);
+    if (buyIn.status === 'approved') reopenSeat(p);
   });
 
   if (!isHost) {
@@ -273,6 +275,7 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
     const buyIn = d.sessions[id].players[target!.player.id].buyIns.find((b) => b.id === buyInId)!;
     buyIn.status = status;
     buyIn.respondedAt = Date.now();
+    if (approve) reopenSeat(d.sessions[id].players[target!.player.id]);
   });
 
   const amount = shekels(target.buyIn.amountCents);
@@ -283,6 +286,16 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
   }));
 
   return requireSession(id);
+}
+
+/**
+ * An approved buy-in after a cash-out puts the player back at the table: bank what they already took
+ * out and clear `cashOut`, so they can cash out again and settling waits for that second cash-out.
+ */
+function reopenSeat(player: Player): void {
+  if (!player.cashOut) return;
+  player.earlierCashOutsCents = (player.earlierCashOutsCents ?? 0) + player.cashOut.amountCents;
+  player.cashOut = null;
 }
 
 export function recordCashOut(id: string, playerId: string, accountId: string, amountCentsRaw: number): Session {
