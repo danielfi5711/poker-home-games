@@ -259,15 +259,7 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
   const session = requireSession(id);
   requireHost(session, accountId);
 
-  let target: { player: Player; buyIn: BuyIn } | null = null;
-  for (const player of Object.values(session.players)) {
-    const buyIn = player.buyIns.find((b) => b.id === buyInId);
-    if (buyIn) {
-      target = { player, buyIn };
-      break;
-    }
-  }
-  if (!target) throw new SessionError('That buy-in request no longer exists.', 404);
+  const target = requireBuyIn(session, buyInId);
   if (target.buyIn.status !== 'pending') throw new SessionError('That request was already handled.', 409);
 
   const status = approve ? 'approved' : 'denied';
@@ -285,6 +277,45 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
     url: `/?session=${session.id}`,
   }));
 
+  return requireSession(id);
+}
+
+function requireBuyIn(session: Session, buyInId: string): { player: Player; buyIn: BuyIn } {
+  for (const player of Object.values(session.players)) {
+    const buyIn = player.buyIns.find((b) => b.id === buyInId);
+    if (buyIn) return { player, buyIn };
+  }
+  throw new SessionError('That buy-in request no longer exists.', 404);
+}
+
+/**
+ * Undo a buy-in mid-game. A waiting request can be cancelled by whoever asked for it (or the host);
+ * an approved one only by the host — that's the "approved it by mistake" / "typed the wrong amount" fix.
+ * A seat that buy-in reopened stays open: the player just cashes out again (₪0 if nothing went back in).
+ */
+export function removeBuyIn(id: string, buyInId: string, accountId: string): Session {
+  const session = requireSession(id);
+  if (session.status === 'settled') throw new SessionError('This game has already been settled.', 409);
+  const { player, buyIn } = requireBuyIn(session, buyInId);
+  const host = session.players[session.hostPlayerId];
+  const byHost = host?.accountId === accountId;
+  if (buyIn.status === 'denied') throw new SessionError('That request was already handled.', 409);
+  if (buyIn.status === 'approved') requireHost(session, accountId);
+  else if (player.accountId !== accountId && !byHost) throw new SessionError('That seat belongs to someone else.', 403);
+
+  save((d) => {
+    const p = d.sessions[session.id].players[player.id];
+    p.buyIns = p.buyIns.filter((b) => b.id !== buyInId);
+  });
+
+  if (byHost && player.accountId !== accountId) {
+    const amount = shekels(buyIn.amountCents);
+    notify(player.accountId, (t) => ({
+      title: t.buyInRemovedTitle,
+      body: t.buyInRemovedBody(amount, session.name),
+      url: `/?session=${session.id}`,
+    }));
+  }
   return requireSession(id);
 }
 

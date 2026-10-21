@@ -26,7 +26,11 @@ player just records what they're leaving the table with (or the host enters
 it for them in the settle sheet). A cashed-out player can buy back in: once that
 buy-in is approved, `reopenSeat()` moves their cash-out into
 `earlierCashOutsCents` and clears `cashOut`, so they can cash out again; money
-out is always `totalCashOutCents()` (earlier + current). Settling requires a cash-out for every
+out is always `totalCashOutCents()` (earlier + current). Mistakes can be undone
+until the game is settled: `removeBuyIn()` lets a player cancel their own
+pending request (or the host cancel anyone's), and only the host can remove an
+approved buy-in (the player is push-notified); a cash-out can be re-entered
+any time (`recordCashOut` overwrites). Settling requires a cash-out for every
 player and no pending buy-ins — a missing cash-out used to count as ₪0,
 which made money vanish.
 
@@ -199,4 +203,10 @@ just ASCII, via a Unicode-aware regex.
 
 ```sh
 npm run typecheck
+npm test
 ```
+
+Tests use `node:test` (`src/**/*.test.ts`, excluded from the build).
+`sessions.test.ts` blanks the Turso/VAPID env vars and points the stores at a
+temp dir *before* importing anything, so a local `.env` can never make the
+tests touch production data or send real pushes.

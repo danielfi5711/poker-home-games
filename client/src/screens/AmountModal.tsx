@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { formatCents, parseShekelsToCents } from '../money.js';
+import { centsToInput, formatCents, parseShekelsToCents } from '../money.js';
 import { tr } from '../i18n.js';
 import { Sheet } from '../ui.js';
 
@@ -13,14 +13,16 @@ interface Props {
   maxCents?: number;
   /** Quick-pick amounts in shekels. */
   quick?: number[];
+  /** Prefill, e.g. when editing a cash-out already entered. */
+  initialCents?: number;
   onCancel: () => void;
   onConfirm: (amountCents: number) => Promise<void>;
 }
 
 const QUICK = [50, 100, 200, 500];
 
-export function AmountModal({ title, hint, confirmLabel, allowZero, maxCents, quick, onCancel, onConfirm }: Props) {
-  const [shekels, setShekels] = useState('');
+export function AmountModal({ title, hint, confirmLabel, allowZero, maxCents, quick, initialCents, onCancel, onConfirm }: Props) {
+  const [shekels, setShekels] = useState(initialCents === undefined ? '' : centsToInput(initialCents));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

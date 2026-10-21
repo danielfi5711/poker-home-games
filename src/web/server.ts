@@ -7,6 +7,7 @@ import { translateError } from '../lib/i18n.js';
 import {
   SessionError,
   requestBuyIn,
+  removeBuyIn,
   respondToBuyIn,
   activateSession,
   createSession,
@@ -310,6 +311,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         const playerId = parts[4];
         const body = await readJsonBody(req);
         const session = recordCashOut(id, playerId, account.id, num(body, 'amountCents'));
+        return sendJson(res, 200, { session });
+      }
+
+      // DELETE /api/sessions/:id/buyins/:buyInId — cancel your waiting request, or (host) remove any buy-in
+      if (req.method === 'DELETE' && parts.length === 5 && parts[3] === 'buyins') {
+        const account = requireAuth(req);
+        const session = removeBuyIn(id, parts[4], account.id);
         return sendJson(res, 200, { session });
       }
 

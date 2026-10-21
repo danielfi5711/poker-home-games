@@ -7,6 +7,11 @@ export function formatCents(cents: number): string {
   return `${sign}₪${n}`;
 }
 
+/** Cents as an editable amount-box value: "50", "12.50". */
+export function centsToInput(cents: number): string {
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
+}
+
 export function parseShekelsToCents(input: string): number {
   const n = Number(input);
   if (!Number.isFinite(n)) return 0;

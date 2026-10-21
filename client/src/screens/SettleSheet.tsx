@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { BuyIn, Session } from '../../../src/shared/types.js';
 import { api } from '../api.js';
-import { formatCents, parseShekelsToCents } from '../money.js';
+import { centsToInput, formatCents, parseShekelsToCents } from '../money.js';
 import { Avatar, Sheet } from '../ui.js';
 import { tr } from '../i18n.js';
 
@@ -14,10 +14,6 @@ interface Props {
 
 function approvedTotal(buyIns: BuyIn[]): number {
   return buyIns.filter((b) => b.status === 'approved').reduce((sum, b) => sum + b.amountCents, 0);
-}
-
-function centsToInput(cents: number): string {
-  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
 }
 
 /**

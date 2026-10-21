@@ -1348,6 +1348,26 @@ form {
   gap: 6px;
 }
 
+.row__link {
+  padding: 0;
+  border: none;
+  background: none;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.mypending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mypending p {
+  flex-basis: 100%;
+}
+
 .seat__status {
   display: flex;
   align-items: center;

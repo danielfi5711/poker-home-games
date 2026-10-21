@@ -110,6 +110,7 @@ export const api = {
     req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/buyins`, { amountCents }),
   respondToBuyIn: (id: string, buyInId: string, approve: boolean) =>
     req<{ session: Session }>('POST', `/sessions/${id}/buyins/${buyInId}/respond`, { approve }),
+  removeBuyIn: (id: string, buyInId: string) => req<{ session: Session }>('DELETE', `/sessions/${id}/buyins/${buyInId}`),
   cashOut: (id: string, playerId: string, amountCents: number) =>
     req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/cashout`, { amountCents }),
   settlementPreview: (id: string) => req<{ settlement: SettlementResult }>('GET', `/sessions/${id}/settlement`),

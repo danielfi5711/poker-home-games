@@ -4,10 +4,11 @@ import { MAX_BUY_IN_CENTS, totalCashOutCents } from '../../../src/shared/types.j
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { AmountModal } from './AmountModal.js';
+import { ConfirmModal } from './ConfirmModal.js';
 import { SettleSheet } from './SettleSheet.js';
 import { tr } from '../i18n.js';
 import { BellIcon, PlusIcon } from '../icons.js';
-import { Avatar, Money, SectionLabel } from '../ui.js';
+import { Avatar, Money, SectionLabel, Sheet } from '../ui.js';
 
 interface Props {
   session: Session;
@@ -28,6 +29,9 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
   const [cashOutFor, setCashOutFor] = useState<string | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  /** Host: whose approved buy-ins are listed for removal, then the one being confirmed. */
+  const [buyInsFor, setBuyInsFor] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<{ name: string; buyIn: BuyIn } | null>(null);
 
   const me = session.players[playerId]!;
   const players = Object.values(session.players).sort((a, b) => a.joinedAt - b.joinedAt);
@@ -39,6 +43,18 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
     setRespondingTo(buyInId);
     try {
       const { session: updated } = await api.respondToBuyIn(session.id, buyInId, approve);
+      onChanged(updated);
+    } catch {
+      /* the next poll will reconcile either way */
+    } finally {
+      setRespondingTo(null);
+    }
+  }
+
+  async function removeBuyIn(buyInId: string) {
+    setRespondingTo(buyInId);
+    try {
+      const { session: updated } = await api.removeBuyIn(session.id, buyInId);
       onChanged(updated);
     } catch {
       /* the next poll will reconcile either way */
@@ -106,7 +122,14 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
       )}
 
       {myPending.length > 0 && (
-        <p class="warning">{tr.table.myPending(myPending.map((b) => formatCents(b.amountCents)))}</p>
+        <div class="warning mypending">
+          <p>{tr.table.myPending(myPending.map((b) => formatCents(b.amountCents)))}</p>
+          {myPending.map((b) => (
+            <button key={b.id} class="btn btn--sm" onClick={() => removeBuyIn(b.id)} disabled={respondingTo === b.id}>
+              {tr.table.cancelRequest(formatCents(b.amountCents))}
+            </button>
+          ))}
+        </div>
       )}
 
       <SectionLabel count={players.length}>{tr.table.players}</SectionLabel>
@@ -124,7 +147,13 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
                   {p.id === playerId && <span class="muted">{tr.common.youSuffix}</span>}
                 </span>
                 <span class="seat__status">
-                  <span class="row__sub">{tr.table.inAmount(formatCents(total))}</span>
+                  {isHost && total > 0 ? (
+                    <button type="button" class="row__sub row__link" onClick={() => setBuyInsFor(p.id)}>
+                      {tr.table.inAmount(formatCents(total))}
+                    </button>
+                  ) : (
+                    <span class="row__sub">{tr.table.inAmount(formatCents(total))}</span>
+                  )}
                   {!p.cashOut && p.earlierCashOutsCents ? (
                     <span class="row__sub">{tr.table.outSoFar(formatCents(p.earlierCashOutsCents))}</span>
                   ) : null}
@@ -172,8 +201,8 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
             {tr.table.cashOut}
           </button>
         ) : (
-          <button class="btn btn--lg" disabled>
-            {tr.table.cashedOut(formatCents(totalCashOutCents(me)))}
+          <button class="btn btn--lg" onClick={() => setCashOutFor(playerId)}>
+            {myPending.length > 0 ? tr.table.rebuyPending : tr.table.cashedOutEdit(formatCents(totalCashOutCents(me)))}
           </button>
         )}
       </div>
@@ -202,6 +231,58 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
         />
       )}
 
+      {buyInsFor && session.players[buyInsFor] && (
+        <Sheet onClose={() => setBuyInsFor(null)}>
+          <h2 class="modal__title">{tr.table.buyInsOf(session.players[buyInsFor].name)}</h2>
+          <p class="hint">
+            {tr.table.removeHint}
+            {buyInsFor !== playerId && tr.table.removeHintNotify}
+          </p>
+          <ul class="surface rows">
+            {session.players[buyInsFor].buyIns
+              .filter((b) => b.status === 'approved')
+              .map((b) => (
+                <li key={b.id} class="row">
+                  <span class="row__main">
+                    <span class="row__title">
+                      <Money cents={b.amountCents} />
+                    </span>
+                    <span class="row__sub">
+                      {new Date(b.respondedAt ?? b.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </span>
+                  <button
+                    class="btn btn--sm btn--danger"
+                    onClick={() => {
+                      setRemoving({ name: session.players[buyInsFor]!.name, buyIn: b });
+                      setBuyInsFor(null);
+                    }}
+                  >
+                    {tr.table.remove}
+                  </button>
+                </li>
+              ))}
+          </ul>
+          <button class="btn btn--lg btn--block" onClick={() => setBuyInsFor(null)}>
+            {tr.common.back}
+          </button>
+        </Sheet>
+      )}
+
+      {removing && (
+        <ConfirmModal
+          title={tr.table.removeTitle(formatCents(removing.buyIn.amountCents), removing.name)}
+          body={tr.table.removeBody}
+          confirmLabel={tr.table.remove}
+          danger
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => {
+            void removeBuyIn(removing.buyIn.id);
+            setRemoving(null);
+          }}
+        />
+      )}
+
       {cashOutFor && session.players[cashOutFor] && (
         <AmountModal
           title={cashOutFor === playerId ? tr.table.cashOut : tr.table.cashOutName(session.players[cashOutFor].name)}
@@ -212,6 +293,7 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
           }
           confirmLabel={tr.table.confirmCashOut}
           allowZero
+          initialCents={session.players[cashOutFor].cashOut?.amountCents}
           onCancel={() => setCashOutFor(null)}
           onConfirm={async (amountCents) => {
             const { session: updated } = await api.cashOut(session.id, cashOutFor, amountCents);
