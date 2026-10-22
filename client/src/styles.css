@@ -225,6 +225,58 @@ input {
   background: var(--gold-soft);
 }
 
+/* The settings entry: your own avatar with a small gear badge. */
+.acctbtn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease);
+}
+
+.acctbtn .av {
+  width: 34px;
+  height: 34px;
+  font-size: 12.5px;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--line-strong), 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: box-shadow var(--t) var(--ease);
+}
+
+.acctbtn__gear {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--surface-solid);
+  border: 1.5px solid var(--bg);
+  color: var(--ink-2);
+  transition: background var(--t) var(--ease), color var(--t) var(--ease), transform var(--t) var(--spring);
+}
+
+.acctbtn:active {
+  transform: scale(0.92);
+}
+
+.acctbtn--active .av {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold), var(--shadow-gold);
+}
+
+.acctbtn--active .acctbtn__gear {
+  background: var(--gold-grad);
+  color: var(--gold-ink);
+  transform: rotate(90deg);
+}
+
 .livechip {
   display: inline-flex;
   align-items: center;

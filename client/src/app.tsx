@@ -21,7 +21,7 @@ import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
 import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
-import { ScreenHead, Spinner } from './ui.js';
+import { Avatar, ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
 import { tr, useLang } from './i18n.js';
 
@@ -170,7 +170,10 @@ export function App() {
     setView('home');
   }
 
-  function openSettings() {
+  // Tapping the button again while Settings is open closes it — remembering
+  // 'settings' as the return view would leave Back stuck on Settings.
+  function toggleSettings() {
+    if (view === 'settings') return closeSettings();
     setReturnView(view);
     setView('settings');
   }
@@ -230,8 +233,16 @@ export function App() {
                   {pendingCount > 0 && <span class="count">{pendingCount}</span>}
                 </button>
               )}
-              <button class={`iconbtn ${view === "settings" ? "iconbtn--active" : ""}`} onClick={openSettings} aria-label={tr.app.settings}>
-                <GearIcon size={19} />
+              <button
+                class={`acctbtn ${view === "settings" ? "acctbtn--active" : ""}`}
+                onClick={toggleSettings}
+                aria-label={tr.app.settings}
+                aria-pressed={view === "settings"}
+              >
+                <Avatar id={account.id} name={account.displayName} size="sm" />
+                <span class="acctbtn__gear">
+                  <GearIcon size={11} />
+                </span>
               </button>
             </div>
           )}
