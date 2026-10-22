@@ -63,9 +63,9 @@ export interface Session {
 export type PaymentStatus = 'unpaid' | 'awaiting_confirmation' | 'confirmed';
 
 /**
- * One settled-game debt. Bit has no API to verify a transfer, so "paid" means
- * the receiver confirmed it: the payer taps Pay (-> awaiting_confirmation),
- * and a minute later the receiver is asked whether the money arrived.
+ * One settled-game debt. The app can't see the transfer, so "paid" means the
+ * receiver confirmed it: the payer taps "I've paid" (-> awaiting_confirmation)
+ * and the receiver is asked whether the money arrived.
  */
 export interface Payment {
   id: string;
@@ -78,13 +78,11 @@ export interface Payment {
   amountCents: number;
   status: PaymentStatus;
   payTappedAt: number | null;
-  /** When to ask the receiver to confirm; cleared once asked. Stored so a restart never loses it. */
-  confirmAskDueAt: number | null;
   confirmedAt: number | null;
   createdAt: number;
 }
 
-/** A payment as its payer/receiver sees it — with the receiver's phone so the payer can send via Bit. */
+/** A payment as its payer/receiver sees it — with the receiver's phone. */
 export interface PaymentView extends Payment {
   toPhone: string | null;
 }
@@ -98,7 +96,7 @@ export interface Account {
   id: string;
   username: string;
   displayName: string;
-  /** Israeli mobile, normalized to 05XXXXXXXX — friends pay you on Bit with it. Null on accounts made before it was required. */
+  /** Israeli mobile, normalized to 05XXXXXXXX — friends can pay you with it. Null on accounts made before it was required. */
   phone: string | null;
   /** UI language — also the language of this account's push notifications. */
   lang: Lang;

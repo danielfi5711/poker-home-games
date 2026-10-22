@@ -166,7 +166,6 @@ test('the payer saying they paid asks the receiver straight away; the receiver t
   sessions.markPaid(t.paymentId, t.guest.id);
   let p = paymentOf(t.guest.id, t.paymentId);
   assert.equal(p.status, 'awaiting_confirmation');
-  assert.equal(p.confirmAskDueAt, null); // asked now, not after the Bit delay
 
   sessions.respondPayment(t.paymentId, t.host.id, true);
   p = paymentOf(t.guest.id, t.paymentId);

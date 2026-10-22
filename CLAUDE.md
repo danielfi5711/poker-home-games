@@ -79,7 +79,7 @@ just ASCII, via a Unicode-aware regex.
 
 - `src/lib/push.ts` — Web Push (VAPID). Stores each account's push
   subscription(s) (one per device/browser). Only payments push: "says they
-  paid" / "did they pay you?" (to the receiver) and confirmed / "still need
+  paid" (to the receiver) and confirmed / "still need
   to pay" (to the payer) — table events (buy-ins, cash-outs, closing,
   settling) deliberately don't. Silently disabled if
   `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` aren't set. A 404/410 from a push send means that subscription expired
@@ -118,19 +118,12 @@ just ASCII, via a Unicode-aware regex.
   in the Leaderboard tab.
   `Payment` (stored on `Session.payments`, created by `settleSession()`) is
   one who-pays-whom debt: `unpaid` → `awaiting_confirmation` (payer tapped
-  Pay with Bit; `confirmAskDueAt` = +60s) → `confirmed` (receiver said Got
-  it). `sweepPaymentConfirmations()` (every 15s, started in `src/index.ts`)
-  sends the receiver the "did it arrive?" push once the due time passes —
-  persisted, so restarts don't lose it. "Not yet" resets to `unpaid` and
-  pushes the payer. The payer can also tap "I've paid" (`markPaid`, `POST
-  /api/payments/:id/paid`, also fired by the back-from-Bit "I sent it"), which
-  asks the receiver immediately instead of after 60s; and the receiver can tap
-  "Got it" at any time, even on an `unpaid` payment (cash, forgot to tap). Bit can't be pre-filled or verified, hence this flow
-  (pre-filled Bit links exist only for business accounts via payment
-  providers). To compensate, the client's pay sheet (`screens/Payments.tsx`)
-  is a 3-step guide with tap-to-copy number/amount chips; the number is
-  copied before Bit opens, and on `visibilitychange` back to the app a
-  "Paying X" sheet offers Copy amount / Back to Bit.
+  "I've paid" — `markPaid`, `POST /api/payments/:id/paid` — which pushes the
+  receiver right away) → `confirmed` (receiver said Got it). "Not yet" resets
+  to `unpaid` and pushes the payer. The receiver can tap "Got it" at any
+  time, even on an `unpaid` payment (cash, forgot to tap). The app doesn't
+  link to any payment app — players pay however they like (there used to be
+  an "Open Bit" flow; it was removed on purpose).
   `Account.phone` (Israeli mobile, normalized `05XXXXXXXX`) is required at
   register and settable via `PUT /api/auth/phone`; older accounts have
   `null` and the client blocks on a phone form until set.

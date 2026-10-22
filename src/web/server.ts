@@ -20,7 +20,6 @@ import {
   settleSession,
   paymentsFor,
   leaveSession,
-  startPayment,
   markPaid,
   respondPayment,
 } from '../lib/sessions.js';
@@ -255,12 +254,6 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (req.method === 'GET' && parts.length === 2 && parts[1] === 'payments') {
       const account = requireAuth(req);
       return sendJson(res, 200, { payments: paymentsFor(account.id) });
-    }
-
-    // POST /api/payments/:id/start — payer tapped "Pay with Bit"
-    if (req.method === 'POST' && parts.length === 4 && parts[1] === 'payments' && parts[3] === 'start') {
-      const account = requireAuth(req);
-      return sendJson(res, 200, { payment: startPayment(parts[2], account.id) });
     }
 
     // POST /api/payments/:id/paid — payer says they've paid; the receiver is asked to confirm right away

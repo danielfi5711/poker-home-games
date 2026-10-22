@@ -10,7 +10,7 @@ interface Props {
   onCancel?: () => void;
 }
 
-/** Enter/change your Israeli mobile — the number friends pay you on with Bit. */
+/** Enter/change your Israeli mobile — the number friends pay you with. */
 export function PhoneForm({ initial = '', submitLabel, onSaved, onCancel }: Props) {
   const [phone, setPhone] = useState(initial);
   const [busy, setBusy] = useState(false);

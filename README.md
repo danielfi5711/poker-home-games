@@ -36,10 +36,8 @@ are in shekels (₪).
    who pays them) and how much. The game then shows up in the **Games** tab
    (bottom bar) with its results and payments, and folds into the
    **Leaderboard** tab (balance, winning/losing streaks, biggest win/loss).
-7. **Payments tab**: every debt you owe or are owed. **Pay with Bit** copies
-   the friend's phone number, shows the amount, and opens Bit (Bit has no
-   public link that pre-fills recipient/amount, and no API to check a
-   payment). A minute later the receiver is asked "did it arrive?" — **Got
+7. **Payments tab**: every debt you owe or are owed. Pay however you like,
+   then tap **I've paid** — the receiver is asked "did it arrive?" — **Got
    it** marks it paid; **Not yet** puts it back to unpaid and notifies the
    payer they still owe. A phone number (Israeli mobile) is required at
    sign-up; older accounts are asked for one on their next open.

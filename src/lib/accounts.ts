@@ -83,7 +83,7 @@ export const USERNAME_FORMAT_MESSAGE =
   'Name must be 3-24 characters: letters (any language), numbers, spaces, "_", "." or "-" — and can\'t start or end with a space or symbol.';
 
 /**
- * Israeli mobile numbers only (that's what Bit uses): accepts "050-123-4567",
+ * Israeli mobile numbers only: accepts "050-123-4567",
  * "050 1234567", "+972 50 123 4567", "972501234567" and returns "0501234567".
  */
 export function normalizeIsraeliMobile(raw: string): string {

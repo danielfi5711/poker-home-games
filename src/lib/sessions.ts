@@ -352,7 +352,6 @@ export function settleSession(id: string, accountId: string): SettleResponse {
       amountCents: t.amountCents,
       status: 'unpaid',
       payTappedAt: null,
-      confirmAskDueAt: null,
       confirmedAt: null,
       createdAt: now,
     };
@@ -366,9 +365,6 @@ export function settleSession(id: string, accountId: string): SettleResponse {
 }
 
 // --- Payments ----------------------------------------------------------------
-
-/** How long after the payer taps "Pay with Bit" the receiver is asked to confirm. */
-const CONFIRM_ASK_DELAY_MS = 60_000;
 
 const shekels = (cents: number) => `₪${(cents / 100).toFixed(2)}`;
 
@@ -388,7 +384,7 @@ function updatePayment(sessionId: string, paymentId: string, mutate: (p: Payment
   return findPayment(paymentId).payment;
 }
 
-/** Every payment you owe or are owed, newest first, with the receiver's phone for Bit. */
+/** Every payment you owe or are owed, newest first, with the receiver's phone. */
 export function paymentsFor(accountId: string): PaymentView[] {
   return Object.values(data().sessions)
     .flatMap((s) => s.payments ?? [])
@@ -397,22 +393,9 @@ export function paymentsFor(accountId: string): PaymentView[] {
     .map((p) => ({ ...p, toPhone: getAccount(p.toAccountId)?.phone ?? null }));
 }
 
-/** The payer tapped "Pay with Bit" — ask the receiver to confirm in a minute (re-tapping re-arms it). */
-export function startPayment(paymentId: string, accountId: string): Payment {
-  const { session, payment } = findPayment(paymentId);
-  if (payment.fromAccountId !== accountId) throw new SessionError('Only the payer can do that.', 403);
-  if (payment.status === 'confirmed') return payment;
-  const now = Date.now();
-  return updatePayment(session.id, paymentId, (p) => {
-    p.status = 'awaiting_confirmation';
-    p.payTappedAt = now;
-    p.confirmAskDueAt = now + CONFIRM_ASK_DELAY_MS;
-  });
-}
-
 /**
- * The payer says they've sent the money (however they paid): ask the receiver right away rather than
- * waiting out the "Pay with Bit" delay. Saying it again re-asks.
+ * The payer says they've sent the money (however they paid): ask the receiver to confirm. Saying it
+ * again re-asks.
  */
 export function markPaid(paymentId: string, accountId: string): Payment {
   const { session, payment } = findPayment(paymentId);
@@ -421,7 +404,6 @@ export function markPaid(paymentId: string, accountId: string): Payment {
   const updated = updatePayment(session.id, paymentId, (p) => {
     p.status = 'awaiting_confirmation';
     p.payTappedAt ??= Date.now();
-    p.confirmAskDueAt = null;
   });
   notify(payment.toAccountId, (t) => ({
     title: t.saysPaidTitle(payment.fromName),
@@ -443,7 +425,6 @@ export function respondPayment(paymentId: string, accountId: string, received: b
   if (received) {
     const updated = updatePayment(session.id, paymentId, (p) => {
       p.status = 'confirmed';
-      p.confirmAskDueAt = null;
       p.confirmedAt = Date.now();
     });
     notify(payment.fromAccountId, (t) => ({
@@ -456,7 +437,6 @@ export function respondPayment(paymentId: string, accountId: string, received: b
 
   const updated = updatePayment(session.id, paymentId, (p) => {
     p.status = 'unpaid';
-    p.confirmAskDueAt = null;
   });
   notify(payment.fromAccountId, (t) => ({
     title: t.stillNeedToPayTitle,
@@ -464,27 +444,6 @@ export function respondPayment(paymentId: string, accountId: string, received: b
     url: '/?tab=payments',
   }));
   return updated;
-}
-
-/**
- * Sends each due "did the money arrive?" question once. Runs on an interval;
- * due times live in the stored data, so a restart never loses one.
- */
-export function sweepPaymentConfirmations(): void {
-  const now = Date.now();
-  for (const session of Object.values(data().sessions)) {
-    for (const payment of session.payments ?? []) {
-      if (payment.status !== 'awaiting_confirmation' || payment.confirmAskDueAt === null || payment.confirmAskDueAt > now) continue;
-      updatePayment(session.id, payment.id, (p) => {
-        p.confirmAskDueAt = null;
-      });
-      notify(payment.toAccountId, (t) => ({
-        title: t.didTheyPayTitle(payment.fromName),
-        body: t.didTheyPayBody(payment.fromName, shekels(payment.amountCents), payment.sessionName),
-        url: '/?tab=payments',
-      }));
-    }
-  }
 }
 
 export function allSessions(): Session[] {
