@@ -4,8 +4,8 @@
 
 An installable PWA for tracking local home poker games: real logins, host-approved buy-ins, cash-outs, automatic settlement (nets +
 minimal payments) across the table, an all-time leaderboard with
-winning/losing streaks, a full match history, and push notifications so a
-host doesn't have to be staring at the app to approve a buy-in. No real
+winning/losing streaks, a full match history, and push notifications for
+paying up after a game. No real
 money moves through the app — it's a calculator for a cash game the friends
 already play, not a payment product. Amounts are in shekels (₪).
 
@@ -29,7 +29,7 @@ buy-in is approved, `reopenSeat()` moves their cash-out into
 out is always `totalCashOutCents()` (earlier + current). Mistakes can be undone
 until the game is settled: `removeBuyIn()` lets a player cancel their own
 pending request (or the host cancel anyone's), and only the host can remove an
-approved buy-in (the player is push-notified); a cash-out can be re-entered
+approved buy-in; a cash-out can be re-entered
 any time (`recordCashOut` overwrites). Settling requires a cash-out for every
 player and no pending buy-ins — a missing cash-out used to count as ₪0,
 which made money vanish.
@@ -62,7 +62,7 @@ just ASCII, via a Unicode-aware regex.
   (`leaveSession`) or hasn't had the lobby open for 15 min (`closeAbandonedLobbies`,
   every 60s; presence = `hostSeenAt`, refreshed at most once a minute by the
   host's own lobby polling), record a cash-out (a player for themselves, or the host for anyone who
-  didn't — that player is push-notified), and settle (host-only,
+  didn't), and settle (host-only,
   doesn't require every player to have cashed out). Ownership is enforced
   server-side: buy-ins and cash-outs must be posted by the account that owns
   that seat (`requirePlayerOwnedBy`), and starting/approving/settling must
@@ -75,15 +75,14 @@ just ASCII, via a Unicode-aware regex.
   `longestLossStreak`, and `biggestWinCents`/`biggestLossCents`, which also
   feed the `HistoryHighlights` ("🔥 on a 3-game win streak", "💰 biggest win").
   Each `MatchSummary` also carries that game's `transfers` (by account and
-  name) for the Games tab. Settling a table (`settleSession`) push-notifies
-  every player at it with exactly whom they pay / who pays them.
+  name) for the Games tab.
 
 - `src/lib/push.ts` — Web Push (VAPID). Stores each account's push
-  subscription(s) (one per device/browser) and sends a notification when a
-  non-host requests a buy-in (to the host) or when the host responds (to the
-  requester). Silently disabled if `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
-  aren't set — the app still works, the host just won't get pushed until
-  they reopen it. A 404/410 from a push send means that subscription expired
+  subscription(s) (one per device/browser). Only payments push: "says they
+  paid" / "did they pay you?" (to the receiver) and confirmed / "still need
+  to pay" (to the payer) — table events (buy-ins, cash-outs, closing,
+  settling) deliberately don't. Silently disabled if
+  `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` aren't set. A 404/410 from a push send means that subscription expired
   and gets pruned automatically.
 - `src/lib/avatars.ts` — profile pictures, in their own store
   (`config.avatarsFile`). The client (`client/src/avatars.ts`) center-crops a

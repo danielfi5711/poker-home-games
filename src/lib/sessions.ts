@@ -4,7 +4,6 @@ import { newId, newJoinCode } from './id.js';
 import { computeSettlement } from './settlement.js';
 import { getAccount } from './accounts.js';
 import { notify } from './push.js';
-import type { PushText } from './i18n.js';
 import type {
   Account,
   BuyIn,
@@ -17,7 +16,6 @@ import type {
   Player,
   Session,
   SettleResponse,
-  SettlementResult,
 } from '../shared/types.js';
 import { MAX_BUY_IN_CENTS } from '../shared/types.js';
 
@@ -154,14 +152,10 @@ export function getSession(id: string, viewerAccountId?: string): Session {
   return requireSession(id);
 }
 
-function closeTable(session: Session, reason: (t: PushText) => string): void {
+function closeTable(session: Session): void {
   save((d) => {
     delete d.sessions[session.id];
   });
-  for (const p of Object.values(session.players)) {
-    if (p.id === session.hostPlayerId) continue;
-    notify(p.accountId, (t) => ({ title: t.tableClosedTitle(session.name), body: reason(t), url: '/?tab=tables' }));
-  }
 }
 
 /** The host left the lobby before starting — the table goes away with them. */
@@ -169,7 +163,7 @@ export function leaveSession(id: string, accountId: string): { closed: boolean }
   const session = requireSession(id);
   const host = session.players[session.hostPlayerId];
   if (session.status !== 'setup' || host?.accountId !== accountId) return { closed: false };
-  closeTable(session, (t) => t.hostLeft(host.name));
+  closeTable(session);
   return { closed: true };
 }
 
@@ -179,8 +173,7 @@ export function closeAbandonedLobbies(): void {
   for (const session of Object.values(data().sessions)) {
     if (session.status !== 'setup') continue;
     if ((session.hostSeenAt ?? session.createdAt) > cutoff) continue;
-    const host = session.players[session.hostPlayerId];
-    closeTable(session, (t) => t.neverStarted(host?.name ?? null));
+    closeTable(session);
     console.log(`Closed abandoned lobby ${session.id}`);
   }
 }
@@ -240,21 +233,10 @@ export function requestBuyIn(id: string, playerId: string, accountId: string, am
     if (buyIn.status === 'approved') reopenSeat(p);
   });
 
-  if (!isHost) {
-    const host = session.players[session.hostPlayerId];
-    if (host) {
-      notify(host.accountId, (t) => ({
-        title: t.buyInRequestTitle(player.name),
-        body: t.buyInRequestBody(player.name, shekels(amountCents), session.name),
-        url: `/?session=${session.id}`,
-      }));
-    }
-  }
-
   return requireSession(id);
 }
 
-/** Host-only: approve or deny a pending buy-in request. The requesting player gets a push either way. */
+/** Host-only: approve or deny a pending buy-in request. */
 export function respondToBuyIn(id: string, buyInId: string, accountId: string, approve: boolean): Session {
   const session = requireSession(id);
   requireHost(session, accountId);
@@ -269,13 +251,6 @@ export function respondToBuyIn(id: string, buyInId: string, accountId: string, a
     buyIn.respondedAt = Date.now();
     if (approve) reopenSeat(d.sessions[id].players[target!.player.id]);
   });
-
-  const amount = shekels(target.buyIn.amountCents);
-  notify(target.player.accountId, (t) => ({
-    title: approve ? t.buyInApprovedTitle : t.buyInDeniedTitle,
-    body: approve ? t.buyInApprovedBody(amount, session.name) : t.buyInDeniedBody(amount, session.name),
-    url: `/?session=${session.id}`,
-  }));
 
   return requireSession(id);
 }
@@ -307,15 +282,6 @@ export function removeBuyIn(id: string, buyInId: string, accountId: string): Ses
     const p = d.sessions[session.id].players[player.id];
     p.buyIns = p.buyIns.filter((b) => b.id !== buyInId);
   });
-
-  if (byHost && player.accountId !== accountId) {
-    const amount = shekels(buyIn.amountCents);
-    notify(player.accountId, (t) => ({
-      title: t.buyInRemovedTitle,
-      body: t.buyInRemovedBody(amount, session.name),
-      url: `/?session=${session.id}`,
-    }));
-  }
   return requireSession(id);
 }
 
@@ -342,14 +308,6 @@ export function recordCashOut(id: string, playerId: string, accountId: string, a
   save((d) => {
     d.sessions[id].players[playerId].cashOut = { amountCents, at: Date.now() };
   });
-
-  if (byHost) {
-    notify(player.accountId, (t) => ({
-      title: t.cashedOutTitle,
-      body: t.cashedOutBody(shekels(amountCents), session.name),
-      url: `/?session=${session.id}`,
-    }));
-  }
   return requireSession(id);
 }
 
@@ -404,7 +362,6 @@ export function settleSession(id: string, accountId: string): SettleResponse {
     d.sessions[id].settledAt = now;
     d.sessions[id].payments = payments;
   });
-  notifySettled(session, settlement);
   return { session: requireSession(id), settlement };
 }
 
@@ -527,25 +484,6 @@ export function sweepPaymentConfirmations(): void {
         url: '/?tab=payments',
       }));
     }
-  }
-}
-
-/** Tell every player at the table what they owe or are owed, so nobody has to ask. */
-function notifySettled(session: Session, settlement: SettlementResult): void {
-  for (const player of Object.values(session.players)) {
-    const pays = settlement.transfers.filter((t) => t.fromPlayerId === player.id);
-    const gets = settlement.transfers.filter((t) => t.toPlayerId === player.id);
-    notify(player.accountId, (t) => {
-      const lines = [
-        ...pays.map((x) => t.youSend(shekels(x.amountCents), session.players[x.toPlayerId]?.name ?? '?')),
-        ...gets.map((x) => t.youGet(session.players[x.fromPlayerId]?.name ?? '?', shekels(x.amountCents))),
-      ];
-      return {
-        title: t.gameOverTitle(session.name),
-        body: lines.length > 0 ? lines.join('\n') : t.brokeEven,
-        url: lines.length > 0 ? '/?tab=payments' : '/?tab=games',
-      };
-    });
   }
 }
 

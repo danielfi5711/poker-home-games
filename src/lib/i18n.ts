@@ -48,19 +48,6 @@ export function translateError(message: string, lang: Lang): string {
 }
 
 const en = {
-  tableClosedTitle: (table: string) => `"${table}" was closed`,
-  hostLeft: (host: string) => `${host} left before the game started.`,
-  neverStarted: (host: string | null) => `${host ?? 'The host'} never started the game.`,
-  buyInRequestTitle: (name: string) => `${name} wants to buy in`,
-  buyInRequestBody: (name: string, amount: string, table: string) => `${name} is requesting a ${amount} buy-in at "${table}".`,
-  buyInApprovedTitle: 'Buy-in approved',
-  buyInDeniedTitle: 'Buy-in denied',
-  buyInApprovedBody: (amount: string, table: string) => `Your ${amount} buy-in at "${table}" was approved.`,
-  buyInDeniedBody: (amount: string, table: string) => `Your ${amount} buy-in request at "${table}" was denied.`,
-  buyInRemovedTitle: 'Buy-in removed',
-  buyInRemovedBody: (amount: string, table: string) => `The host removed your ${amount} buy-in at "${table}".`,
-  cashedOutTitle: 'The host cashed you out',
-  cashedOutBody: (amount: string, table: string) => `You were cashed out for ${amount} at "${table}".`,
   paymentConfirmedTitle: 'Payment confirmed ✓',
   paymentConfirmedBody: (to: string, amount: string, table: string) => `${to} got your ${amount} for "${table}".`,
   stillNeedToPayTitle: 'You still need to pay',
@@ -70,27 +57,10 @@ const en = {
   didTheyPayTitle: (from: string) => `Did ${from} pay you?`,
   didTheyPayBody: (from: string, amount: string, table: string) =>
     `${from} went to send you ${amount} on Bit for "${table}". Tap to confirm.`,
-  gameOverTitle: (table: string) => `"${table}" is over`,
-  youSend: (amount: string, to: string) => `Send ${amount} to ${to}`,
-  youGet: (from: string, amount: string) => `${from} sends you ${amount}`,
-  brokeEven: 'You broke even — nothing to pay.',
 };
 
 // Hebrew phrasing avoids gendered verbs about other players (names don't tell us).
 const he: typeof en = {
-  tableClosedTitle: (table) => `השולחן "${table}" נסגר`,
-  hostLeft: (host) => `השולחן של ${host} נסגר לפני תחילת המשחק.`,
-  neverStarted: (host) => (host ? `המשחק של ${host} לא התחיל בזמן.` : 'המשחק לא התחיל בזמן.'),
-  buyInRequestTitle: (name) => `בקשת קנייה: ${name}`,
-  buyInRequestBody: (name, amount, table) => `בקשה לקנייה של ${amount} מ-${name} בשולחן "${table}".`,
-  buyInApprovedTitle: 'הקנייה אושרה',
-  buyInDeniedTitle: 'הקנייה נדחתה',
-  buyInApprovedBody: (amount, table) => `הקנייה שלך על סך ${amount} בשולחן "${table}" אושרה.`,
-  buyInDeniedBody: (amount, table) => `בקשת הקנייה שלך על סך ${amount} בשולחן "${table}" נדחתה.`,
-  buyInRemovedTitle: 'קנייה הוסרה',
-  buyInRemovedBody: (amount, table) => `המארח הסיר את הקנייה שלך על סך ${amount} בשולחן "${table}".`,
-  cashedOutTitle: 'המארח רשם לך פדיון',
-  cashedOutBody: (amount, table) => `נרשם לך פדיון של ${amount} בשולחן "${table}".`,
   paymentConfirmedTitle: 'התשלום אושר ✓',
   paymentConfirmedBody: (to, amount, table) => `התשלום של ${amount} ל-${to} עבור "${table}" התקבל.`,
   stillNeedToPayTitle: 'עדיין צריך לשלם',
@@ -99,10 +69,6 @@ const he: typeof en = {
   saysPaidBody: (from, amount, table) => `${amount} מ-${from} עבור "${table}". הכסף הגיע? לחיצה לאישור.`,
   didTheyPayTitle: (from) => `קיבלת תשלום מ-${from}?`,
   didTheyPayBody: (from, amount, table) => `${amount} מ-${from} בביט עבור "${table}". לחיצה לאישור.`,
-  gameOverTitle: (table) => `המשחק "${table}" הסתיים`,
-  youSend: (amount, to) => `להעביר ${amount} ל-${to}`,
-  youGet: (from, amount) => `לקבל ${amount} מ-${from}`,
-  brokeEven: 'יצאת באפס — אין מה לשלם.',
 };
 
 export type PushText = typeof en;
