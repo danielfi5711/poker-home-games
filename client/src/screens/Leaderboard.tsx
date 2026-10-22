@@ -14,19 +14,79 @@ function streakBadge(type: 'win' | 'loss' | null, count: number) {
   );
 }
 
+/** Champion's confetti: [left %, delay s, duration s, color]. Fixed, so it doesn't reshuffle on re-render. */
+const CONFETTI: [number, number, number, string][] = [
+  [8, 0, 2.6, 'var(--gold)'],
+  [22, 1.1, 3.1, '#ff7a7a'],
+  [35, 0.5, 2.4, 'var(--up)'],
+  [50, 1.7, 2.9, 'var(--gold-hi)'],
+  [63, 0.2, 2.7, 'var(--info)'],
+  [77, 1.4, 3.3, '#ff7a7a'],
+  [90, 0.8, 2.5, 'var(--gold)'],
+  [15, 2.2, 2.8, 'var(--info)'],
+  [57, 2.6, 3, 'var(--up)'],
+  [84, 1.9, 2.6, 'var(--gold-hi)'],
+];
+
+/**
+ * A little medal-colored figure dancing on its podium block, with the player's
+ * avatar (their photo, if they have one) as its face. Each place has its own
+ * dance — 1st jumps and raises the roof, 2nd does the disco point, 3rd the robot —
+ * all on the same 120 bpm beat so the three dance together.
+ */
+function Dancer({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 3 }) {
+  return (
+    <div class={`dancer dancer--${place}`} aria-hidden="true">
+      <span class="dancer__shadow" />
+      <span class="dancer__fig">
+        <span class="dancer__leg dancer__leg--l">
+          <span class="dancer__shin" />
+        </span>
+        <span class="dancer__leg dancer__leg--r">
+          <span class="dancer__shin" />
+        </span>
+        <span class="dancer__torso">{place}</span>
+        <span class="dancer__arm dancer__arm--l">
+          <span class="dancer__fore">
+            <span class="dancer__hand" />
+          </span>
+        </span>
+        <span class="dancer__arm dancer__arm--r">
+          <span class="dancer__fore">
+            <span class="dancer__hand" />
+          </span>
+        </span>
+        <span class="dancer__head">
+          {place === 1 && (
+            <span class="dancer__crown">
+              <CrownIcon size={20} />
+            </span>
+          )}
+          <Avatar id={entry.accountId} name={entry.name} size="lg" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
 function PodiumSpot({ entry, place }: { entry: LeaderboardEntry | undefined; place: 1 | 2 | 3 }) {
   if (!entry) return <div />;
   return (
     <div class={`podium__spot podium__spot--${place}`}>
+      <span class="podium__light" />
       {place === 1 && (
-        <span class="podium__crown">
-          <CrownIcon size={22} />
+        <span class="confetti" aria-hidden="true">
+          {CONFETTI.map(([left, delay, duration, color], i) => (
+            <i key={i} style={{ left: `${left}%`, animationDelay: `${delay}s`, animationDuration: `${duration}s`, background: color }} />
+          ))}
         </span>
       )}
-      <Avatar id={entry.accountId} name={entry.name} size={place === 1 ? 'xl' : 'lg'} />
-      <span class="podium__name">{entry.name}</span>
-      <Money cents={entry.balanceCents} signed size="sm" />
-      <div class="podium__block">{place}</div>
+      <Dancer entry={entry} place={place} />
+      <div class="podium__block">
+        <span class="podium__place">{place}</span>
+        <span class="podium__name">{entry.name}</span>
+        <Money cents={entry.balanceCents} signed size="sm" />
+      </div>
     </div>
   );
 }
