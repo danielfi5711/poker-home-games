@@ -2,6 +2,8 @@ import type { ComponentChildren } from 'preact';
 import { createPortal } from 'preact/compat';
 import { avatarStyle } from './avatarColor.js';
 import { initials } from './initials.js';
+import { useAvatarUrl } from './avatars.js';
+import { useState } from 'preact/hooks';
 import { formatCents } from './money.js';
 import { setLang, tr, useLang } from './i18n.js';
 
@@ -10,9 +12,18 @@ import { setLang, tr, useLang } from './i18n.js';
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export function Avatar({ id, name, size = 'md', ring, short }: { id: string; name: string; size?: AvatarSize; ring?: boolean; short?: boolean }) {
+  const photo = useAvatarUrl(id);
+  const [failed, setFailed] = useState<string | null>(null);
+  const showPhoto = photo && failed !== photo;
   return (
-    <span class={`av av--${size} ${ring ? 'av--ring' : ''}`} style={avatarStyle(id)} aria-hidden="true">
-      {short ? initials(name).slice(0, 1) : initials(name)}
+    <span class={`av av--${size} ${ring ? 'av--ring' : ''} ${showPhoto ? 'av--photo' : ''}`} style={avatarStyle(id)} aria-hidden="true">
+      {showPhoto ? (
+        <img class="av__img" src={photo} alt="" loading="lazy" decoding="async" onError={() => setFailed(photo)} />
+      ) : short ? (
+        initials(name).slice(0, 1)
+      ) : (
+        initials(name)
+      )}
     </span>
   );
 }

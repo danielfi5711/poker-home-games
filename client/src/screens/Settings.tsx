@@ -4,7 +4,8 @@ import { api } from '../api.js';
 import { ConfirmModal } from './ConfirmModal.js';
 import { PhoneForm } from './PhoneForm.js';
 import { formatPhone } from '../phone.js';
-import { ArrowLeftIcon, LogoutIcon, PhoneIcon, UserIcon } from '../icons.js';
+import { ArrowLeftIcon, CameraIcon, LogoutIcon, PhoneIcon, UserIcon } from '../icons.js';
+import { photoToJpeg, setAvatarVersions, useAvatarUrl } from '../avatars.js';
 import { Avatar, LangSwitch, ScreenHead, SectionLabel } from '../ui.js';
 import { tr } from '../i18n.js';
 
@@ -23,6 +24,9 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const hasPhoto = useAvatarUrl(account.id) !== null;
 
   function flash(message: string) {
     setSaved(message);
@@ -52,6 +56,42 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
     }
   }
 
+  async function pickPhoto(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // picking the same file again should still fire
+    if (!file) return;
+    setPhotoError(null);
+    setPhotoBusy(true);
+    try {
+      let image: string;
+      try {
+        image = await photoToJpeg(file);
+      } catch {
+        throw new Error(tr.settings.photoUnreadable);
+      }
+      setAvatarVersions((await api.setAvatar(image)).avatars);
+      flash(tr.settings.photoUpdated);
+    } catch (err) {
+      setPhotoError((err as Error).message);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function removePhoto() {
+    setPhotoError(null);
+    setPhotoBusy(true);
+    try {
+      setAvatarVersions((await api.removeAvatar()).avatars);
+      flash(tr.settings.photoRemoved);
+    } catch (err) {
+      setPhotoError((err as Error).message);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   return (
     <div class="view">
       <ScreenHead
@@ -64,15 +104,39 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
       />
 
       <section class="surface profile">
-        <Avatar id={account.id} name={account.displayName} size="xl" />
+        <label class={`profile__photo ${photoBusy ? 'profile__photo--busy' : ''}`} aria-label={hasPhoto ? tr.settings.changePhoto : tr.settings.addPhoto}>
+          <Avatar id={account.id} name={account.displayName} size="xl" />
+          <span class="profile__cam">
+            <CameraIcon size={14} />
+          </span>
+          <input type="file" accept="image/*" class="sr-only" onChange={pickPhoto} disabled={photoBusy} />
+        </label>
         <span class="row__main">
           <span class="profile__name">{account.displayName}</span>
           <span class="row__sub">
             {account.phone ? <bdi dir="ltr">{formatPhone(account.phone)}</bdi> : tr.settings.noPhone}
           </span>
+          <span class="profile__photoactions">
+            {photoBusy ? (
+              <span class="profile__photolink">{tr.settings.uploadingPhoto}</span>
+            ) : (
+              <>
+                <label class="profile__photolink">
+                  {hasPhoto ? tr.settings.changePhoto : tr.settings.addPhoto}
+                  <input type="file" accept="image/*" class="sr-only" onChange={pickPhoto} />
+                </label>
+                {hasPhoto && (
+                  <button class="profile__photolink profile__photolink--muted" onClick={removePhoto}>
+                    {tr.settings.removePhoto}
+                  </button>
+                )}
+              </>
+            )}
+          </span>
         </span>
       </section>
 
+      {photoError && <p class="error">{photoError}</p>}
       {saved && <p class="saved">✓ {saved}</p>}
 
       <SectionLabel>{tr.settings.account}</SectionLabel>

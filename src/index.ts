@@ -2,6 +2,7 @@ import { config } from './config.js';
 import { initAccounts } from './lib/accounts.js';
 import { closeAbandonedLobbies, initSessions, sweepPaymentConfirmations } from './lib/sessions.js';
 import { initPush } from './lib/push.js';
+import { initAvatars } from './lib/avatars.js';
 import { libsqlEnabled } from './lib/libsql.js';
 import { JsonStore } from './lib/store.js';
 import { startWebServer } from './web/server.js';
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
   setInterval(sweepPaymentConfirmations, 15_000);
   setInterval(closeAbandonedLobbies, 60_000);
   await initPush();
+  await initAvatars();
   startWebServer();
   console.log(`Storage: ${libsqlEnabled() ? 'turso' : `local files (${config.dataFile})`}`);
 }

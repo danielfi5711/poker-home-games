@@ -37,6 +37,7 @@ export const config = {
   dataFile: process.env.DATA_FILE ?? 'data/sessions.json',
   accountsFile: process.env.ACCOUNTS_FILE ?? 'data/accounts.json',
   pushFile: process.env.PUSH_FILE ?? 'data/push.json',
+  avatarsFile: process.env.AVATARS_FILE ?? 'data/avatars.json',
 
   /**
    * A session with no activity (no buy-in, cash-out, or setup change) for

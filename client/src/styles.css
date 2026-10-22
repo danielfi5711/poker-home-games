@@ -505,6 +505,17 @@ input {
   font-size: 24px;
 }
 
+.av--photo {
+  overflow: hidden;
+}
+
+.av__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .av--ring {
   box-shadow: 0 0 0 2.5px var(--surface-solid);
 }
@@ -2107,6 +2118,74 @@ form {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
+}
+
+/* Tap the big avatar to pick a photo. */
+.profile__photo {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease);
+}
+
+.profile__photo:active {
+  transform: scale(0.95);
+}
+
+.profile__photo--busy .av {
+  animation: photo-pulse 1s var(--ease) infinite alternate;
+}
+
+@keyframes photo-pulse {
+  to {
+    opacity: 0.45;
+  }
+}
+
+.profile__cam {
+  position: absolute;
+  inset-block-end: -2px;
+  inset-inline-end: -2px;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold-grad);
+  color: var(--gold-ink);
+  border: 2.5px solid var(--surface-solid);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+.profile__photoactions {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.profile__photolink {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--gold);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.profile__photolink--muted {
+  color: var(--ink-3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .setting {

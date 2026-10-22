@@ -85,6 +85,16 @@ just ASCII, via a Unicode-aware regex.
   aren't set — the app still works, the host just won't get pushed until
   they reopen it. A 404/410 from a push send means that subscription expired
   and gets pruned automatically.
+- `src/lib/avatars.ts` — profile pictures, in their own store
+  (`config.avatarsFile`). The client (`client/src/avatars.ts`) center-crops a
+  picked photo to a 256px JPEG and uploads it as a data URL
+  (`PUT`/`DELETE /api/auth/avatar`). Each upload gets a random `version`;
+  `GET /api/avatars` (auth) returns `accountId -> version`, and the image is
+  served unauthenticated at `/api/avatars/:accountId/:version` (an `<img>`
+  can't send the bearer token; the random version makes it unguessable and
+  lets it be cached forever). `Avatar` in `ui.tsx` shows the photo when the
+  shared map has one, initials otherwise — so every avatar in the app
+  (keyed by account id) picks it up.
 - `src/lib/settlement.ts` — `computeSettlement()`: nets everyone
   (`cashOut − approved buy-ins`), then greedily matches the largest creditor
   against the largest debtor until everyone is settled (Splitwise-style

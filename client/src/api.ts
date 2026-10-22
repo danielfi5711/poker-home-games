@@ -92,6 +92,10 @@ export const api = {
   changeUsername: (newUsername: string, currentPassword: string) =>
     req<{ account: Account }>('PUT', '/auth/username', { newUsername, currentPassword }),
 
+  avatars: () => req<{ avatars: Record<string, string> }>('GET', '/avatars'),
+  setAvatar: (image: string) => req<{ avatars: Record<string, string> }>('PUT', '/auth/avatar', { image }),
+  removeAvatar: () => req<{ avatars: Record<string, string> }>('DELETE', '/auth/avatar'),
+
   vapidPublicKey: () => req<VapidKeyResponse>('GET', '/push/vapid-public-key'),
   subscribePush: (subscription: PushSubscriptionJSON) => req<{ ok: true }>('POST', '/push/subscribe', { subscription }),
 

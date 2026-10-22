@@ -33,6 +33,8 @@ const HE_ERRORS: Record<string, string> = {
   'Payment not found.': 'התשלום לא נמצא.',
   'Only the payer can do that.': 'רק המשלם יכול לעשות את זה.',
   'Only the person being paid can confirm.': 'רק מי שמקבל את התשלום יכול לאשר.',
+  "That photo couldn't be used.": 'אי אפשר להשתמש בתמונה הזו.',
+  'That photo is too large.': 'התמונה גדולה מדי.',
   'Please log in.': 'יש להתחבר.',
   'Something went wrong.': 'משהו השתבש.',
   'Not found': 'לא נמצא',

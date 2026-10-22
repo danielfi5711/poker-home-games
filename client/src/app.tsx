@@ -23,6 +23,7 @@ import { SettingsScreen } from './screens/Settings.js';
 import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
 import { Avatar, ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
+import { refreshAvatars } from './avatars.js';
 import { tr, useLang } from './i18n.js';
 
 type View = 'login' | 'home' | 'session' | 'settings';
@@ -85,6 +86,19 @@ export function App() {
     const timer = setInterval(refreshPayments, onPaymentsTab ? 8000 : 30000);
     return () => clearInterval(timer);
   }, [account?.id, account?.phone, onPaymentsTab]);
+
+  // Friends' profile pictures: a tiny id -> version map, so a slow refresh is plenty.
+  useEffect(() => {
+    if (!account) return;
+    refreshAvatars();
+    const timer = setInterval(refreshAvatars, 120_000);
+    const onVisible = () => document.visibilityState === 'visible' && refreshAvatars();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [account?.id]);
 
   // A tapped notification focuses the already-open app and posts its URL here.
   useEffect(() => {

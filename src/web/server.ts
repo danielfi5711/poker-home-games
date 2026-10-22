@@ -25,6 +25,7 @@ import {
   respondPayment,
 } from '../lib/sessions.js';
 import { subscribe, vapidPublicKey } from '../lib/push.js';
+import { avatarImage, avatarVersions, removeAvatar, setAvatar } from '../lib/avatars.js';
 import { libsqlEnabled } from '../lib/libsql.js';
 import { isLang, type Account, type Lang } from '../shared/types.js';
 
@@ -192,6 +193,40 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       const lang = body?.lang;
       if (!isLang(lang)) throw new AuthError('Unsupported language.', 400);
       return sendJson(res, 200, { account: setLang(account.id, lang) });
+    }
+
+    // PUT /api/auth/avatar — set your profile picture (a JPEG data URL, already cropped/compressed by the client)
+    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'avatar') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      setAvatar(account.id, str(body, 'image'));
+      return sendJson(res, 200, { avatars: avatarVersions() });
+    }
+
+    // DELETE /api/auth/avatar — back to initials
+    if (req.method === 'DELETE' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'avatar') {
+      const account = requireAuth(req);
+      removeAvatar(account.id);
+      return sendJson(res, 200, { avatars: avatarVersions() });
+    }
+
+    // --- Profile pictures -------------------------------------------------------
+
+    // GET /api/avatars — which accounts have a photo, and its current version
+    if (req.method === 'GET' && parts.length === 2 && parts[1] === 'avatars') {
+      requireAuth(req);
+      return sendJson(res, 200, { avatars: avatarVersions() });
+    }
+
+    // GET /api/avatars/:accountId/:version — the image itself. No auth: an <img> can't send the
+    // bearer token, and the random version makes the URL unguessable. A new photo is a new URL,
+    // so each one can be cached forever.
+    if (req.method === 'GET' && parts.length === 4 && parts[1] === 'avatars') {
+      const image = avatarImage(parts[2], parts[3]);
+      if (!image) return sendJson(res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable' });
+      res.end(image);
+      return;
     }
 
     // --- Push notifications ----------------------------------------------------
