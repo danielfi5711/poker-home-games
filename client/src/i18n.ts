@@ -255,7 +255,10 @@ const en = {
     waitingToPay: (name: string) => `Waiting for ${name} to pay`,
     showDone: (n: number) => `Show completed (${n})`,
     hideDone: (n: number) => `Hide completed (${n})`,
-    iPaid: "I've paid — ask them to confirm",
+    iPaid: "I've paid",
+    tapWhenPaid: "Paid? Tap here",
+    payName: (name: string) => `Pay ${name}`,
+    payConfirmBody: (name: string) => `Only tap once the money is sent — ${name} will be asked to confirm it arrived.`,
   },
 };
 
@@ -501,7 +504,10 @@ const he: Strings = {
     waitingToPay: (name) => `מחכים לתשלום של ${name}`,
     showDone: (n) => `הצגת תשלומים שהושלמו (${n})`,
     hideDone: (n) => `הסתרת תשלומים שהושלמו (${n})`,
-    iPaid: 'שילמתי — לבקש אישור',
+    iPaid: 'שילמתי',
+    tapWhenPaid: 'שילמת? לחיצה כאן',
+    payName: (name) => `תשלום ל-${name}`,
+    payConfirmBody: (name) => `לוחצים רק אחרי שהכסף נשלח — תישלח ל-${name} בקשה לאשר שהוא הגיע.`,
   },
 };
 

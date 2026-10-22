@@ -2567,6 +2567,33 @@ form {
   flex-wrap: wrap;
 }
 
+.paycard--tap {
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease), border-color var(--t-fast);
+}
+
+.paycard--tap:active {
+  transform: scale(0.985);
+}
+
+.paycard__hint {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.payconfirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+
 .paycard__question {
   font-weight: 650;
   font-size: 14.5px;

@@ -2,8 +2,8 @@ import { useState } from 'preact/hooks';
 import type { PaymentView } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
-import { ArrowRightIcon, CheckIcon, WalletIcon } from '../icons.js';
-import { Avatar, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
+import { ArrowRightIcon, CheckIcon, ChevronRightIcon, WalletIcon } from '../icons.js';
+import { Avatar, Empty, Money, ScreenHead, SectionLabel, Sheet, Spinner } from '../ui.js';
 import { tr } from '../i18n.js';
 
 interface Props {
@@ -25,6 +25,8 @@ export function paymentsNeedingAction(payments: PaymentView[], myAccountId: stri
 const sum = (list: PaymentView[]) => list.reduce((n, p) => n + p.amountCents, 0);
 
 export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Props) {
+  // "I've paid" lives in a sheet behind a tap on the card, so it can't be hit by accident.
+  const [paying, setPaying] = useState<PaymentView | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -43,6 +45,7 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
     setActionError(null);
     try {
       await api.markPaid(p.id);
+      setPaying(null);
       onChanged();
     } catch (err) {
       setActionError((err as Error).message);
@@ -93,27 +96,47 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
           {toPay.length > 0 && (
             <>
               <SectionLabel count={toPay.length}>{tr.payments.needToPay}</SectionLabel>
-              {toPay.map((p) => (
-                <div key={p.id} class="surface paycard">
-                  <div class="paycard__top">
-                    <Avatar id={p.toAccountId} name={p.toName} />
-                    <span class="row__main">
-                      <span class="row__title">{p.toName}</span>
-                      <span class="row__sub">{p.sessionName}</span>
-                    </span>
-                    <Money cents={p.amountCents} size="lg" class="money--down" />
+              {toPay.map((p) => {
+                const open = p.status === 'unpaid';
+                return (
+                  <div
+                    key={p.id}
+                    class={`surface paycard ${open ? 'paycard--tap' : ''}`}
+                    role={open ? 'button' : undefined}
+                    tabIndex={open ? 0 : undefined}
+                    onClick={open ? () => setPaying(p) : undefined}
+                    onKeyDown={
+                      open
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setPaying(p);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <div class="paycard__top">
+                      <Avatar id={p.toAccountId} name={p.toName} />
+                      <span class="row__main">
+                        <span class="row__title">{p.toName}</span>
+                        <span class="row__sub">{p.sessionName}</span>
+                      </span>
+                      <Money cents={p.amountCents} size="lg" class="money--down" />
+                    </div>
+                    {open ? (
+                      <span class="paycard__hint">
+                        {tr.payments.tapWhenPaid}
+                        <ChevronRightIcon size={14} />
+                      </span>
+                    ) : (
+                      <span class="pill pill--gold" style={{ alignSelf: 'flex-start' }}>
+                        {tr.payments.waitingToConfirm(p.toName)}
+                      </span>
+                    )}
                   </div>
-                  {p.status === 'awaiting_confirmation' ? (
-                    <span class="pill pill--gold" style={{ alignSelf: 'flex-start' }}>
-                      {tr.payments.waitingToConfirm(p.toName)}
-                    </span>
-                  ) : (
-                    <button class="btn btn--primary btn--lg btn--block" onClick={() => markPaid(p)} disabled={busyId === p.id}>
-                      <CheckIcon size={15} /> {tr.payments.iPaid}
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </>
           )}
 
@@ -188,6 +211,25 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
             </>
           )}
         </>
+      )}
+
+      {paying && (
+        <Sheet onClose={() => setPaying(null)}>
+          <h2 class="modal__title">{tr.payments.payName(paying.toName)}</h2>
+          <div class="payconfirm">
+            <Money cents={paying.amountCents} size="xl" />
+            <span class="muted">{paying.sessionName}</span>
+          </div>
+          <p class="hint center">{tr.payments.payConfirmBody(paying.toName)}</p>
+          <div class="btnrow">
+            <button class="btn btn--lg" onClick={() => setPaying(null)}>
+              {tr.common.cancel}
+            </button>
+            <button class="btn btn--lg btn--primary" onClick={() => markPaid(paying)} disabled={busyId === paying.id}>
+              <CheckIcon size={15} /> {tr.payments.iPaid}
+            </button>
+          </div>
+        </Sheet>
       )}
     </div>
   );
