@@ -18,11 +18,11 @@ function streakBadge(type: 'win' | 'loss' | null, count: number) {
 /** Champion's confetti: [left %, delay s, duration s, color]. Fixed, so it doesn't reshuffle on re-render. */
 const CONFETTI: [number, number, number, string][] = [
   [8, 0, 2.6, 'var(--gold)'],
-  [22, 1.1, 3.1, '#ff7a7a'],
+  [22, 1.1, 3.1, 'var(--down)'],
   [35, 0.5, 2.4, 'var(--up)'],
   [50, 1.7, 2.9, 'var(--gold-hi)'],
   [63, 0.2, 2.7, 'var(--info)'],
-  [77, 1.4, 3.3, '#ff7a7a'],
+  [77, 1.4, 3.3, 'var(--down)'],
   [90, 0.8, 2.5, 'var(--gold)'],
   [15, 2.2, 2.8, 'var(--info)'],
   [57, 2.6, 3, 'var(--up)'],

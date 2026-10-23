@@ -64,8 +64,8 @@ function drawIcon(size, { opaque } = {}) {
   const ringR = chipR * 0.72;
   const dotR = size * 0.045;
 
-  const felt = [21, 92, 62, 255]; // #155c3e
-  const feltEdge = [15, 66, 45, 255];
+  const felt = [23, 25, 32, 255]; // #171920 graphite
+  const feltEdge = [14, 15, 20, 255];
   const white = [245, 245, 240, 255];
   const red = [196, 42, 42, 255];
 

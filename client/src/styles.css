@@ -1,26 +1,26 @@
 /* =============================================================================
    Poker Night — design system
-   Deep felt green, warm gold, glassy surfaces. Mobile-first, one column.
+   Graphite and gold, glassy surfaces. Mobile-first, one column.
    ========================================================================== */
 
 :root {
   color-scheme: dark;
 
   /* surfaces */
-  --bg: #06110c;
-  --bg-glow: #134a31;
-  --felt: #0c2519;
+  --bg: #0b0c10;
+  --bg-glow: #1c1f27;
+  --felt: #14161c;
   --surface: rgba(255, 255, 255, 0.045);
   --surface-2: rgba(255, 255, 255, 0.075);
-  --surface-solid: #0f2a1d;
-  --sheet: #0d241a;
+  --surface-solid: #15171d;
+  --sheet: #14161c;
   --line: rgba(255, 255, 255, 0.075);
   --line-strong: rgba(255, 255, 255, 0.14);
 
   /* ink */
-  --ink: #f4f6ef;
-  --ink-2: #b4c7ba;
-  --ink-3: #7c9286;
+  --ink: #f2f3f5;
+  --ink-2: #a4a9b4;
+  --ink-3: #6e7480;
 
   /* gold */
   --gold: #e9c068;
@@ -32,10 +32,10 @@
   --gold-line: rgba(233, 192, 104, 0.35);
 
   /* semantic */
-  --up: #4fe08b;
-  --up-soft: rgba(79, 224, 139, 0.13);
-  --down: #ff7a7a;
-  --down-soft: rgba(255, 122, 122, 0.13);
+  --up: #5fd39a;
+  --up-soft: rgba(95, 211, 154, 0.12);
+  --down: #f2797a;
+  --down-soft: rgba(242, 121, 122, 0.12);
   --info: #6fc8ee;
   --info-soft: rgba(111, 200, 238, 0.13);
 
@@ -89,7 +89,7 @@ body {
   min-height: 100vh;
   background-color: var(--bg);
   background-image:
-    radial-gradient(120% 60% at 50% -12%, rgba(32, 110, 72, 0.55) 0%, rgba(19, 74, 49, 0.18) 45%, transparent 70%),
+    radial-gradient(120% 60% at 50% -12%, rgba(70, 76, 92, 0.32) 0%, rgba(40, 44, 54, 0.14) 45%, transparent 70%),
     radial-gradient(80% 40% at 100% 100%, rgba(233, 192, 104, 0.05) 0%, transparent 60%);
   background-attachment: fixed;
 }
@@ -169,7 +169,7 @@ input {
   justify-content: space-between;
   gap: 8px;
   padding: calc(10px + var(--safe-t)) 16px 10px;
-  background: linear-gradient(180deg, rgba(6, 17, 12, 0.92) 0%, rgba(6, 17, 12, 0.7) 70%, rgba(6, 17, 12, 0) 100%);
+  background: linear-gradient(180deg, rgba(11, 12, 16, 0.92) 0%, rgba(11, 12, 16, 0.7) 70%, rgba(11, 12, 16, 0) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -298,17 +298,17 @@ input {
   height: 7px;
   border-radius: 50%;
   background: var(--up);
-  box-shadow: 0 0 0 0 rgba(79, 224, 139, 0.6);
+  box-shadow: 0 0 0 0 rgba(95, 211, 154, 0.6);
   animation: live 2s var(--ease) infinite;
 }
 
 @keyframes live {
   0% {
-    box-shadow: 0 0 0 0 rgba(79, 224, 139, 0.55);
+    box-shadow: 0 0 0 0 rgba(95, 211, 154, 0.55);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 7px rgba(79, 224, 139, 0);
+    box-shadow: 0 0 0 7px rgba(95, 211, 154, 0);
   }
 }
 
@@ -575,13 +575,13 @@ input {
 }
 
 .btn--success {
-  border-color: rgba(79, 224, 139, 0.35);
+  border-color: rgba(95, 211, 154, 0.35);
   background: var(--up-soft);
   color: var(--up);
 }
 
 .btn--danger {
-  border-color: rgba(255, 122, 122, 0.32);
+  border-color: rgba(242, 121, 122, 0.32);
   background: var(--down-soft);
   color: var(--down);
 }
@@ -698,7 +698,7 @@ form {
   padding: 11px 14px;
   border-radius: var(--r-md);
   background: var(--down-soft);
-  border: 1px solid rgba(255, 122, 122, 0.3);
+  border: 1px solid rgba(242, 121, 122, 0.3);
   color: #ffb3b3;
   font-size: 13.5px;
 }
@@ -901,7 +901,7 @@ form {
   grid-template-columns: repeat(5, 1fr);
   padding: 6px;
   border-radius: 24px;
-  background: rgba(12, 34, 24, 0.82);
+  background: rgba(20, 22, 28, 0.82);
   border: 1px solid var(--line-strong);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(18px) saturate(150%);
@@ -952,7 +952,7 @@ form {
   position: absolute;
   top: -6px;
   inset-inline-end: -11px;
-  box-shadow: 0 0 0 2.5px rgba(12, 34, 24, 1);
+  box-shadow: 0 0 0 2.5px var(--surface-solid);
   animation: pop var(--t-slow) var(--spring) both;
 }
 
@@ -972,7 +972,7 @@ form {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(2, 8, 5, 0.62);
+  background: rgba(4, 5, 8, 0.66);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: fade var(--t) var(--ease) both;
@@ -994,7 +994,7 @@ form {
   gap: 14px;
   padding: 10px 20px calc(20px + var(--safe-b));
   border-radius: var(--r-xl) var(--r-xl) 0 0;
-  background: linear-gradient(180deg, #123323 0%, var(--sheet) 60%);
+  background: linear-gradient(180deg, #1b1e25 0%, var(--sheet) 60%);
   border-top: 1px solid var(--line-strong);
   box-shadow: var(--shadow-2);
   animation: sheet-up var(--t-slow) var(--ease) both;
@@ -1216,7 +1216,7 @@ form {
   border: 1px solid var(--gold-line);
   background:
     radial-gradient(120% 140% at 100% 0%, rgba(233, 192, 104, 0.2) 0%, transparent 55%),
-    linear-gradient(160deg, #18452f 0%, #0e2a1c 100%);
+    linear-gradient(160deg, #1d2028 0%, #121419 100%);
   box-shadow: var(--shadow-1), 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
@@ -1264,7 +1264,7 @@ form {
 }
 
 .tablecard--live {
-  border-color: rgba(79, 224, 139, 0.25);
+  border-color: rgba(95, 211, 154, 0.25);
 }
 
 .tablecard__top {
@@ -1321,8 +1321,8 @@ form {
   border-radius: var(--r-xl);
   border: 1px solid var(--line-strong);
   background:
-    radial-gradient(90% 120% at 50% 0%, rgba(40, 130, 85, 0.45) 0%, transparent 70%),
-    linear-gradient(180deg, #154431 0%, #0c281b 100%);
+    radial-gradient(90% 120% at 50% 0%, rgba(233, 192, 104, 0.14) 0%, transparent 70%),
+    linear-gradient(180deg, #1d2028 0%, #121419 100%);
   box-shadow: var(--shadow-1);
 }
 
@@ -1454,9 +1454,9 @@ form {
   gap: 10px;
   padding: 10px;
   border-radius: var(--r-xl);
-  background: #0e271b;
+  background: #16181e;
   border: 1px solid var(--line-strong);
-  box-shadow: 0 -12px 30px rgba(6, 17, 12, 0.9), 0 14px 34px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -12px 30px rgba(11, 12, 16, 0.9), 0 14px 34px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -1483,8 +1483,8 @@ form {
   border-radius: var(--r-xl);
   border: 1px solid var(--line-strong);
   background:
-    radial-gradient(80% 100% at 50% 0%, rgba(40, 130, 85, 0.4) 0%, transparent 70%),
-    linear-gradient(180deg, #143e2c 0%, #0c271a 100%);
+    radial-gradient(80% 100% at 50% 0%, rgba(233, 192, 104, 0.14) 0%, transparent 70%),
+    linear-gradient(180deg, #1d2028 0%, #121419 100%);
 }
 
 .lobbyhead__title {
@@ -2523,13 +2523,13 @@ form {
 }
 
 .balance__box--owe {
-  border-color: rgba(255, 122, 122, 0.25);
-  background: linear-gradient(160deg, rgba(255, 122, 122, 0.1), transparent 70%);
+  border-color: rgba(242, 121, 122, 0.25);
+  background: linear-gradient(160deg, rgba(242, 121, 122, 0.1), transparent 70%);
 }
 
 .balance__box--get {
-  border-color: rgba(79, 224, 139, 0.25);
-  background: linear-gradient(160deg, rgba(79, 224, 139, 0.1), transparent 70%);
+  border-color: rgba(95, 211, 154, 0.25);
+  background: linear-gradient(160deg, rgba(95, 211, 154, 0.1), transparent 70%);
 }
 
 .balance__label {
@@ -2702,13 +2702,13 @@ form {
 
 .settle__totals--ok {
   background: var(--up-soft);
-  border-color: rgba(79, 224, 139, 0.35);
+  border-color: rgba(95, 211, 154, 0.35);
   color: var(--up);
 }
 
 .settle__totals--off {
   background: var(--down-soft);
-  border-color: rgba(255, 122, 122, 0.35);
+  border-color: rgba(242, 121, 122, 0.35);
   color: var(--down);
 }
 
@@ -2738,7 +2738,7 @@ form {
   border: 1px solid var(--gold-line);
   background:
     radial-gradient(90% 110% at 50% 0%, rgba(233, 192, 104, 0.22) 0%, transparent 65%),
-    linear-gradient(180deg, #16402d 0%, #0c271a 100%);
+    linear-gradient(180deg, #1d2028 0%, #121419 100%);
 }
 
 .finale__label {
@@ -3119,7 +3119,7 @@ form {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: radial-gradient(120% 140% at 50% 0%, rgba(30, 110, 70, 0.35) 0%, transparent 70%), var(--surface);
+  background: radial-gradient(120% 140% at 50% 0%, rgba(233, 192, 104, 0.1) 0%, transparent 70%), var(--surface);
 }
 
 .oddsboard .label {
