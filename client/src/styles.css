@@ -3432,25 +3432,44 @@ form {
   stroke-dasharray: 3 4;
 }
 
+/* full-size layers moved by transform: the dot sits at a layer's top-left corner */
+.pfchart__layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 60ms linear;
+}
+
 .pfchart__cross {
+  opacity: 0;
+  transition: transform 60ms linear, opacity var(--t-fast) var(--ease);
+}
+
+.pfchart__cross::before {
+  content: '';
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 0;
   width: 1px;
   background: var(--line-strong);
-  pointer-events: none;
+}
+
+.pfchart__plot--active .pfchart__cross {
+  opacity: 1;
 }
 
 .pfchart__dot {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 11px;
   height: 11px;
   margin: -5.5px 0 0 -5.5px;
   border-radius: 50%;
   background: var(--gold-hi);
   box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 6px var(--gold-soft);
-  pointer-events: none;
-  transition: left 90ms linear, top 90ms linear;
 }
 
 .pfchart__dot--down {

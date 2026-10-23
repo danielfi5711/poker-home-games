@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'preact/hooks';
+import { memo } from 'preact/compat';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { PlayerProfile } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { ArrowLeftIcon, ReceiptIcon } from '../icons.js';
@@ -189,24 +190,56 @@ const PAD = 12;
  */
 function BalanceChart({ profile }: { profile: PlayerProfile }) {
   const [active, setActive] = useState<number | null>(null);
-  const chronological = [...profile.matches].reverse();
-  const values = [0, ...profile.balanceHistory.map((h) => h.balanceCents)];
-  const labels = [tr.profile.start, ...chronological.map((m) => `${m.name} · ${shortDate(m.settledAt)}`)];
+  const rect = useRef<DOMRect | null>(null);
+  const frame = useRef(0);
 
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
-  const span = max - min || 1;
-  const x = (i: number) => (i / (values.length - 1)) * W;
-  const y = (v: number) => PAD + ((max - v) / span) * (H - PAD * 2);
-  const line = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
-  const area = `${line}L${W},${y(0)}L0,${y(0)}Z`;
+  // Everything that depends only on the data, worked out once per profile —
+  // not on every finger movement.
+  const chart = useMemo(() => {
+    const values = [0, ...profile.balanceHistory.map((h) => h.balanceCents)];
+    const chronological = [...profile.matches].reverse();
+    const labels = [tr.profile.start, ...chronological.map((m) => `${m.name} · ${shortDate(m.settledAt)}`)];
+    const min = Math.min(0, ...values);
+    const max = Math.max(0, ...values);
+    const span = max - min || 1;
+    const x = (i: number) => (i / (values.length - 1)) * W;
+    const y = (v: number) => PAD + ((max - v) / span) * (H - PAD * 2);
+    const line = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    return {
+      values,
+      labels,
+      line,
+      area: `${line}L${W},${y(0)}L0,${y(0)}Z`,
+      zero: y(0),
+      // Each point as a fraction of the plot's width/height, for positioning the dot.
+      points: values.map((v, i) => [x(i) / W, y(v) / H] as const),
+    };
+  }, [profile]);
 
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+
+  const { values, labels, points } = chart;
   const shown = active ?? values.length - 1;
+  const [fx, fy] = points[shown]!;
 
+  // Measure once per touch (not per move), and update at most once per frame.
+  // setActive with the same index doesn't re-render, so sliding within one
+  // game's slot costs nothing.
   function scrub(e: PointerEvent) {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const t = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    setActive(Math.round(t * (values.length - 1)));
+    if (e.type === 'pointerdown' || !rect.current) rect.current = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const clientX = e.clientX;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      const r = rect.current!;
+      const t = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+      setActive(Math.round(t * (values.length - 1)));
+    });
+  }
+
+  function release() {
+    cancelAnimationFrame(frame.current);
+    rect.current = null;
+    setActive(null);
   }
 
   return (
@@ -216,43 +249,22 @@ function BalanceChart({ profile }: { profile: PlayerProfile }) {
         <Money cents={values[shown]!} signed size="xl" />
       </div>
       <div
-        class="pfchart__plot"
+        class={`pfchart__plot ${active !== null ? 'pfchart__plot--active' : ''}`}
         dir="ltr"
+        onPointerEnter={() => (rect.current = null)}
         onPointerDown={scrub}
         onPointerMove={scrub}
-        onPointerLeave={() => setActive(null)}
-        onPointerUp={(e) => e.pointerType !== 'mouse' && setActive(null)}
-        onPointerCancel={() => setActive(null)}
+        onPointerLeave={release}
+        onPointerUp={(e) => e.pointerType !== 'mouse' && release()}
+        onPointerCancel={release}
       >
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="pfUp" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="var(--gold)" stop-opacity="0.3" />
-              <stop offset="1" stop-color="var(--gold)" stop-opacity="0.02" />
-            </linearGradient>
-            <linearGradient id="pfDown" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0" stop-color="var(--down)" stop-opacity="0.26" />
-              <stop offset="1" stop-color="var(--down)" stop-opacity="0.02" />
-            </linearGradient>
-            {/* Above ₪0 is gold, below is red — the same line, split at the zero line. */}
-            <clipPath id="pfAbove">
-              <rect x="-4" y="-4" width={W + 8} height={y(0) + 4} />
-            </clipPath>
-            <clipPath id="pfBelow">
-              <rect x="-4" y={y(0)} width={W + 8} height={H - y(0) + 4} />
-            </clipPath>
-          </defs>
-          <path d={area} fill="url(#pfUp)" clip-path="url(#pfAbove)" />
-          <path d={area} fill="url(#pfDown)" clip-path="url(#pfBelow)" />
-          <line class="pfchart__zero" x1="0" x2={W} y1={y(0)} y2={y(0)} vector-effect="non-scaling-stroke" />
-          <path class="pfchart__line" d={line} clip-path="url(#pfAbove)" vector-effect="non-scaling-stroke" />
-          <path class="pfchart__line pfchart__line--down" d={line} clip-path="url(#pfBelow)" vector-effect="non-scaling-stroke" />
-        </svg>
-        {active !== null && <span class="pfchart__cross" style={{ left: `${(x(shown) / W) * 100}%` }} />}
-        <span
-          class={`pfchart__dot ${values[shown]! < 0 ? 'pfchart__dot--down' : ''}`}
-          style={{ left: `${(x(shown) / W) * 100}%`, top: `${(y(values[shown]!) / H) * 100}%` }}
-        />
+        <ChartArt chart={chart} />
+        {/* Full-size layers moved with transforms (percentages of their own size = the plot's size),
+            so following a finger never triggers layout — only compositing. */}
+        <span class="pfchart__layer pfchart__cross" style={{ transform: `translateX(${fx * 100}%)` }} />
+        <span class="pfchart__layer" style={{ transform: `translate(${fx * 100}%, ${fy * 100}%)` }}>
+          <span class={`pfchart__dot ${values[shown]! < 0 ? 'pfchart__dot--down' : ''}`} />
+        </span>
       </div>
       <div class="pfchart__axis" dir="ltr">
         <span>{shortDate(profile.balanceHistory[0]!.at)}</span>
@@ -261,3 +273,36 @@ function BalanceChart({ profile }: { profile: PlayerProfile }) {
     </section>
   );
 }
+
+type ChartGeometry = { line: string; area: string; zero: number };
+
+/** The static line and fills. Memoized, so scrubbing only ever touches the dot and crosshair. */
+const ChartArt = memo(function ChartArt({ chart }: { chart: ChartGeometry }) {
+  const { line, area, zero } = chart;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="pfUp" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="var(--gold)" stop-opacity="0.3" />
+          <stop offset="1" stop-color="var(--gold)" stop-opacity="0.02" />
+        </linearGradient>
+        <linearGradient id="pfDown" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="var(--down)" stop-opacity="0.26" />
+          <stop offset="1" stop-color="var(--down)" stop-opacity="0.02" />
+        </linearGradient>
+        {/* Above ₪0 is gold, below is red — the same line, split at the zero line. */}
+        <clipPath id="pfAbove">
+          <rect x="-4" y="-4" width={W + 8} height={zero + 4} />
+        </clipPath>
+        <clipPath id="pfBelow">
+          <rect x="-4" y={zero} width={W + 8} height={H - zero + 4} />
+        </clipPath>
+      </defs>
+      <path d={area} fill="url(#pfUp)" clip-path="url(#pfAbove)" />
+      <path d={area} fill="url(#pfDown)" clip-path="url(#pfBelow)" />
+      <line class="pfchart__zero" x1="0" x2={W} y1={zero} y2={zero} vector-effect="non-scaling-stroke" />
+      <path class="pfchart__line" d={line} clip-path="url(#pfAbove)" vector-effect="non-scaling-stroke" />
+      <path class="pfchart__line pfchart__line--down" d={line} clip-path="url(#pfBelow)" vector-effect="non-scaling-stroke" />
+    </svg>
+  );
+});
