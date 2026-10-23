@@ -13,6 +13,7 @@ import {
   createSession,
   getSession,
   history,
+  profile,
   joinSession,
   previewSettlement,
   recordCashOut,
@@ -275,6 +276,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (req.method === 'GET' && parts.length === 2 && parts[1] === 'history') {
       requireAuth(req);
       return sendJson(res, 200, history());
+    }
+
+    // GET /api/profiles/:accountId — a player's info and all-time stats
+    if (req.method === 'GET' && parts.length === 3 && parts[1] === 'profiles') {
+      requireAuth(req);
+      return sendJson(res, 200, { profile: profile(parts[2]) });
     }
 
     // GET /api/sessions — every table

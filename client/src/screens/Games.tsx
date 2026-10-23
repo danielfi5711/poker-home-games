@@ -5,6 +5,7 @@ import { formatCents } from '../money.js';
 import { ArrowRightIcon, ChevronDownIcon, CrownIcon, ReceiptIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, Spinner } from '../ui.js';
 import { locale, tr } from '../i18n.js';
+import { profileTap } from '../profileNav.js';
 
 interface Props {
   myAccountId: string;
@@ -96,7 +97,7 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
         <div class="game__inner">
           <div class="game__section">
             {players.map((p) => (
-              <div key={p.accountId} class={`minirow ${p.accountId === myAccountId ? 'minirow--me' : ''}`}>
+              <div key={p.accountId} class={`minirow tappable ${p.accountId === myAccountId ? 'minirow--me' : ''}`} {...profileTap(p.accountId)}>
                 <Avatar id={p.accountId} name={p.name} size="sm" />
                 <span class="minirow__name">
                   {p.name}

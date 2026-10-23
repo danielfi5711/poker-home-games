@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { CrownIcon, TrophyIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
 import { tr } from '../i18n.js';
+import { profileTap } from '../profileNav.js';
 
 function streakBadge(type: 'win' | 'loss' | null, count: number) {
   if (!type || count < 2) return null;
@@ -72,7 +73,7 @@ function Dancer({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 3 })
 function PodiumSpot({ entry, place }: { entry: LeaderboardEntry | undefined; place: 1 | 2 | 3 }) {
   if (!entry) return <div />;
   return (
-    <div class={`podium__spot podium__spot--${place}`}>
+    <div class={`podium__spot podium__spot--${place} tappable`} {...profileTap(entry.accountId)}>
       <span class="podium__light" />
       {place === 1 && (
         <span class="confetti" aria-hidden="true">
@@ -129,7 +130,7 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
       {board.length > 0 && (
         <ul class="surface rows">
           {board.map((entry, i) => (
-            <li key={entry.accountId} class={`row ${entry.accountId === myAccountId ? 'row--me' : ''}`}>
+            <li key={entry.accountId} class={`row tappable ${entry.accountId === myAccountId ? 'row--me' : ''}`} {...profileTap(entry.accountId)}>
               <span class="rank">{i + 1}</span>
               <Avatar id={entry.accountId} name={entry.name} />
               <span class="row__main">
@@ -155,7 +156,7 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
           <SectionLabel>{tr.leaderboard.highlights}</SectionLabel>
           <div class="highlights">
             {h.hottest && (
-              <div class="highlight">
+              <div class="highlight tappable" {...profileTap(h.hottest.accountId)}>
                 <span class="highlight__icon">🔥</span>
                 <span class="highlight__label">{tr.leaderboard.hotStreak}</span>
                 <span class="highlight__who">{h.hottest.name}</span>
@@ -163,7 +164,7 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
               </div>
             )}
             {h.coldest && (
-              <div class="highlight">
+              <div class="highlight tappable" {...profileTap(h.coldest.accountId)}>
                 <span class="highlight__icon">🧊</span>
                 <span class="highlight__label">{tr.leaderboard.coldStreak}</span>
                 <span class="highlight__who">{h.coldest.name}</span>
@@ -171,7 +172,7 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
               </div>
             )}
             {h.biggestWin && (
-              <div class="highlight">
+              <div class="highlight tappable" {...profileTap(h.biggestWin.accountId)}>
                 <span class="highlight__icon">💰</span>
                 <span class="highlight__label">{tr.leaderboard.biggestWin}</span>
                 <span class="highlight__who">{h.biggestWin.name}</span>
@@ -179,7 +180,7 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
               </div>
             )}
             {h.biggestLoss && (
-              <div class="highlight">
+              <div class="highlight tappable" {...profileTap(h.biggestLoss.accountId)}>
                 <span class="highlight__icon">📉</span>
                 <span class="highlight__label">{tr.leaderboard.biggestLoss}</span>
                 <span class="highlight__who">{h.biggestLoss.name}</span>

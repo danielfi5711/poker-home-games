@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Account, PaymentView, Session } from '../../src/shared/types.js';
 import {
   api,
@@ -21,13 +21,15 @@ import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
+import { ProfileScreen } from './screens/Profile.js';
+import { onOpenProfile } from './profileNav.js';
 import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon, PercentIcon } from './icons.js';
 import { Avatar, ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
 import { refreshAvatars } from './avatars.js';
 import { tr, useLang } from './i18n.js';
 
-type View = 'login' | 'home' | 'session' | 'settings';
+type View = 'login' | 'home' | 'session' | 'settings' | 'profile';
 type HomeTab = 'tables' | 'leaderboard' | 'games' | 'odds' | 'payments';
 
 const HOME_TABS: { id: HomeTab; icon: typeof CardsIcon }[] = [
@@ -52,6 +54,9 @@ export function App() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [returnView, setReturnView] = useState<View>('home');
   const [homeTab, setHomeTab] = useState<HomeTab>(() => tabFromUrl(location.href) ?? 'tables');
+  // Profiles opened from a profile stack up, so Back walks back through them.
+  const [profileStack, setProfileStack] = useState<string[]>([]);
+  const [profileReturn, setProfileReturn] = useState<View>('home');
   const [payments, setPayments] = useState<PaymentView[] | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
@@ -101,6 +106,29 @@ export function App() {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [account?.id]);
+
+  // Tapping a player anywhere opens their profile (see profileNav.ts).
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(
+    () =>
+      onOpenProfile((id) => {
+        if (viewRef.current !== 'profile') {
+          setProfileReturn(viewRef.current);
+          setProfileStack([id]);
+        } else {
+          setProfileStack((stack) => (stack[stack.length - 1] === id ? stack : [...stack, id]));
+        }
+        setView('profile');
+      }),
+    [],
+  );
+
+  function closeProfile() {
+    if (profileStack.length > 1) return setProfileStack(profileStack.slice(0, -1));
+    setProfileStack([]);
+    setView(profileReturn);
+  }
 
   // A tapped notification focuses the already-open app and posts its URL here.
   useEffect(() => {
@@ -323,6 +351,10 @@ export function App() {
               {tr.common.backToTables}
             </button>
           </div>
+        )}
+
+        {!needsPhone && view === "profile" && account && profileStack.length > 0 && (
+          <ProfileScreen accountId={profileStack[profileStack.length - 1]!} myAccountId={account.id} onBack={closeProfile} />
         )}
 
         {view === "settings" && account && (

@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { Avatar, SectionLabel } from '../ui.js';
 import { ConfirmModal } from './ConfirmModal.js';
 import { tr } from '../i18n.js';
+import { profileTap } from '../profileNav.js';
 
 interface Props {
   session: Session;
@@ -49,7 +50,7 @@ export function LobbyScreen({ session, isHost, onChanged, onLeave }: Props) {
       <SectionLabel count={players.length}>{tr.lobby.atTheTable}</SectionLabel>
       <ul class="surface rows">
         {players.map((p) => (
-          <li key={p.id} class="row">
+          <li key={p.id} class="row tappable" {...profileTap(p.accountId)}>
             <Avatar id={p.accountId} name={p.name} />
             <span class="row__main">
               <span class="row__title">{p.name}</span>

@@ -3288,3 +3288,281 @@ form {
   outline: 2px solid var(--gold);
   outline-offset: 1px;
 }
+
+/* ---------- profiles ---------- */
+
+/* anything that opens a player's profile when tapped */
+.tappable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+
+.row.tappable:active,
+.minirow.tappable:active,
+.highlight.tappable:active {
+  background: var(--surface-2);
+}
+
+.podium__spot.tappable:active {
+  transform: scale(0.97);
+}
+
+.tappable:focus-visible,
+.avbtn:focus-visible {
+  outline: 2px solid var(--gold-line);
+  outline-offset: 2px;
+  border-radius: var(--r-md);
+}
+
+.avbtn {
+  flex: none;
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease);
+}
+
+.avbtn:active {
+  transform: scale(0.92);
+}
+
+.pfbar {
+  display: flex;
+  margin-bottom: -10px;
+}
+
+.pfhero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.pfhero .av--xl {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 6px;
+  font-size: 32px;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--gold-line), 0 18px 40px rgba(0, 0, 0, 0.45);
+  animation: pop var(--t-slow) var(--spring) both;
+}
+
+.pfhero__name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 26px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfhero__name .muted {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pfhero__since {
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+
+.pfhero__pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* balance chart */
+.pfchart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pfchart__head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 58px;
+}
+
+.pfchart__head .label {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfchart__plot {
+  position: relative;
+  height: 130px;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+
+.pfchart__plot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.pfchart__line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.pfchart__line--down {
+  stroke: var(--down);
+}
+
+.pfchart__zero {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.pfchart__cross {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-strong);
+  pointer-events: none;
+}
+
+.pfchart__dot {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: var(--gold-hi);
+  box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 6px var(--gold-soft);
+  pointer-events: none;
+  transition: left 90ms linear, top 90ms linear;
+}
+
+.pfchart__dot--down {
+  background: var(--down);
+  box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 6px var(--down-soft);
+}
+
+.pfchart__axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* stat tiles */
+.pfstats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pfstat {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.pfstat__label {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.pfstat__value {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pfstat__value .money {
+  font-size: inherit;
+}
+
+/* won / even / lost */
+.pfrecord {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pfrecord .label {
+  margin: 0;
+}
+
+.pfrecord__bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.pfrecord__seg {
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 4px;
+}
+
+.pfrecord__seg--won {
+  background: var(--up);
+}
+
+.pfrecord__seg--even {
+  background: var(--ink-3);
+}
+
+.pfrecord__seg--lost {
+  background: var(--down);
+}
+
+.pfrecord__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.pfrecord__legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pfrecord__legend strong {
+  color: var(--ink);
+}
+
+.pfrecord__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}

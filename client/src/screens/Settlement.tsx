@@ -5,6 +5,7 @@ import { formatCents } from '../money.js';
 import { ArrowRightIcon } from '../icons.js';
 import { Avatar, Money, SectionLabel, Spinner } from '../ui.js';
 import { tr } from '../i18n.js';
+import { profileTap } from '../profileNav.js';
 
 interface Props {
   session: Session;
@@ -58,7 +59,7 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
           <SectionLabel>{tr.settlement.results}</SectionLabel>
           <ul class="surface rows">
             {ranked.map((p, i) => (
-              <li key={p.id} class={`row ${p.id === playerId ? 'row--me' : ''}`}>
+              <li key={p.id} class={`row tappable ${p.id === playerId ? 'row--me' : ''}`} {...profileTap(p.accountId)}>
                 <span class="rank">{i + 1}</span>
                 <Avatar id={p.accountId} name={p.name} />
                 <span class="row__main">

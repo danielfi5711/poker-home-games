@@ -6,6 +6,7 @@ import type {
   Lang,
   Payment,
   PaymentsResponse,
+  ProfileResponse,
   PushSubscriptionJSON,
   Session,
   SessionResponse,
@@ -103,6 +104,7 @@ export const api = {
   markPaid: (id: string) => req<{ payment: Payment }>('POST', `/payments/${id}/paid`),
   respondPayment: (id: string, received: boolean) => req<{ payment: Payment }>('POST', `/payments/${id}/respond`, { received }),
   history: () => req<HistoryResponse>('GET', '/history'),
+  profile: (accountId: string) => req<ProfileResponse>('GET', `/profiles/${accountId}`),
   sessions: () => req<{ sessions: Session[] }>('GET', '/sessions'),
   createSession: (name: string) => req<SessionResponse>('POST', '/sessions', { name }),
 

@@ -7,6 +7,7 @@ import { AmountModal } from './AmountModal.js';
 import { ConfirmModal } from './ConfirmModal.js';
 import { SettleSheet } from './SettleSheet.js';
 import { tr } from '../i18n.js';
+import { openProfile } from '../profileNav.js';
 import { BellIcon, PlusIcon } from '../icons.js';
 import { Avatar, Money, SectionLabel, Sheet } from '../ui.js';
 
@@ -140,7 +141,9 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
           const net = p.cashOut ? totalCashOutCents(p) - total : null;
           return (
             <li key={p.id} class={`row ${p.id === playerId ? "row--me" : ""}`}>
-              <Avatar id={p.accountId} name={p.name} />
+              <button type="button" class="avbtn" onClick={() => openProfile(p.accountId)} aria-label={p.name}>
+                <Avatar id={p.accountId} name={p.name} />
+              </button>
               <span class="row__main">
                 <span class="row__title">
                   {p.name}

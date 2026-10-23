@@ -265,3 +265,48 @@ export interface SubscribePushRequest {
 export interface VapidKeyResponse {
   publicKey: string;
 }
+
+// --- Player profiles -----------------------------------------------------------
+
+/** One settled game from a single player's point of view. */
+export interface ProfileMatch {
+  id: string;
+  name: string;
+  settledAt: number;
+  netCents: number;
+  /** 1 = biggest winner at that table. Players with the same net share a place. */
+  place: number;
+  playerCount: number;
+}
+
+/** Someone this player often sits down with. */
+export interface ProfileRegular {
+  accountId: string;
+  name: string;
+  gamesTogether: number;
+}
+
+/** Everything the profile screen shows about one account, built from the same settled games as the leaderboard. */
+export interface PlayerProfile {
+  accountId: string;
+  name: string;
+  memberSince: number;
+  /** Place on the all-time leaderboard; null before their first settled game. */
+  rank: number | null;
+  rankedPlayers: number;
+  /** Their leaderboard row (totals, streaks, biggest win/loss); null before their first settled game. */
+  stats: LeaderboardEntry | null;
+  wins: number;
+  losses: number;
+  breakevens: number;
+  /** All-time balance after each game, oldest first. */
+  balanceHistory: { at: number; balanceCents: number }[];
+  /** Newest first. */
+  matches: ProfileMatch[];
+  /** Up to three players they've shared the most tables with. */
+  regulars: ProfileRegular[];
+}
+
+export interface ProfileResponse {
+  profile: PlayerProfile;
+}

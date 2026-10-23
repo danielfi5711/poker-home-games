@@ -76,6 +76,13 @@ just ASCII, via a Unicode-aware regex.
   feed the `HistoryHighlights` ("🔥 on a 3-game win streak", "💰 biggest win").
   Each `MatchSummary` also carries that game's `transfers` (by account and
   name) for the Games tab.
+  `profile(accountId)` (`GET /api/profiles/:accountId`) reuses `history()` to
+  build one player's `PlayerProfile`: their leaderboard row and rank,
+  won/even/lost counts, running balance after each game (the chart), every
+  game with their place at that table, and the 3 players they've shared the
+  most tables with. Any screen opens a profile with `openProfile()` /
+  `profileTap()` from `client/src/profileNav.ts`; `App` keeps a stack of
+  opened profiles so Back walks back through them.
 
 - `src/lib/push.ts` — Web Push (VAPID). Stores each account's push
   subscription(s) (one per device/browser). Only payments push: "says they

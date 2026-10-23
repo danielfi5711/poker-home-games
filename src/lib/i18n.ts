@@ -31,6 +31,7 @@ const HE_ERRORS: Record<string, string> = {
   'That request was already handled.': 'הבקשה הזו כבר טופלה.',
   'Approve or deny the pending buy-in requests before settling.': 'יש לאשר או לדחות את בקשות הקנייה הממתינות לפני ההתחשבנות.',
   'Payment not found.': 'התשלום לא נמצא.',
+  'Player not found.': 'השחקן לא נמצא.',
   'Only the payer can do that.': 'רק המשלם יכול לעשות את זה.',
   'Only the person being paid can confirm.': 'רק מי שמקבל את התשלום יכול לאשר.',
   "That photo couldn't be used.": 'אי אפשר להשתמש בתמונה הזו.',

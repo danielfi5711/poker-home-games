@@ -194,3 +194,46 @@ test('a settled game with only one player is left out of the history', () => {
   const t = settledWithDebt();
   assert.ok(sessions.history().matches.some((m) => m.id === t.id));
 });
+
+test("a profile counts the player's games, places, balance over time and regulars", (t) => {
+  // A minute between games, so newest-first is unambiguous.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const a = newAccount('pa');
+  const b = newAccount('pb');
+  const c = newAccount('pc');
+  /** One settled game: [account, buy-in, cash-out] per seat, host first. */
+  function play(seats: [Account, number, number][]) {
+    const [hostAccount] = seats[0]!;
+    const { session } = sessions.createSession('Profile game', hostAccount);
+    const seatOf = new Map([[hostAccount.id, Object.keys(sessions.getSession(session.id).players)[0]!]]);
+    for (const [acc] of seats.slice(1)) seatOf.set(acc.id, sessions.joinSession(session.id, acc).playerId);
+    sessions.activateSession(session.id, hostAccount.id);
+    for (const [acc, buyIn, cashOut] of seats) {
+      const seat = seatOf.get(acc.id)!;
+      sessions.requestBuyIn(session.id, seat, acc.id, buyIn);
+      const pending = lastBuyIn(session.id, seat);
+      if (pending.status === 'pending') sessions.respondToBuyIn(session.id, pending.id, hostAccount.id, true);
+      sessions.recordCashOut(session.id, seat, acc.id, cashOut);
+    }
+    sessions.settleSession(session.id, hostAccount.id);
+    t.mock.timers.tick(60_000);
+  }
+
+  play([[a, 50_00, 80_00], [b, 50_00, 20_00]]); // a +30
+  play([[a, 50_00, 40_00], [b, 50_00, 50_00], [c, 50_00, 60_00]]); // a -10, third
+  play([[b, 50_00, 50_00], [a, 50_00, 50_00]]); // a even, shares first place
+
+  const p = sessions.profile(a.id);
+  assert.equal(p.name, a.displayName);
+  assert.deepEqual([p.wins, p.losses, p.breakevens], [1, 1, 1]);
+  assert.deepEqual(p.matches.map((m) => [m.netCents, m.place, m.playerCount]), [[0, 1, 2], [-10_00, 3, 3], [30_00, 1, 2]]);
+  assert.deepEqual(p.balanceHistory.map((h) => h.balanceCents), [30_00, 20_00, 20_00]);
+  assert.equal(p.stats?.balanceCents, 20_00);
+  assert.deepEqual(p.regulars.map((r) => [r.accountId, r.gamesTogether]), [[b.id, 3], [c.id, 1]]);
+
+  const newcomer = sessions.profile(newAccount('pnew').id);
+  assert.equal(newcomer.rank, null);
+  assert.equal(newcomer.matches.length, 0);
+
+  assert.throws(() => sessions.profile('nobody'), /Player not found/);
+});

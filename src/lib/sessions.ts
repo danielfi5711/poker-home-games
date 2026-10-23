@@ -14,6 +14,9 @@ import type {
   Payment,
   PaymentView,
   Player,
+  PlayerProfile,
+  ProfileMatch,
+  ProfileRegular,
   Session,
   SettleResponse,
 } from '../shared/types.js';
@@ -584,4 +587,52 @@ export function history(): HistoryResponse {
   };
 
   return { matches, leaderboard, highlights };
+}
+
+/** One player's profile: their leaderboard row plus a per-game breakdown, from the same games as `history()`. */
+export function profile(accountId: string): PlayerProfile {
+  const account = getAccount(accountId);
+  if (!account) throw new SessionError('Player not found.', 404);
+
+  const { matches, leaderboard } = history();
+  const rankIndex = leaderboard.findIndex((e) => e.accountId === accountId);
+  const together = new Map<string, ProfileRegular>();
+  const mine: ProfileMatch[] = [];
+
+  for (const match of matches) {
+    const me = match.players.find((p) => p.accountId === accountId);
+    if (!me) continue;
+    mine.push({
+      id: match.id,
+      name: match.name,
+      settledAt: match.settledAt,
+      netCents: me.netCents,
+      place: 1 + match.players.filter((p) => p.netCents > me.netCents).length,
+      playerCount: match.players.length,
+    });
+    for (const other of match.players) {
+      if (other.accountId === accountId) continue;
+      const seen = together.get(other.accountId);
+      if (seen) seen.gamesTogether++;
+      else together.set(other.accountId, { accountId: other.accountId, name: other.name, gamesTogether: 1 });
+    }
+  }
+
+  let running = 0;
+  const balanceHistory = [...mine].reverse().map((m) => ({ at: m.settledAt, balanceCents: (running += m.netCents) }));
+
+  return {
+    accountId,
+    name: account.displayName,
+    memberSince: account.createdAt,
+    rank: rankIndex >= 0 ? rankIndex + 1 : null,
+    rankedPlayers: leaderboard.length,
+    stats: rankIndex >= 0 ? leaderboard[rankIndex]! : null,
+    wins: mine.filter((m) => m.netCents > 0).length,
+    losses: mine.filter((m) => m.netCents < 0).length,
+    breakevens: mine.filter((m) => m.netCents === 0).length,
+    balanceHistory,
+    matches: mine,
+    regulars: [...together.values()].sort((a, b) => b.gamesTogether - a.gamesTogether).slice(0, 3),
+  };
 }
