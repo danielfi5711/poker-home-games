@@ -1,26 +1,26 @@
 /* =============================================================================
    Poker Night — design system
-   Graphite and gold, glassy surfaces. Mobile-first, one column.
+   Deep midnight blue, warm gold, glassy surfaces. Mobile-first, one column.
    ========================================================================== */
 
 :root {
   color-scheme: dark;
 
   /* surfaces */
-  --bg: #0b0c10;
-  --bg-glow: #1c1f27;
-  --felt: #14161c;
+  --bg: #081328;
+  --bg-glow: #143060;
+  --felt: #0c1a33;
   --surface: rgba(255, 255, 255, 0.045);
   --surface-2: rgba(255, 255, 255, 0.075);
-  --surface-solid: #15171d;
-  --sheet: #14161c;
+  --surface-solid: #0f1d38;
+  --sheet: #0d1a32;
   --line: rgba(255, 255, 255, 0.075);
   --line-strong: rgba(255, 255, 255, 0.14);
 
   /* ink */
-  --ink: #f2f3f5;
-  --ink-2: #a4a9b4;
-  --ink-3: #6e7480;
+  --ink: #f1f4fa;
+  --ink-2: #b4c0d4;
+  --ink-3: #7a8aa6;
 
   /* gold */
   --gold: #e9c068;
@@ -89,7 +89,7 @@ body {
   min-height: 100vh;
   background-color: var(--bg);
   background-image:
-    radial-gradient(120% 60% at 50% -12%, rgba(70, 76, 92, 0.32) 0%, rgba(40, 44, 54, 0.14) 45%, transparent 70%),
+    radial-gradient(120% 60% at 50% -12%, rgba(36, 86, 170, 0.6) 0%, rgba(20, 54, 112, 0.22) 45%, transparent 70%),
     radial-gradient(80% 40% at 100% 100%, rgba(233, 192, 104, 0.05) 0%, transparent 60%);
   background-attachment: fixed;
 }
@@ -169,7 +169,7 @@ input {
   justify-content: space-between;
   gap: 8px;
   padding: calc(10px + var(--safe-t)) 16px 10px;
-  background: linear-gradient(180deg, rgba(11, 12, 16, 0.92) 0%, rgba(11, 12, 16, 0.7) 70%, rgba(11, 12, 16, 0) 100%);
+  background: linear-gradient(180deg, rgba(8, 19, 40, 0.92) 0%, rgba(8, 19, 40, 0.7) 70%, rgba(8, 19, 40, 0) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -901,7 +901,7 @@ form {
   grid-template-columns: repeat(5, 1fr);
   padding: 6px;
   border-radius: 24px;
-  background: rgba(20, 22, 28, 0.82);
+  background: rgba(12, 24, 46, 0.82);
   border: 1px solid var(--line-strong);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(18px) saturate(150%);
@@ -972,7 +972,7 @@ form {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(4, 5, 8, 0.66);
+  background: rgba(2, 5, 12, 0.64);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: fade var(--t) var(--ease) both;
@@ -994,7 +994,7 @@ form {
   gap: 14px;
   padding: 10px 20px calc(20px + var(--safe-b));
   border-radius: var(--r-xl) var(--r-xl) 0 0;
-  background: linear-gradient(180deg, #1b1e25 0%, var(--sheet) 60%);
+  background: linear-gradient(180deg, #12264a 0%, var(--sheet) 60%);
   border-top: 1px solid var(--line-strong);
   box-shadow: var(--shadow-2);
   animation: sheet-up var(--t-slow) var(--ease) both;
@@ -1216,7 +1216,7 @@ form {
   border: 1px solid var(--gold-line);
   background:
     radial-gradient(120% 140% at 100% 0%, rgba(233, 192, 104, 0.2) 0%, transparent 55%),
-    linear-gradient(160deg, #1d2028 0%, #121419 100%);
+    linear-gradient(160deg, #173665 0%, #0d1e3c 100%);
   box-shadow: var(--shadow-1), 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
@@ -1321,8 +1321,8 @@ form {
   border-radius: var(--r-xl);
   border: 1px solid var(--line-strong);
   background:
-    radial-gradient(90% 120% at 50% 0%, rgba(233, 192, 104, 0.14) 0%, transparent 70%),
-    linear-gradient(180deg, #1d2028 0%, #121419 100%);
+    radial-gradient(90% 120% at 50% 0%, rgba(40, 95, 190, 0.45) 0%, transparent 70%),
+    linear-gradient(180deg, #173665 0%, #0d1e3c 100%);
   box-shadow: var(--shadow-1);
 }
 
@@ -1454,9 +1454,9 @@ form {
   gap: 10px;
   padding: 10px;
   border-radius: var(--r-xl);
-  background: #16181e;
+  background: #0e1f3c;
   border: 1px solid var(--line-strong);
-  box-shadow: 0 -12px 30px rgba(11, 12, 16, 0.9), 0 14px 34px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -12px 30px rgba(8, 19, 40, 0.9), 0 14px 34px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -1483,8 +1483,8 @@ form {
   border-radius: var(--r-xl);
   border: 1px solid var(--line-strong);
   background:
-    radial-gradient(80% 100% at 50% 0%, rgba(233, 192, 104, 0.14) 0%, transparent 70%),
-    linear-gradient(180deg, #1d2028 0%, #121419 100%);
+    radial-gradient(80% 100% at 50% 0%, rgba(40, 95, 190, 0.4) 0%, transparent 70%),
+    linear-gradient(180deg, #173665 0%, #0d1e3c 100%);
 }
 
 .lobbyhead__title {
@@ -2738,7 +2738,7 @@ form {
   border: 1px solid var(--gold-line);
   background:
     radial-gradient(90% 110% at 50% 0%, rgba(233, 192, 104, 0.22) 0%, transparent 65%),
-    linear-gradient(180deg, #1d2028 0%, #121419 100%);
+    linear-gradient(180deg, #173665 0%, #0d1e3c 100%);
 }
 
 .finale__label {
@@ -3119,7 +3119,7 @@ form {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: radial-gradient(120% 140% at 50% 0%, rgba(233, 192, 104, 0.1) 0%, transparent 70%), var(--surface);
+  background: radial-gradient(120% 140% at 50% 0%, rgba(30, 80, 170, 0.35) 0%, transparent 70%), var(--surface);
 }
 
 .oddsboard .label {
