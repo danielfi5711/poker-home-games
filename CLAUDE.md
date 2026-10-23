@@ -150,14 +150,24 @@ just ASCII, via a Unicode-aware regex.
     create-table UI at all.
   - `client/src/screens/` — `Login` (log in / sign up — no separate display
     name field), `Settings` (change name, log out — behind a confirm
-    dialog), the three bottom-nav tabs shown right after login — `Tables`
+    dialog), the bottom-nav tabs shown right after login — `Tables`
     (start/rejoin a table), `Leaderboard` (all-time standings with streak
-    badges/highlights) and `Games` (recent settled games, each expandable to
-    its per-player results and who-pays-whom transfers), `Lobby` (`setup` status — host starts the game once
+    badges/highlights), `Games` (recent settled games, each expandable to
+    its per-player results and who-pays-whom transfers) and `Odds` (see below), `Lobby` (`setup` status — host starts the game once
     everyone's in), `Table` (live buy-in requests/approvals, cash-outs,
     `active` status), `AmountModal` (shared amount-entry sheet for buy-in
     requests and cash-outs), `ConfirmModal` (generic themed confirm dialog,
     used for logout), `Settlement` (`settled` status).
+- `src/shared/odds.ts` — the Odds tab's math, run entirely in the client (no
+  server route): a 5–7 card Hold'em evaluator (category + tie-break ranks
+  packed into one comparable number) and win/tie/equity tallies for up to
+  `MAX_HANDS` (6) known hands. Flop/turn/river count every remaining board
+  exactly (`exactOdds`, ≤1,081 boards); pre-flop samples (`sampleOdds`) —
+  `client/src/screens/Odds.tsx` runs it in 3,000-board chunks up to 60,000
+  so the numbers appear at once and the UI never blocks. The chosen hands,
+  board and street live only in `localStorage` (`poker.odds`). Tests are in
+  `src/lib/odds.test.ts` — not `src/shared/`, since the client tsconfig
+  includes that folder and has no `node:test` types.
 - `scripts/gen-icons.mjs` — generates the PWA/`apple-touch-icon` PNGs with
   zero image-library dependencies (hand-rolled PNG/CRC32 writer over
   `node:zlib`). Re-run it if you change the icon art in that script.

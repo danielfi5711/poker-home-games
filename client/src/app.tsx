@@ -14,25 +14,27 @@ import { Login } from './screens/Login.js';
 import { TablesScreen } from './screens/Tables.js';
 import { LeaderboardScreen } from './screens/Leaderboard.js';
 import { GamesScreen } from './screens/Games.js';
+import { OddsScreen } from './screens/Odds.js';
 import { PaymentsScreen, paymentsNeedingAction } from './screens/Payments.js';
 import { PhoneForm } from './screens/PhoneForm.js';
 import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
-import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon } from './icons.js';
+import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon, PercentIcon } from './icons.js';
 import { Avatar, ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
 import { refreshAvatars } from './avatars.js';
 import { tr, useLang } from './i18n.js';
 
 type View = 'login' | 'home' | 'session' | 'settings';
-type HomeTab = 'tables' | 'leaderboard' | 'games' | 'payments';
+type HomeTab = 'tables' | 'leaderboard' | 'games' | 'odds' | 'payments';
 
 const HOME_TABS: { id: HomeTab; icon: typeof CardsIcon }[] = [
   { id: 'tables', icon: CardsIcon },
   { id: 'leaderboard', icon: TrophyIcon },
   { id: 'games', icon: ReceiptIcon },
+  { id: 'odds', icon: PercentIcon },
   { id: 'payments', icon: WalletIcon },
 ];
 
@@ -280,6 +282,7 @@ export function App() {
             {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
             {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
             {homeTab === "games" && <GamesScreen myAccountId={account.id} />}
+            {homeTab === "odds" && <OddsScreen />}
             {homeTab === "payments" && (
               <PaymentsScreen myAccountId={account.id} payments={payments} error={paymentsError} onChanged={refreshPayments} />
             )}

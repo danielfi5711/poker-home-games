@@ -377,3 +377,20 @@ export function CameraIcon({ size = 16 }: IconProps) {
     </Stroke>
   );
 }
+
+export function PercentIcon({ size = 20 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <path d="M12 3a9 9 0 1 0 9 9h-9V3Z" />
+      <path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z" />
+    </Stroke>
+  );
+}
+
+export function XIcon({ size = 16 }: IconProps) {
+  return (
+    <Stroke size={size} width={2.2}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </Stroke>
+  );
+}
