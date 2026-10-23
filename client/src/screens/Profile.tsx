@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { PlayerProfile } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { ArrowLeftIcon, ReceiptIcon } from '../icons.js';
@@ -186,7 +186,8 @@ const PAD = 12;
 
 /**
  * Balance after every game, starting from ₪0 before the first one. Drag (or
- * hover) across it to read any game; the headline number follows the finger.
+ * hover) across it to read any game: the dot rides the line under the finger,
+ * the line past it dims, and the headline shows the nearest game.
  */
 function BalanceChart({ profile }: { profile: PlayerProfile }) {
   const [active, setActive] = useState<number | null>(null);
@@ -216,54 +217,110 @@ function BalanceChart({ profile }: { profile: PlayerProfile }) {
     };
   }, [profile]);
 
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  const plot = useRef<HTMLDivElement>(null);
+  const dot = useRef<HTMLSpanElement>(null);
+  const cross = useRef<HTMLSpanElement>(null);
+  const lit = useRef<HTMLDivElement>(null);
+  const settle = useRef(0);
 
-  const { values, labels, points } = chart;
-  const shown = active ?? values.length - 1;
-  const [fx, fy] = points[shown]!;
+  const { values, labels, points, zero } = chart;
+  const n = values.length;
+  const shown = active ?? n - 1;
 
-  // Measure once per touch (not per move), and update at most once per frame.
-  // setActive with the same index doesn't re-render, so sliding within one
-  // game's slot costs nothing.
-  function scrub(e: PointerEvent) {
-    if (e.type === 'pointerdown' || !rect.current) rect.current = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  /**
+   * Puts the dot exactly on the line at `t` (0–1 across the plot), the
+   * crosshair under it, and lights the line up to it. Written straight to the
+   * DOM — no re-render per frame. The points are evenly spaced and joined by
+   * straight segments, so interpolating between neighbours lands on the line.
+   */
+  function place(t: number) {
+    const seg = t * (n - 1);
+    const i = Math.min(n - 2, Math.floor(seg));
+    const [, y0] = points[i]!;
+    const [, y1] = points[i + 1]!;
+    const fy = y0 + (y1 - y0) * (seg - i);
+    dot.current!.style.transform = `translate(${t * 100}%, ${fy * 100}%)`;
+    dot.current!.classList.toggle('pfchart__layer--down', fy * H > zero + 0.5);
+    cross.current!.style.transform = `translateX(${t * 100}%)`;
+    lit.current!.style.clipPath = `inset(-12px ${(1 - t) * 100}% -12px -12px)`;
+  }
+
+  // At rest the dot sits on the latest balance.
+  useLayoutEffect(() => place(1), [chart]);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frame.current);
+      clearTimeout(settle.current);
+    },
+    [],
+  );
+
+  /** idle → glides home slowly; grab → a quick glide to the finger; track → follows it 1:1. */
+  const setMode = (mode: 'idle' | 'grab' | 'track') => (plot.current!.dataset.mode = mode);
+
+  function follow(e: PointerEvent) {
+    if (!rect.current) {
+      // A new touch: measure once, glide to the finger, then track it exactly.
+      rect.current = plot.current!.getBoundingClientRect();
+      setMode('grab');
+      clearTimeout(settle.current);
+      settle.current = window.setTimeout(() => rect.current && setMode('track'), 180);
+    }
     const clientX = e.clientX;
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
-      const r = rect.current!;
+      const r = rect.current;
+      if (!r) return;
       const t = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-      setActive(Math.round(t * (values.length - 1)));
+      place(t);
+      // Same index → no re-render; the headline only changes when the nearest game does.
+      setActive(Math.round(t * (n - 1)));
     });
   }
 
   function release() {
     cancelAnimationFrame(frame.current);
+    clearTimeout(settle.current);
+    if (!rect.current) return;
     rect.current = null;
+    setMode('idle');
+    place(1);
     setActive(null);
   }
 
   return (
     <section class="surface surface--pad pfchart">
       <div class="pfchart__head">
-        <span class="label">{active === null ? tr.profile.balance : labels[shown]}</span>
-        <Money cents={values[shown]!} signed size="xl" />
+        <span class="label" key={`l${shown}${active === null}`}>
+          {active === null ? tr.profile.balance : labels[shown]}
+        </span>
+        <span class="pfchart__value" key={`v${shown}`}>
+          <Money cents={values[shown]!} signed size="xl" />
+        </span>
       </div>
       <div
-        class={`pfchart__plot ${active !== null ? 'pfchart__plot--active' : ''}`}
+        ref={plot}
+        class="pfchart__plot"
+        data-mode="idle"
         dir="ltr"
-        onPointerEnter={() => (rect.current = null)}
-        onPointerDown={scrub}
-        onPointerMove={scrub}
+        onPointerDown={follow}
+        onPointerMove={follow}
         onPointerLeave={release}
         onPointerUp={(e) => e.pointerType !== 'mouse' && release()}
         onPointerCancel={release}
       >
-        <ChartArt chart={chart} />
+        {/* The line twice: a dim copy underneath, and a lit copy clipped at the finger. */}
+        <div class="pfchart__art pfchart__art--dim">
+          <ChartArt chart={chart} />
+        </div>
+        <div ref={lit} class="pfchart__art pfchart__art--lit">
+          <ChartArt chart={chart} />
+        </div>
         {/* Full-size layers moved with transforms (percentages of their own size = the plot's size),
             so following a finger never triggers layout — only compositing. */}
-        <span class="pfchart__layer pfchart__cross" style={{ transform: `translateX(${fx * 100}%)` }} />
-        <span class="pfchart__layer" style={{ transform: `translate(${fx * 100}%, ${fy * 100}%)` }}>
-          <span class={`pfchart__dot ${values[shown]! < 0 ? 'pfchart__dot--down' : ''}`} />
+        <span ref={cross} class="pfchart__layer pfchart__cross" />
+        <span ref={dot} class="pfchart__layer">
+          <span class="pfchart__dot" />
         </span>
       </div>
       <div class="pfchart__axis" dir="ltr">

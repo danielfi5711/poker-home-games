@@ -3432,18 +3432,48 @@ form {
   stroke-dasharray: 3 4;
 }
 
+/* line art: a dim copy, and a lit copy clipped at the finger */
+.pfchart__art {
+  position: absolute;
+  inset: 0;
+}
+
+.pfchart__art--dim {
+  opacity: 1;
+  transition: opacity 240ms var(--ease);
+}
+
+.pfchart__plot:not([data-mode='idle']) .pfchart__art--dim {
+  opacity: 0.28;
+}
+
 /* full-size layers moved by transform: the dot sits at a layer's top-left corner */
 .pfchart__layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
   will-change: transform;
-  transition: transform 60ms linear;
+}
+
+/* how the dot, crosshair and lit line move: home slowly, to a new touch quickly, then 1:1 */
+.pfchart__plot[data-mode='idle'] :is(.pfchart__layer, .pfchart__art--lit) {
+  transition: transform 520ms var(--ease), clip-path 520ms var(--ease);
+}
+
+.pfchart__plot[data-mode='grab'] :is(.pfchart__layer, .pfchart__art--lit) {
+  transition: transform 180ms var(--ease), clip-path 180ms var(--ease);
 }
 
 .pfchart__cross {
   opacity: 0;
-  transition: transform 60ms linear, opacity var(--t-fast) var(--ease);
+}
+
+.pfchart__plot[data-mode='idle'] .pfchart__cross {
+  transition: transform 520ms var(--ease), opacity 200ms var(--ease);
+}
+
+.pfchart__plot:not([data-mode='idle']) .pfchart__cross {
+  opacity: 1;
 }
 
 .pfchart__cross::before {
@@ -3453,28 +3483,45 @@ form {
   bottom: 0;
   left: 0;
   width: 1px;
-  background: var(--line-strong);
-}
-
-.pfchart__plot--active .pfchart__cross {
-  opacity: 1;
+  background: linear-gradient(180deg, transparent, var(--line-strong) 20%, var(--line-strong) 80%, transparent);
 }
 
 .pfchart__dot {
   position: absolute;
   top: 0;
   left: 0;
-  width: 11px;
-  height: 11px;
-  margin: -5.5px 0 0 -5.5px;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
   border-radius: 50%;
   background: var(--gold-hi);
   box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 6px var(--gold-soft);
+  transition: transform 260ms var(--spring), background 200ms var(--ease), box-shadow 200ms var(--ease);
 }
 
-.pfchart__dot--down {
+.pfchart__plot:not([data-mode='idle']) .pfchart__dot {
+  transform: scale(1.3);
+}
+
+.pfchart__layer--down .pfchart__dot {
   background: var(--down);
   box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 6px var(--down-soft);
+}
+
+/* the headline's label and amount fade up whenever they change */
+.pfchart__value {
+  display: block;
+}
+
+.pfchart__head > * {
+  animation: chart-tick 180ms var(--ease) both;
+}
+
+@keyframes chart-tick {
+  from {
+    opacity: 0.35;
+    transform: translateY(3px);
+  }
 }
 
 .pfchart__axis {
