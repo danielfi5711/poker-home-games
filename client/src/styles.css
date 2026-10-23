@@ -57,6 +57,12 @@
   --t-fast: 140ms;
   --t: 260ms;
   --t-slow: 460ms;
+  /* the app's motion: things arrive with --ease (fast start, soft landing), leave with
+     --ease-in (quick, no lingering), sheets move on the iOS sheet curve */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --spring-soft: cubic-bezier(0.34, 1.28, 0.64, 1);
+  --enter: 340ms;
 
   --font-display: 'Sora', 'Rubik', 'Segoe UI', sans-serif;
   --font-body: 'Inter', 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -339,17 +345,75 @@ input {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  animation: view-in var(--t-slow) var(--ease) both;
+  animation: view-in var(--enter) var(--ease) both;
 }
 
 @keyframes view-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* a home tab slides in from the side its button sits on in the nav */
+.tabpane--next {
+  animation: tab-from-end var(--enter) var(--ease) both;
+}
+
+.tabpane--prev {
+  animation: tab-from-start var(--enter) var(--ease) both;
+}
+
+.tabpane--next > .view,
+.tabpane--prev > .view {
+  animation: none;
+}
+
+@keyframes tab-from-end {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+}
+
+@keyframes tab-from-start {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+}
+
+[dir='rtl'] .tabpane--next {
+  animation-name: tab-from-start;
+}
+
+[dir='rtl'] .tabpane--prev {
+  animation-name: tab-from-end;
+}
+
+/* list items arrive one after another (only on first appearance — keyed rows
+   that just update don't replay it) */
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand) {
+  animation: item-in 420ms var(--ease) both;
+  animation-delay: 210ms;
+}
+
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(1) { animation-delay: 0ms; }
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(2) { animation-delay: 30ms; }
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(3) { animation-delay: 60ms; }
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(4) { animation-delay: 90ms; }
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(5) { animation-delay: 120ms; }
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(6) { animation-delay: 150ms; }
+:is(.rows > li, .view > .game, .stack > .paycard, .pfstats > .pfstat, .highlights > .highlight, .stack > .oddshand):nth-child(7) { animation-delay: 180ms; }
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 
@@ -865,6 +929,7 @@ form {
   inset: 0;
   z-index: 30;
   pointer-events: none;
+  animation: fade 200ms var(--ease) 220ms both;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -898,7 +963,7 @@ form {
   max-width: 520px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 6px;
   border-radius: 24px;
   background: rgba(12, 24, 46, 0.82);
@@ -936,7 +1001,40 @@ form {
 
 .bottomnav__item--active {
   color: var(--gold-hi);
+}
+
+.bottomnav__pill {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  inset-inline-start: 6px;
+  width: calc((100% - 12px) / 5);
+  border-radius: 18px;
   background: var(--gold-soft);
+  box-shadow: inset 0 0 0 1px rgba(233, 192, 104, 0.12);
+  transform: translateX(calc(var(--tab) * 100%));
+  transition: transform 460ms var(--spring-soft), opacity 200ms var(--ease);
+  pointer-events: none;
+}
+
+[dir='rtl'] .bottomnav__pill {
+  transform: translateX(calc(var(--tab) * -100%));
+}
+
+.bottomnav__pill--hidden {
+  opacity: 0;
+}
+
+/* five equal columns: on narrow phones the longest label ("Leaderboard") needs a smaller size to fit */
+@media (max-width: 374px) {
+  .bottomnav__item {
+    font-size: 10px;
+    letter-spacing: -0.01em;
+  }
+}
+
+.bottomnav__item {
+  z-index: 1;
 }
 
 .bottomnav__item--active svg {
@@ -978,6 +1076,27 @@ form {
   animation: fade var(--t) var(--ease) both;
 }
 
+.modal--leaving {
+  pointer-events: none;
+  animation: fade-out 240ms var(--ease-in) both;
+}
+
+.modal--leaving .modal__panel {
+  animation: sheet-down 240ms var(--ease-in) both;
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
 @keyframes fade {
   from {
     opacity: 0;
@@ -997,13 +1116,12 @@ form {
   background: linear-gradient(180deg, #12264a 0%, var(--sheet) 60%);
   border-top: 1px solid var(--line-strong);
   box-shadow: var(--shadow-2);
-  animation: sheet-up var(--t-slow) var(--ease) both;
+  animation: sheet-up 440ms var(--ease-sheet) both;
 }
 
 @keyframes sheet-up {
   from {
-    transform: translateY(40px);
-    opacity: 0;
+    transform: translateY(100%);
   }
 }
 

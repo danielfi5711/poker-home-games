@@ -3,7 +3,7 @@ import { createPortal } from 'preact/compat';
 import { avatarStyle } from './avatarColor.js';
 import { initials } from './initials.js';
 import { useAvatarUrl } from './avatars.js';
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { formatCents } from './money.js';
 import { setLang, tr, useLang } from './i18n.js';
 
@@ -101,8 +101,31 @@ export function Spinner({ label = tr.common.loading }: { label?: string }) {
  * its z-index in a stacking context).
  */
 export function Sheet({ onClose, children }: { onClose?: () => void; children: ComponentChildren }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Every screen closes a sheet by simply not rendering it any more, so the
+  // exit animation lives here: just before the sheet leaves the DOM, a copy
+  // of it is left behind to slide down and fade, then removed.
+  useLayoutEffect(
+    () => () => {
+      const el = ref.current;
+      if (!el?.isConnected) return;
+      const ghost = el.cloneNode(true) as HTMLElement;
+      // cloneNode copies attributes, not what was typed — keep inputs showing their text while it leaves.
+      const inputs = el.querySelectorAll('input');
+      ghost.querySelectorAll('input').forEach((input, i) => input.setAttribute('value', inputs[i]?.value ?? ''));
+      ghost.classList.add('modal--leaving');
+      ghost.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(ghost);
+      const remove = () => ghost.remove();
+      ghost.addEventListener('animationend', (e) => e.target === ghost && remove());
+      setTimeout(remove, 500);
+    },
+    [],
+  );
+
   return createPortal(
-    <div class="modal" onClick={(e) => onClose && e.target === e.currentTarget && onClose()}>
+    <div ref={ref} class="modal" onClick={(e) => onClose && e.target === e.currentTarget && onClose()}>
       <div class="modal__panel" role="dialog" aria-modal="true">
         <div class="modal__handle" />
         {children}

@@ -54,6 +54,7 @@ export function App() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [returnView, setReturnView] = useState<View>('home');
   const [homeTab, setHomeTab] = useState<HomeTab>(() => tabFromUrl(location.href) ?? 'tables');
+  const [tabMotion, setTabMotion] = useState<'next' | 'prev' | 'rise'>('rise');
   // Profiles opened from a profile stack up, so Back walks back through them.
   const [profileStack, setProfileStack] = useState<string[]>([]);
   const [profileReturn, setProfileReturn] = useState<View>('home');
@@ -210,6 +211,10 @@ export function App() {
   }
 
   function openHomeTab(tab: HomeTab) {
+    // Switching between tabs slides the new one in from the side it sits on in the nav.
+    const from = HOME_TABS.findIndex((t) => t.id === homeTab);
+    const to = HOME_TABS.findIndex((t) => t.id === tab);
+    setTabMotion(view === 'home' && from !== to ? (to > from ? 'next' : 'prev') : 'rise');
     setHomeTab(tab);
     setView('home');
   }
@@ -306,7 +311,7 @@ export function App() {
         )}
 
         {!needsPhone && view === "home" && account && (
-          <div key={homeTab}>
+          <div key={homeTab} class={`tabpane tabpane--${tabMotion}`}>
             {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
             {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
             {homeTab === "games" && <GamesScreen myAccountId={account.id} />}
@@ -364,6 +369,12 @@ export function App() {
 
       {showNav && (
         <nav class="bottomnav" aria-label="Main">
+          {/* One highlight that slides to the active tab (hidden on screens that aren't a tab). */}
+          <span
+            class={`bottomnav__pill ${view === 'home' ? '' : 'bottomnav__pill--hidden'}`}
+            style={{ '--tab': Math.max(0, HOME_TABS.findIndex((t) => t.id === homeTab)) }}
+            aria-hidden="true"
+          />
           {HOME_TABS.map(({ id, icon: Icon }) => {
             const active = view === 'home' && homeTab === id;
             return (
