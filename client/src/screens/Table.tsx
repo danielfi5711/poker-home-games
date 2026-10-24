@@ -8,7 +8,7 @@ import { ConfirmModal } from './ConfirmModal.js';
 import { SettleSheet } from './SettleSheet.js';
 import { tr } from '../i18n.js';
 import { openProfile } from '../profileNav.js';
-import { BellIcon, PlusIcon } from '../icons.js';
+import { ArrowLeftIcon, BellIcon, CloseIcon, PlusIcon } from '../icons.js';
 import { Avatar, Money, SectionLabel, Sheet } from '../ui.js';
 
 interface Props {
@@ -197,22 +197,22 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
         })}
       </ul>
 
-      {isHost && noBuyIns && (
-        <button class="btn btn--ghost btn--block" onClick={() => setConfirmClose(true)}>
-          {tr.table.closeTable}
-        </button>
-      )}
-
-      {isHost && !noBuyIns && (
+      {isHost && (
         <div class="hostbar">
-          <button class="btn btn--lg btn--block" style={{ borderColor: "var(--gold-line)", color: "var(--gold-hi)" }} onClick={() => setSettleOpen(true)}>
-            {tr.table.endAndSettle}
-          </button>
+          {noBuyIns ? (
+            <button class="btn btn--lg btn--block btn--danger" onClick={() => setConfirmClose(true)}>
+              <CloseIcon size={17} /> {tr.table.closeTable}
+            </button>
+          ) : (
+            <button class="btn btn--lg btn--block" style={{ borderColor: "var(--gold-line)", color: "var(--gold-hi)" }} onClick={() => setSettleOpen(true)}>
+              {tr.table.endAndSettle}
+            </button>
+          )}
         </div>
       )}
 
-      <button class="btn btn--ghost btn--block" onClick={onLeave}>
-        {tr.common.backToTables}
+      <button class="btn btn--block" onClick={onLeave}>
+        <ArrowLeftIcon size={16} /> {tr.common.backToTables}
       </button>
 
       <div class="actionbar">
