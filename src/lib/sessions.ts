@@ -134,6 +134,7 @@ export function createSession(name: string, host: Account): { session: Session; 
     name: name.trim().slice(0, 60) || 'Poker Night',
     createdAt: Date.now(),
     status: 'active',
+    bank: true,
     hostPlayerId: hostPlayer.id,
     players: { [hostPlayer.id]: hostPlayer },
     settledAt: null,
@@ -557,6 +558,7 @@ export function history(sinceMs = 0): HistoryResponse {
       settledAt: session.settledAt ?? session.createdAt,
       hostAccountId: session.players[session.hostPlayerId]?.accountId ?? '',
       players: matchPlayers,
+      bank: !!session.bank,
       transfers: transfers.map((t) => {
         const fromAccountId = session.players[t.fromPlayerId]?.accountId ?? '';
         const toAccountId = session.players[t.toPlayerId]?.accountId ?? '';

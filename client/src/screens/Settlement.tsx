@@ -91,8 +91,9 @@ export function SettlementScreen({ session, playerId, isHost, onChanged, onLeave
           </ul>
 
           <SectionLabel>{tr.settlement.whoPaysWhom}</SectionLabel>
+          {session.bank && settlement.transfers.length > 0 && <p class="hint">{tr.settlement.bankHint}</p>}
           {settlement.transfers.length === 0 ? (
-            <p class="muted">{tr.settlement.allEven}</p>
+            <p class="muted">{session.bank ? tr.settlement.bankNothing : tr.settlement.allEven}</p>
           ) : (
             <div class="stack stack--tight">
               {settlement.transfers.map((t, i) => {

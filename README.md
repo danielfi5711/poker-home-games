@@ -1,11 +1,12 @@
 # Poker Home Games
 
 An installable app (PWA — add it to your phone's home screen, no App Store
-needed) for tracking local poker nights: players request buy-ins, the host
-approves them, the host ends the game whenever they're ready, and the app
-works out who pays whom — plus a leaderboard (this month, this year or all
-time) with winning/losing streaks and a full match history. No real money moves through
-the app; it's a calculator for a cash game your friends already play. Amounts
+needed) for tracking local poker nights. The host is the bank: players pay
+the host for chips, the host confirms the money arrived, and at the end the
+app tells the host exactly what to pay each player — plus a leaderboard
+(this month, this year or all time) with winning/losing streaks and a full
+match history. No real money moves through the app (money changes hands in
+cash or Bit, between your friends); it's a calculator for a cash game your friends already play. Amounts
 are in shekels (₪).
 
 ## How it works
@@ -21,18 +22,19 @@ are in shekels (₪).
    people join and buy in as they arrive. If nobody has bought in yet, the
    host can **Close table** (opened by mistake, game's off); a table still
    empty after 2 hours closes by itself.
-3. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters an
-   amount, and it sits pending until the host approves or denies it on the
-   table screen (players just tell the host at the table, so there's no
-   notification for it). The host's own buy-ins are approved automatically.
+3. **Buying in = paying the host**: a player gives the host the money (cash
+   or Bit) and taps **Buy in** for that amount. It's pending until the host
+   taps **Got the money** (or Deny) on the table screen — then the chips
+   count. The host's own buy-ins count right away.
 4. **Cash-out**: a player enters what they're leaving the table with (even
    ₪0 is a valid cash-out). If someone leaves without entering theirs, the
    host can cash them out from their row on the table screen.
 5. The host taps **Settle game**: a sheet lists every player with a cash-out
    box (already-entered ones filled in) and a live "money in vs. money out"
-   total, so nothing is silently counted as ₪0. Settling computes each player's net and
-   the minimum set of payments to square everyone up, and flags it if the
-   buy-ins and cash-outs don't quite add up.
+   total, so nothing is silently counted as ₪0. Settling computes each
+   player's net (for the leaderboard) and the payouts: since the host holds
+   all the buy-in money, the host pays every player what they cashed out. It
+   flags it if the buy-ins and cash-outs don't quite add up.
 6. Everyone sees the results and exactly whom to pay (or who pays them) and
    how much. The game then shows up in the **Games** tab (bottom bar) with its
    results and payments, and folds into the **Leaderboard** tab (balance,

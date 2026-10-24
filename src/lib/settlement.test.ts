@@ -83,3 +83,16 @@ test('a missing cash-out makes the settlement incomplete', () => {
   const result = computeSettlement(session(player('a', [buyIn(50_00)], 50_00), player('b', [buyIn(50_00)], null)));
   assert.equal(result.complete, false);
 });
+
+test('on a bank game the host pays every other player their whole cash-out', () => {
+  // Host a, b re-bought after cashing out ₪15, c busted.
+  const s = {
+    ...session(player('a', [buyIn(50_00)], 60_00), player('b', [buyIn(50_00), buyIn(50_00)], 45_00, 15_00), player('c', [buyIn(30_00)], 0)),
+    bank: true,
+  };
+  const result = computeSettlement(s);
+  assert.deepEqual(result.transfers, [{ fromPlayerId: 'a', toPlayerId: 'b', amountCents: 60_00 }]);
+  // Nets (and so the leaderboard) don't depend on who pays whom.
+  assert.deepEqual(result.netsCents, computeSettlement({ ...s, bank: false }).netsCents);
+  assert.deepEqual(result.netsCents, { a: 10_00, b: -40_00, c: -30_00 });
+});

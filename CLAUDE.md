@@ -16,9 +16,16 @@ leaderboard/match history across all settled tables. (Groups existed
 before and were removed on purpose to keep the app simple — old stored
 sessions may still carry a stale `groupId` field; it is ignored.)
 
-Buy-in model: a player requests a buy-in for an amount; it sits `pending`
-until the host approves or denies it (the host's own requests auto-approve —
-there's no one above the host). Only `approved` buy-ins count toward a
+Bank model (`Session.bank`, every table opened since 2026-10-24): **the host is
+the bank**. A player hands the host real money (cash/Bit — outside the app;
+in-app payments were ruled out: processors ban poker money and paying out
+winners needs a payment license) and requests a buy-in; it sits `pending`
+until the host taps "Got the money" (approve) or denies it (the host's own
+requests auto-approve — there's no one above the host). At settle, the host
+pays every other player their whole cash-out (`computeSettlement`'s bank
+branch), so the Payments are all host → player. Nets (and the leaderboard)
+are the same as before. Older games without `bank` keep the old
+losers-pay-winners transfers. Only `approved` buy-ins count toward a
 player's total or the settlement math. A single buy-in is capped at ₪50
 (`MAX_BUY_IN_CENTS` in `src/shared/types.ts`, enforced by `requestBuyIn()` and
 the buy-in sheet) — buy in again for more. Cash-outs don't need approval — a
@@ -111,7 +118,8 @@ just ASCII, via a Unicode-aware regex.
   shared map has one, initials otherwise — so every avatar in the app
   (keyed by account id) picks it up.
 - `src/lib/settlement.ts` — `computeSettlement()`: nets everyone
-  (`cashOut − approved buy-ins`), then greedily matches the largest creditor
+  (`cashOut − approved buy-ins`). On a bank game, transfers are host → each
+  player for `totalCashOutCents` (none for ₪0 or the host). Otherwise it greedily matches the largest creditor
   against the largest debtor until everyone is settled (Splitwise-style
   minimum cash flow). `discrepancyCents` (nets not summing to zero) means a
   buy-in or cash-out doesn't add up — surfaced as a warning, not an error.

@@ -62,6 +62,12 @@ export interface Session {
   hostPlayerId: string;
   players: Record<string, Player>;
   settledAt: number | null;
+  /**
+   * Host is the bank: an approved buy-in means the host got the money, and at the end the host pays
+   * every player their cash-out. Set on every table opened since 2026-10-24; absent on older games,
+   * where losers pay winners directly.
+   */
+  bank?: boolean;
   /** Created when the game is settled — one per who-pays-whom transfer. Absent on older games. */
   payments?: Payment[];
 }
@@ -125,7 +131,7 @@ export interface Transfer {
 export interface SettlementResult {
   /** cashOut - approved buy-ins per player, in cents. */
   netsCents: Record<string, number>;
-  /** Minimal set of payments that settles every net. */
+  /** Payments that settle every net: host → each player on a bank game, else the minimal set between players. */
   transfers: Transfer[];
   /**
    * Sum of all nets. Should be 0 (money in == money out). A nonzero value
@@ -182,7 +188,9 @@ export interface MatchSummary {
   /** Only the host can reopen a just-settled game (see `REOPEN_WINDOW_MS`). */
   hostAccountId: string;
   players: MatchPlayerResult[];
-  /** Minimal set of payments that squares everyone up for this match. */
+  /** The host was the bank (see `Session.bank`). */
+  bank: boolean;
+  /** The payments that square everyone up for this match (see `SettlementResult.transfers`). */
   transfers: MatchTransfer[];
   /** Nonzero when buy-ins and cash-outs didn't add up (see `SettlementResult`). */
   discrepancyCents: number;

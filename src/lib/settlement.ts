@@ -1,7 +1,8 @@
 import { totalCashOutCents, type Session, type SettlementResult, type Transfer } from '../shared/types.js';
 
 /**
- * Nets every player (cash-out − total buy-ins), then greedily matches the
+ * Nets every player (cash-out − total buy-ins). On a bank game (`session.bank`) the host pays every
+ * other player their total cash-out. On older games players settle with each other: greedily match the
  * largest creditor against the largest debtor, repeatedly, until everyone is
  * settled. This is the standard "minimum cash flow" approach (as used by
  * Splitwise etc.) — not always the mathematically fewest possible transfers,
@@ -25,6 +26,14 @@ export function computeSettlement(session: Session): SettlementResult {
   }
 
   const discrepancyCents = Object.values(netsCents).reduce((a, b) => a + b, 0);
+
+  // Host is the bank: they already hold every approved buy-in, so they pay each player what they cashed out.
+  if (session.bank) {
+    const transfers: Transfer[] = Object.values(session.players)
+      .filter((p) => p.id !== session.hostPlayerId && totalCashOutCents(p) > 0)
+      .map((p) => ({ fromPlayerId: session.hostPlayerId, toPlayerId: p.id, amountCents: totalCashOutCents(p) }));
+    return { netsCents, transfers, discrepancyCents, complete };
+  }
 
   interface Party {
     playerId: string;

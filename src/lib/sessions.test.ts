@@ -142,7 +142,7 @@ test("nobody but the owner or the host can cancel a waiting request, and denied 
   assert.throws(() => sessions.removeBuyIn(t.id, pending.id, t.host.id), /already handled/);
 });
 
-/** A settled table where the guest owes the host ₪20; returns that payment's id. */
+/** A settled bank game where the host owes the guest their ₪30 cash-out; returns that payment's id. */
 function settledWithDebt() {
   const t = table();
   sessions.requestBuyIn(t.id, t.hostSeat, t.host.id, 50_00);
@@ -152,7 +152,7 @@ function settledWithDebt() {
   sessions.recordCashOut(t.id, t.guestSeat, t.guest.id, 30_00);
   sessions.settleSession(t.id, t.host.id);
   const [payment] = sessions.paymentsFor(t.guest.id);
-  assert.equal(payment?.amountCents, 20_00);
+  assert.equal(payment?.amountCents, 30_00);
   return { ...t, paymentId: payment!.id };
 }
 
@@ -160,25 +160,25 @@ const paymentOf = (accountId: string, id: string) => sessions.paymentsFor(accoun
 
 test('the payer saying they paid asks the receiver straight away; the receiver then confirms', () => {
   const t = settledWithDebt();
-  assert.throws(() => sessions.markPaid(t.paymentId, t.host.id), /Only the payer/);
+  assert.throws(() => sessions.markPaid(t.paymentId, t.guest.id), /Only the payer/);
 
-  sessions.markPaid(t.paymentId, t.guest.id);
-  let p = paymentOf(t.guest.id, t.paymentId);
+  sessions.markPaid(t.paymentId, t.host.id);
+  let p = paymentOf(t.host.id, t.paymentId);
   assert.equal(p.status, 'awaiting_confirmation');
 
-  sessions.respondPayment(t.paymentId, t.host.id, true);
-  p = paymentOf(t.guest.id, t.paymentId);
+  sessions.respondPayment(t.paymentId, t.guest.id, true);
+  p = paymentOf(t.host.id, t.paymentId);
   assert.equal(p.status, 'confirmed');
 });
 
 test('the receiver can confirm a payment the payer never marked as paid', () => {
   const t = settledWithDebt();
-  assert.equal(paymentOf(t.host.id, t.paymentId).status, 'unpaid');
-  assert.throws(() => sessions.respondPayment(t.paymentId, t.guest.id, true), /being paid/);
-  sessions.respondPayment(t.paymentId, t.host.id, true);
-  assert.equal(paymentOf(t.host.id, t.paymentId).status, 'confirmed');
+  assert.equal(paymentOf(t.guest.id, t.paymentId).status, 'unpaid');
+  assert.throws(() => sessions.respondPayment(t.paymentId, t.host.id, true), /being paid/);
+  sessions.respondPayment(t.paymentId, t.guest.id, true);
+  assert.equal(paymentOf(t.guest.id, t.paymentId).status, 'confirmed');
   // Nothing to do once it's confirmed.
-  assert.equal(sessions.markPaid(t.paymentId, t.guest.id).status, 'confirmed');
+  assert.equal(sessions.markPaid(t.paymentId, t.host.id).status, 'confirmed');
 });
 
 test('a settled game with only one player is left out of the history', () => {
@@ -249,7 +249,7 @@ test('the host can reopen a just-settled game until a payment is marked or the w
   // Settled again: a marked payment locks it.
   sessions.settleSession(g.id, g.host.id);
   const [payment] = sessions.paymentsFor(g.guest.id).filter((p) => p.sessionId === g.id);
-  sessions.markPaid(payment!.id, g.guest.id);
+  sessions.markPaid(payment!.id, g.host.id);
   assert.throws(() => sessions.reopenSession(g.id, g.host.id), /already marked/);
 
   // Untouched payments, but too late.
@@ -308,4 +308,21 @@ test('tables nobody bought in at close themselves after two hours', (t) => {
   sessions.closeEmptyTables();
   assert.throws(() => sessions.getSession(empty.id), /gone/);
   assert.equal(sessions.getSession(playing.id).status, 'active');
+});
+
+test('a new game has the host as the bank: settling makes host → player payouts', () => {
+  const t = table();
+  assert.equal(sessions.getSession(t.id).bank, true);
+  sessions.requestBuyIn(t.id, t.hostSeat, t.host.id, 50_00);
+  sessions.requestBuyIn(t.id, t.guestSeat, t.guest.id, 50_00);
+  sessions.respondToBuyIn(t.id, lastBuyIn(t.id, t.guestSeat).id, t.host.id, true);
+  sessions.recordCashOut(t.id, t.hostSeat, t.host.id, 20_00);
+  sessions.recordCashOut(t.id, t.guestSeat, t.guest.id, 80_00);
+  sessions.settleSession(t.id, t.host.id);
+
+  const payments = sessions.paymentsFor(t.guest.id).filter((p) => p.sessionId === t.id);
+  assert.deepEqual(
+    payments.map((p) => [p.fromAccountId, p.toAccountId, p.amountCents]),
+    [[t.host.id, t.guest.id, 80_00]],
+  );
 });

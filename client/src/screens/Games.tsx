@@ -155,7 +155,7 @@ function GameCard({ match, myAccountId, open, onToggle, onReopen }: CardProps) {
               <p class="warning">{tr.games.offBy(formatCents(Math.abs(match.discrepancyCents)))}</p>
             )}
             {match.transfers.length === 0 ? (
-              <p class="muted">{tr.settlement.allEven}</p>
+              <p class="muted">{match.bank ? tr.settlement.bankNothing : tr.settlement.allEven}</p>
             ) : (
               match.transfers.map((t, i) => {
                 const mine = t.fromAccountId === myAccountId || t.toAccountId === myAccountId;
