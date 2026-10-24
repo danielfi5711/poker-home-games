@@ -64,6 +64,15 @@ function runMigrations(): void {
       if (session.status === 'settled') delete d.sessions[id];
     }
   });
+
+  // 2026-10-24: there's no lobby any more — a table is live from the moment it's opened. Tables still
+  // waiting in the old lobby go live; the host-presence field the lobby used is dropped.
+  apply('2026-10-24-no-lobby', (d) => {
+    for (const session of Object.values(d.sessions)) {
+      if ((session.status as string) === 'setup') session.status = 'active';
+      delete (session as { hostSeenAt?: number }).hostSeenAt;
+    }
+  });
 }
 
 function data(): Data {
@@ -124,7 +133,7 @@ export function createSession(name: string, host: Account): { session: Session; 
     id,
     name: name.trim().slice(0, 60) || 'Poker Night',
     createdAt: Date.now(),
-    status: 'setup',
+    status: 'active',
     hostPlayerId: hostPlayer.id,
     players: { [hostPlayer.id]: hostPlayer },
     settledAt: null,
@@ -136,23 +145,16 @@ export function createSession(name: string, host: Account): { session: Session; 
   return { session, playerId: hostPlayer.id };
 }
 
-/** How long an unstarted table survives without its host having the lobby open. */
-const ABANDONED_LOBBY_MS = 15 * 60_000;
-/** Only persist host presence this often, so an open lobby isn't a database write every poll. */
-const HOST_SEEN_WRITE_MS = 60_000;
+/** A live table nobody has bought in at is closed after this long (opened by mistake, or the game never happened). */
+const EMPTY_TABLE_MS = 2 * 60 * 60_000;
 
-export function getSession(id: string, viewerAccountId?: string): Session {
-  const session = requireSession(id);
-  const host = session.players[session.hostPlayerId];
-  if (session.status === 'setup' && viewerAccountId && host?.accountId === viewerAccountId) {
-    const now = Date.now();
-    if (now - (session.hostSeenAt ?? 0) > HOST_SEEN_WRITE_MS) {
-      save((d) => {
-        d.sessions[session.id].hostSeenAt = now;
-      });
-    }
-  }
+export function getSession(id: string): Session {
   return requireSession(id);
+}
+
+/** Any buy-in that is or may become money on the table (denied ones don't count). */
+function hasBuyIns(session: Session): boolean {
+  return Object.values(session.players).some((p) => p.buyIns.some((b) => b.status !== 'denied'));
 }
 
 function closeTable(session: Session): void {
@@ -161,23 +163,22 @@ function closeTable(session: Session): void {
   });
 }
 
-/** The host left the lobby before starting — the table goes away with them. */
-export function leaveSession(id: string, accountId: string): { closed: boolean } {
+/** The host closes a table nobody has bought in at yet — once money is on it, it has to be settled instead. */
+export function closeEmptyTable(id: string, accountId: string): void {
   const session = requireSession(id);
-  const host = session.players[session.hostPlayerId];
-  if (session.status !== 'setup' || host?.accountId !== accountId) return { closed: false };
+  requireHost(session, accountId);
+  if (session.status !== 'active') throw new SessionError('This game has already been settled.', 409);
+  if (hasBuyIns(session)) throw new SessionError('Someone already bought in — settle the game instead.', 409);
   closeTable(session);
-  return { closed: true };
 }
 
-/** Closes unstarted tables whose host hasn't had the lobby open for a while (app closed, wandered off). */
-export function closeAbandonedLobbies(): void {
-  const cutoff = Date.now() - ABANDONED_LOBBY_MS;
+/** Closes live tables that nobody has bought in at within `EMPTY_TABLE_MS` of opening. */
+export function closeEmptyTables(): void {
+  const cutoff = Date.now() - EMPTY_TABLE_MS;
   for (const session of Object.values(data().sessions)) {
-    if (session.status !== 'setup') continue;
-    if ((session.hostSeenAt ?? session.createdAt) > cutoff) continue;
+    if (session.status !== 'active' || session.createdAt > cutoff || hasBuyIns(session)) continue;
     closeTable(session);
-    console.log(`Closed abandoned lobby ${session.id}`);
+    console.log(`Closed empty table ${session.id}`);
   }
 }
 
@@ -197,16 +198,6 @@ export function joinSession(id: string, account: Account): { session: Session; p
   return { session: requireSession(id), playerId: player.id };
 }
 
-export function activateSession(id: string, accountId: string): Session {
-  const session = requireSession(id);
-  requireHost(session, accountId);
-  if (session.status !== 'setup') return session;
-  save((d) => {
-    d.sessions[id].status = 'active';
-  });
-  return requireSession(id);
-}
-
 /**
  * A player asks to buy in for `amountCents`. The host's own requests
  * auto-approve (there's no one above the host); everyone else's request sits
@@ -215,7 +206,7 @@ export function activateSession(id: string, accountId: string): Session {
  */
 export function requestBuyIn(id: string, playerId: string, accountId: string, amountCentsRaw: number): Session {
   const session = requireSession(id);
-  if (session.status !== 'active') throw new SessionError('The game needs to be started before buy-ins can be recorded.', 409);
+  if (session.status !== 'active') throw new SessionError('This game has already been settled.', 409);
   const player = requirePlayerOwnedBy(session, playerId, accountId);
   const amountCents = sanitizeAmountCents(amountCentsRaw);
   if (amountCents <= 0) throw new SessionError('Buy-in must be worth more than ₪0.', 400);

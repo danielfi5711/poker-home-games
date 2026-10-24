@@ -9,7 +9,6 @@ import {
   requestBuyIn,
   removeBuyIn,
   respondToBuyIn,
-  activateSession,
   createSession,
   getSession,
   history,
@@ -21,7 +20,7 @@ import {
   settleSession,
   reopenSession,
   paymentsFor,
-  leaveSession,
+  closeEmptyTable,
   markPaid,
   respondPayment,
 } from '../lib/sessions.js';
@@ -304,28 +303,23 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     if (parts[0] === 'api' && parts[1] === 'sessions' && parts[2]) {
       const id = parts[2];
 
-      // GET /api/sessions/:id (the host polling an open lobby also marks them present)
+      // GET /api/sessions/:id
       if (req.method === 'GET' && parts.length === 3) {
-        const account = requireAuth(req);
-        return sendJson(res, 200, { session: getSession(id, account.id) });
+        requireAuth(req);
+        return sendJson(res, 200, { session: getSession(id) });
       }
 
-      // POST /api/sessions/:id/leave — the host leaving an unstarted table closes it
-      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'leave') {
+      // POST /api/sessions/:id/close — the host closes a table nobody has bought in at yet
+      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'close') {
         const account = requireAuth(req);
-        return sendJson(res, 200, leaveSession(id, account.id));
+        closeEmptyTable(id, account.id);
+        return sendJson(res, 200, { ok: true });
       }
 
       // POST /api/sessions/:id/join
       if (req.method === 'POST' && parts.length === 4 && parts[3] === 'join') {
         const account = requireAuth(req);
         return sendJson(res, 200, joinSession(id, account));
-      }
-
-      // POST /api/sessions/:id/activate
-      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'activate') {
-        const account = requireAuth(req);
-        return sendJson(res, 200, { session: activateSession(id, account.id) });
       }
 
       // GET /api/sessions/:id/settlement

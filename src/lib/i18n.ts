@@ -24,7 +24,7 @@ const HE_ERRORS: Record<string, string> = {
   'Enter a valid amount.': 'יש להזין סכום תקין.',
   'That amount looks wrong.': 'הסכום הזה נראה שגוי.',
   'This game has already been settled.': 'ההתחשבנות במשחק הזה כבר בוצעה.',
-  'The game needs to be started before buy-ins can be recorded.': 'צריך להתחיל את המשחק לפני שאפשר לרשום קניות.',
+  'Someone already bought in — settle the game instead.': 'מישהו כבר קנה — צריך לעשות התחשבנות במקום.',
   'Buy-in must be worth more than ₪0.': 'קנייה צריכה להיות יותר מ-₪0.',
   'A buy-in can be at most ₪50.': 'קנייה יכולה להיות עד ₪50.',
   'That buy-in request no longer exists.': 'בקשת הקנייה הזו כבר לא קיימת.',

@@ -1589,61 +1589,6 @@ form {
   gap: 8px;
 }
 
-/* ---------- lobby ---------- */
-
-.lobbyhead {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 26px 18px;
-  text-align: center;
-  border-radius: var(--r-xl);
-  border: 1px solid var(--line-strong);
-  background:
-    radial-gradient(80% 100% at 50% 0%, rgba(40, 95, 190, 0.4) 0%, transparent 70%),
-    linear-gradient(180deg, #173665 0%, #0d1e3c 100%);
-}
-
-.lobbyhead__title {
-  font-size: 26px;
-  font-weight: 800;
-}
-
-.waitdots {
-  display: inline-flex;
-  gap: 5px;
-}
-
-.waitdots span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--gold);
-  animation: waitdot 1.4s ease-in-out infinite;
-}
-
-.waitdots span:nth-child(2) {
-  animation-delay: 0.18s;
-}
-
-.waitdots span:nth-child(3) {
-  animation-delay: 0.36s;
-}
-
-@keyframes waitdot {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.8);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 /* ---------- leaderboard ---------- */
 
 .podium {

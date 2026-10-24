@@ -56,16 +56,18 @@ just ASCII, via a Unicode-aware regex.
   that the server maps back to an account id. Tokens don't expire — logout
   just deletes the token server-side.
 - `src/lib/sessions.ts` — all table state mutation lives here: create/join a
-  table, start it (`activateSession`), request a buy-in (`requestBuyIn` —
+  table (there's **no lobby** — a table is `active` the moment it's opened,
+  and anyone can join until it's settled; the lobby/`setup` status was removed
+  on purpose, and the `2026-10-24-no-lobby` migration moved old lobbies to
+  `active`), request a buy-in (`requestBuyIn` —
   auto-approves for the host, `pending` for everyone else), approve/deny one
-  (`respondToBuyIn`, host-only), close an unstarted table when its host leaves
-  (`leaveSession`) or hasn't had the lobby open for 15 min (`closeAbandonedLobbies`,
-  every 60s; presence = `hostSeenAt`, refreshed at most once a minute by the
-  host's own lobby polling), record a cash-out (a player for themselves, or the host for anyone who
-  didn't), and settle (host-only,
-  doesn't require every player to have cashed out). Ownership is enforced
+  (`respondToBuyIn`, host-only), close a table nobody has bought in at
+  (`closeEmptyTable`, host-only, `POST /api/sessions/:id/close`; and
+  `closeEmptyTables` every 60s closes ones still empty 2 hours after opening —
+  a denied buy-in doesn't count as money on the table), record a cash-out (a player for themselves, or the host for anyone who
+  didn't), and settle (host-only). Ownership is enforced
   server-side: buy-ins and cash-outs must be posted by the account that owns
-  that seat (`requirePlayerOwnedBy`), and starting/approving/settling must
+  that seat (`requirePlayerOwnedBy`), and closing/approving/settling must
   come from the account that owns the host seat (`requireHost`) — a
   client-supplied `playerId` alone is never enough. `history()` also lives
   here: builds the per-match breakdown (`MatchSummary[]`), and walks each
@@ -167,9 +169,9 @@ just ASCII, via a Unicode-aware regex.
     dialog), the bottom-nav tabs shown right after login — `Tables`
     (start/rejoin a table), `Leaderboard` (all-time standings with streak
     badges/highlights), `Games` (recent settled games, each expandable to
-    its per-player results and who-pays-whom transfers) and `Odds` (see below), `Lobby` (`setup` status — host starts the game once
-    everyone's in), `Table` (live buy-in requests/approvals, cash-outs,
-    `active` status), `AmountModal` (shared amount-entry sheet for buy-in
+    its per-player results and who-pays-whom transfers) and `Odds` (see below), `Table` (live buy-in requests/approvals, cash-outs,
+    `active` status; the host gets "Close table" instead of "End game & settle
+    up" while nobody has bought in), `AmountModal` (shared amount-entry sheet for buy-in
     requests and cash-outs), `ConfirmModal` (generic themed confirm dialog,
     used for logout), `Settlement` (`settled` status).
 - `src/shared/odds.ts` — the Odds tab's math, run entirely in the client (no

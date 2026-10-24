@@ -17,7 +17,6 @@ import { GamesScreen } from './screens/Games.js';
 import { OddsScreen } from './screens/Odds.js';
 import { PaymentsScreen, paymentsNeedingAction } from './screens/Payments.js';
 import { PhoneForm } from './screens/PhoneForm.js';
-import { LobbyScreen } from './screens/Lobby.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
@@ -324,7 +323,6 @@ export function App() {
 
         {!needsPhone && view === "session" && session && playerId && me && (
           <>
-            {session.status === "setup" && <LobbyScreen session={session} isHost={isHost} onChanged={setSession} onLeave={leaveSession} />}
             {session.status === "active" && (
               <TableScreen
                 session={session}

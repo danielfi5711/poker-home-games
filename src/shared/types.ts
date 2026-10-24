@@ -51,19 +51,17 @@ export function canReopen(settledAt: number | null, paymentStatuses: (PaymentSta
   return settledAt !== null && Date.now() - settledAt < REOPEN_WINDOW_MS && paymentStatuses.every((s) => s === null || s === 'unpaid');
 }
 
-export type SessionStatus = 'setup' | 'active' | 'settled';
+export type SessionStatus = 'active' | 'settled';
 
 export interface Session {
   id: string;
   name: string;
   createdAt: number;
-  /** 'setup' = lobby, waiting for the host to start; 'active' = playing; 'settled' = final. */
+  /** 'active' = playing (from the moment it's opened — there's no lobby); 'settled' = final. */
   status: SessionStatus;
   hostPlayerId: string;
   players: Record<string, Player>;
   settledAt: number | null;
-  /** Last time the host had the lobby open — an unstarted table whose host is gone gets closed. */
-  hostSeenAt?: number;
   /** Created when the game is settled — one per who-pays-whom transfer. Absent on older games. */
   payments?: Payment[];
 }

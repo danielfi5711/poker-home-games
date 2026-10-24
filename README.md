@@ -17,8 +17,10 @@ are in shekels (₪).
    from the day and time (e.g. "Thursday Evening"), no typing needed. Everyone
    else sees it appear in the table list and taps it to join — no codes or
    groups; the app is just for one circle of friends, so every account shares
-   the same tables and leaderboard. The host taps **Start game** once
-   everyone's seated.
+   the same tables and leaderboard. The table is live straight away —
+   people join and buy in as they arrive. If nobody has bought in yet, the
+   host can **Close table** (opened by mistake, game's off); a table still
+   empty after 2 hours closes by itself.
 3. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters an
    amount, and it sits pending until the host approves or denies it on the
    table screen (players just tell the host at the table, so there's no

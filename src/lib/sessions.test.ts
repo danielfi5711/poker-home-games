@@ -33,13 +33,12 @@ before(async () => {
   await sessions.initSessions();
 });
 
-/** A started table: a host and one other player, each holding their seat id. */
+/** A live table: a host and one other player, each holding their seat id. */
 function table() {
   const host = newAccount('host');
   const guest = newAccount('guest');
   const { session, playerId: hostSeat } = sessions.createSession('Test', host);
   const { playerId: guestSeat } = sessions.joinSession(session.id, guest);
-  sessions.activateSession(session.id, host.id);
   return { id: session.id, host, guest, hostSeat, guestSeat };
 }
 
@@ -185,7 +184,6 @@ test('the receiver can confirm a payment the payer never marked as paid', () => 
 test('a settled game with only one player is left out of the history', () => {
   const host = newAccount('solo');
   const { session, playerId } = sessions.createSession('Solo', host);
-  sessions.activateSession(session.id, host.id);
   sessions.requestBuyIn(session.id, playerId, host.id, 10_00);
   sessions.recordCashOut(session.id, playerId, host.id, 10_00);
   sessions.settleSession(session.id, host.id);
@@ -207,7 +205,6 @@ test("a profile counts the player's games, places, balance over time and regular
     const { session } = sessions.createSession('Profile game', hostAccount);
     const seatOf = new Map([[hostAccount.id, Object.keys(sessions.getSession(session.id).players)[0]!]]);
     for (const [acc] of seats.slice(1)) seatOf.set(acc.id, sessions.joinSession(session.id, acc).playerId);
-    sessions.activateSession(session.id, hostAccount.id);
     for (const [acc, buyIn, cashOut] of seats) {
       const seat = seatOf.get(acc.id)!;
       sessions.requestBuyIn(session.id, seat, acc.id, buyIn);
@@ -272,4 +269,43 @@ test('history from a date on leaves out older games', (t) => {
   assert.ok(ids.includes(newer.id));
   assert.ok(!ids.includes(older.id));
   assert.ok(sessions.history().matches.some((m) => m.id === older.id));
+});
+
+test('a new table is live straight away — buy-ins work without starting it', () => {
+  const host = newAccount('live');
+  const { session, playerId } = sessions.createSession('Live', host);
+  assert.equal(session.status, 'active');
+  sessions.requestBuyIn(session.id, playerId, host.id, 20_00);
+  assert.equal(lastBuyIn(session.id, playerId).status, 'approved');
+});
+
+test('only the host can close a table, and only while nobody has bought in', () => {
+  const t = table();
+  assert.throws(() => sessions.closeEmptyTable(t.id, t.guest.id), /Only the host/);
+
+  // A denied request isn't money on the table.
+  sessions.requestBuyIn(t.id, t.guestSeat, t.guest.id, 10_00);
+  sessions.respondToBuyIn(t.id, lastBuyIn(t.id, t.guestSeat).id, t.host.id, false);
+  const u = table();
+  sessions.requestBuyIn(u.id, u.guestSeat, u.guest.id, 10_00); // pending counts
+  assert.throws(() => sessions.closeEmptyTable(u.id, u.host.id), /already bought in/);
+
+  sessions.closeEmptyTable(t.id, t.host.id);
+  assert.throws(() => sessions.getSession(t.id), /gone/);
+});
+
+test('tables nobody bought in at close themselves after two hours', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const empty = table();
+  const playing = table();
+  sessions.requestBuyIn(playing.id, playing.hostSeat, playing.host.id, 20_00);
+
+  t.mock.timers.tick(2 * 60 * 60_000 - 1);
+  sessions.closeEmptyTables();
+  assert.equal(sessions.getSession(empty.id).status, 'active');
+
+  t.mock.timers.tick(2);
+  sessions.closeEmptyTables();
+  assert.throws(() => sessions.getSession(empty.id), /gone/);
+  assert.equal(sessions.getSession(playing.id).status, 'active');
 });

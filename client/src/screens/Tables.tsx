@@ -89,18 +89,14 @@ export function TablesScreen({ onEnterSession }: Props) {
 
       {open.map((s) => {
         const players = Object.values(s.players).sort((a, b) => a.joinedAt - b.joinedAt);
-        const live = s.status === 'active';
+        const pot = potCents(s);
         return (
-          <button key={s.id} class={`surface tablecard ${live ? 'tablecard--live' : ''}`} onClick={() => openTable(s)} disabled={busy}>
+          <button key={s.id} class="surface tablecard tablecard--live" onClick={() => openTable(s)} disabled={busy}>
             <div class="tablecard__top">
               <span class="tablecard__name">{s.name}</span>
-              {live ? (
-                <span class="pill pill--up">
-                  <span class="dot-live" /> {tr.common.live}
-                </span>
-              ) : (
-                <span class="pill pill--gold">{tr.tables.inLobby}</span>
-              )}
+              <span class="pill pill--up">
+                <span class="dot-live" /> {tr.common.live}
+              </span>
             </div>
             <div class="tablecard__bottom">
               <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -109,10 +105,11 @@ export function TablesScreen({ onEnterSession }: Props) {
                   {tr.common.players(players.length)}
                 </span>
               </span>
-              {live ? (
+              {/* Nothing on the table yet: invite people in instead of showing ₪0. */}
+              {pot > 0 ? (
                 <span class="tablecard__pot">
                   <span class="tablecard__potlabel">{tr.tables.onTheTable}</span>
-                  <Money cents={potCents(s)} size="lg" />
+                  <Money cents={pot} size="lg" />
                 </span>
               ) : (
                 <span class="tablecard__cta">

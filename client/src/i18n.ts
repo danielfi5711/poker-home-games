@@ -111,7 +111,6 @@ const en = {
     happeningNow: 'Happening now',
     noTables: 'No tables right now',
     noTablesSub: 'Start one above — everyone with the app will see it.',
-    inLobby: 'In the lobby',
     onTheTable: 'On the table',
     join: 'Join',
   },
@@ -123,20 +122,10 @@ const en = {
     night: 'Night',
     format: (day: string, time: string) => `${day} ${time}`,
   },
-  lobby: {
-    lobby: 'Lobby',
-    hostHint: 'Start the game once everyone has joined. Leaving before you start closes the table.',
-    waitingFor: (host: string | null) => `Waiting for ${host ?? 'the host'} to start the game.`,
-    atTheTable: 'At the table',
-    starting: 'Starting…',
-    startGame: (n: number) => `Start game · ${plural(n, 'player', 'players')}`,
+  table: {
     closeTable: 'Close table',
     closeTitle: 'Close this table?',
-    closeBodyOthers: (others: number) =>
-      `The game hasn't started, so leaving closes the table for everyone — ${plural(others, 'player', 'players')} will be told.`,
-    closeBodyAlone: "The game hasn't started, so leaving closes the table.",
-  },
-  table: {
+    closeBody: 'Nobody has bought in yet, so the table just closes for everyone — nothing is saved.',
     stillPlaying: (playing: number, total: number) => `${playing} of ${total} still playing`,
     pot: 'Pot',
     youreIn: "You're in",
@@ -427,7 +416,6 @@ const he: Strings = {
     happeningNow: 'משחקים עכשיו',
     noTables: 'אין שולחנות כרגע',
     noTablesSub: 'פותחים שולחן למעלה — כל מי שיש לו את האפליקציה יראה אותו.',
-    inLobby: 'בלובי',
     onTheTable: 'על השולחן',
     join: 'הצטרפות',
   },
@@ -439,20 +427,10 @@ const he: Strings = {
     night: 'בלילה',
     format: (day, time) => `${day} ${time}`,
   },
-  lobby: {
-    lobby: 'לובי',
-    hostHint: 'מתחילים את המשחק כשכולם הצטרפו. יציאה לפני ההתחלה סוגרת את השולחן.',
-    waitingFor: (host) => (host ? `מחכים להתחלת המשחק על ידי ${host}.` : 'מחכים שהמארח יתחיל את המשחק.'),
-    atTheTable: 'ליד השולחן',
-    starting: 'מתחיל…',
-    startGame: (n) => `התחלת המשחק · ${n === 1 ? 'שחקן אחד' : `${n} שחקנים`}`,
+  table: {
     closeTable: 'סגירת השולחן',
     closeTitle: 'לסגור את השולחן?',
-    closeBodyOthers: (others) =>
-      `המשחק עוד לא התחיל, אז יציאה סוגרת את השולחן לכולם — ${others === 1 ? 'שחקן אחד יקבל' : `${others} שחקנים יקבלו`} הודעה.`,
-    closeBodyAlone: 'המשחק עוד לא התחיל, אז יציאה סוגרת את השולחן.',
-  },
-  table: {
+    closeBody: 'אף אחד עוד לא קנה, אז השולחן פשוט נסגר לכולם — שום דבר לא נשמר.',
     stillPlaying: (playing, total) => `${playing} מתוך ${total} עדיין משחקים`,
     pot: 'קופה',
     youreIn: 'השקעת',

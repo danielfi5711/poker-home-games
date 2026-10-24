@@ -1,6 +1,6 @@
 import { config } from './config.js';
 import { initAccounts } from './lib/accounts.js';
-import { closeAbandonedLobbies, initSessions } from './lib/sessions.js';
+import { closeEmptyTables, initSessions } from './lib/sessions.js';
 import { initPush } from './lib/push.js';
 import { initAvatars } from './lib/avatars.js';
 import { libsqlEnabled } from './lib/libsql.js';
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   }
   await initAccounts();
   await initSessions();
-  setInterval(closeAbandonedLobbies, 60_000);
+  setInterval(closeEmptyTables, 60_000);
   await initPush();
   await initAvatars();
   startWebServer();

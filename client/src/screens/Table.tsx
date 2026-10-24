@@ -33,9 +33,23 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
   /** Host: whose approved buy-ins are listed for removal, then the one being confirmed. */
   const [buyInsFor, setBuyInsFor] = useState<string | null>(null);
   const [removing, setRemoving] = useState<{ name: string; buyIn: BuyIn } | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   const me = session.players[playerId]!;
   const players = Object.values(session.players).sort((a, b) => a.joinedAt - b.joinedAt);
+  // Until someone buys in, the host can simply close the table (opened by mistake, game's off).
+  const noBuyIns = players.every((p) => p.buyIns.every((b) => b.status === 'denied'));
+
+  async function closeTable() {
+    setConfirmClose(false);
+    try {
+      await api.close(session.id);
+    } catch {
+      /* already gone, or someone just bought in — the next poll shows which */
+      return;
+    }
+    onLeave();
+  }
 
   const pendingRequests = players.flatMap((p) => p.buyIns.filter((b) => b.status === 'pending').map((b) => ({ player: p, buyIn: b })));
   const myPending = me.buyIns.filter((b) => b.status === 'pending');
@@ -183,7 +197,13 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
         })}
       </ul>
 
-      {isHost && (
+      {isHost && noBuyIns && (
+        <button class="btn btn--ghost btn--block" onClick={() => setConfirmClose(true)}>
+          {tr.table.closeTable}
+        </button>
+      )}
+
+      {isHost && !noBuyIns && (
         <div class="hostbar">
           <button class="btn btn--lg btn--block" style={{ borderColor: "var(--gold-line)", color: "var(--gold-hi)" }} onClick={() => setSettleOpen(true)}>
             {tr.table.endAndSettle}
@@ -270,6 +290,17 @@ export function TableScreen({ session, playerId, isHost, onChanged, onSettled, o
             {tr.common.back}
           </button>
         </Sheet>
+      )}
+
+      {confirmClose && (
+        <ConfirmModal
+          title={tr.table.closeTitle}
+          body={tr.table.closeBody}
+          confirmLabel={tr.table.closeTable}
+          danger
+          onCancel={() => setConfirmClose(false)}
+          onConfirm={closeTable}
+        />
       )}
 
       {removing && (
