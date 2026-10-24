@@ -314,7 +314,7 @@ export function App() {
           <div key={homeTab} class={`tabpane tabpane--${tabMotion}`}>
             {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
             {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
-            {homeTab === "games" && <GamesScreen myAccountId={account.id} />}
+            {homeTab === "games" && <GamesScreen myAccountId={account.id} onEnterSession={enterSession} />}
             {homeTab === "odds" && <OddsScreen />}
             {homeTab === "payments" && (
               <PaymentsScreen myAccountId={account.id} payments={payments} error={paymentsError} onChanged={refreshPayments} />
@@ -339,6 +339,8 @@ export function App() {
               <SettlementScreen
                 session={session}
                 playerId={playerId}
+                isHost={isHost}
+                onChanged={setSession}
                 onLeave={() => {
                   leaveSession();
                   openHomeTab("payments");

@@ -20,7 +20,7 @@ import type {
   Session,
   SettleResponse,
 } from '../shared/types.js';
-import { MAX_BUY_IN_CENTS } from '../shared/types.js';
+import { MAX_BUY_IN_CENTS, REOPEN_WINDOW_MS } from '../shared/types.js';
 
 export class SessionError extends Error {
   constructor(
@@ -367,6 +367,30 @@ export function settleSession(id: string, accountId: string): SettleResponse {
   return { session: requireSession(id), settlement };
 }
 
+/**
+ * The host reopens a just-settled game to fix a mistake: it goes back to `active` and its payments are
+ * dropped, so it can be corrected and settled again. Only within `REOPEN_WINDOW_MS`, and only while
+ * every payment is still `unpaid` — once someone says they paid, money may already have moved.
+ */
+export function reopenSession(id: string, accountId: string): Session {
+  const session = requireSession(id);
+  requireHost(session, accountId);
+  if (session.status !== 'settled') return session;
+  if (Date.now() - (session.settledAt ?? 0) > REOPEN_WINDOW_MS) {
+    throw new SessionError('It is too late to reopen this game.', 409);
+  }
+  if (session.payments?.some((p) => p.status !== 'unpaid')) {
+    throw new SessionError('A payment for this game was already marked — it can no longer be reopened.', 409);
+  }
+  save((d) => {
+    const s = d.sessions[session.id];
+    s.status = 'active';
+    s.settledAt = null;
+    delete s.payments;
+  });
+  return requireSession(id);
+}
+
 // --- Payments ----------------------------------------------------------------
 
 const shekels = (cents: number) => `₪${(cents / 100).toFixed(2)}`;
@@ -458,8 +482,9 @@ interface StreakAccumulator extends LeaderboardEntry {
   biggestLossMatchName: string | null;
 }
 
-export function history(): HistoryResponse {
-  const cutoff = Date.now() - config.historyWindowDays * 24 * 60 * 60 * 1000;
+/** `sinceMs` narrows everything (leaderboard, streaks, highlights, games) to games settled from then on. */
+export function history(sinceMs = 0): HistoryResponse {
+  const cutoff = Math.max(sinceMs, Date.now() - config.historyWindowDays * 24 * 60 * 60 * 1000);
   // A game with a single player isn't a real game (usually a test or a table nobody joined): leave it out of
   // the Games tab and the leaderboard both.
   const settled = Object.values(data().sessions).filter(
@@ -539,6 +564,7 @@ export function history(): HistoryResponse {
       id: session.id,
       name: session.name,
       settledAt: session.settledAt ?? session.createdAt,
+      hostAccountId: session.players[session.hostPlayerId]?.accountId ?? '',
       players: matchPlayers,
       transfers: transfers.map((t) => {
         const fromAccountId = session.players[t.fromPlayerId]?.accountId ?? '';

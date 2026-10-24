@@ -92,16 +92,34 @@ function PodiumSpot({ entry, place }: { entry: LeaderboardEntry | undefined; pla
   );
 }
 
+const PERIODS = ['month', 'year', 'all'] as const;
+type Period = (typeof PERIODS)[number];
+
+/** Start of this month / year on the player's own clock (0 = all time). */
+function periodStart(period: Period): number {
+  const now = new Date();
+  if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  if (period === 'year') return new Date(now.getFullYear(), 0, 1).getTime();
+  return 0;
+}
+
 export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
+  const [period, setPeriod] = useState<Period>('all');
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Switching periods keeps the old standings on screen until the new ones arrive.
   useEffect(() => {
+    let current = true;
+    setError(null);
     api
-      .history()
-      .then(setData)
-      .catch((err) => setError((err as Error).message));
-  }, []);
+      .history(periodStart(period))
+      .then((r) => current && setData(r))
+      .catch((err) => current && setError((err as Error).message));
+    return () => {
+      current = false;
+    };
+  }, [period]);
 
   const board = data?.leaderboard ?? [];
   const h = data?.highlights;
@@ -110,12 +128,25 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
   return (
     <div class="view">
       <ScreenHead title={tr.leaderboard.title} sub={tr.leaderboard.sub} />
+
+      <div class="streetseg" role="group" style={{ '--i': PERIODS.indexOf(period), '--n': PERIODS.length }}>
+        <span class="streetseg__thumb" />
+        {PERIODS.map((p) => (
+          <button key={p} type="button" aria-pressed={p === period} onClick={() => setPeriod(p)}>
+            {tr.leaderboard.periods[p]}
+          </button>
+        ))}
+      </div>
+
       {error && <p class="error">{error}</p>}
       {!data && !error && <Spinner />}
 
       {data && board.length === 0 && (
-        <Empty icon={<TrophyIcon size={24} />} title={tr.leaderboard.empty}>
-          {tr.leaderboard.emptySub}
+        <Empty
+          icon={<TrophyIcon size={24} />}
+          title={period === 'month' ? tr.leaderboard.emptyMonth : period === 'year' ? tr.leaderboard.emptyYear : tr.leaderboard.empty}
+        >
+          {period === 'all' ? tr.leaderboard.emptySub : tr.leaderboard.emptyPeriodSub}
         </Empty>
       )}
 

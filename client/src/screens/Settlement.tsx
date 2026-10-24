@@ -1,21 +1,38 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Session, SettlementResult } from '../../../src/shared/types.js';
+import { canReopen } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { ArrowRightIcon } from '../icons.js';
 import { Avatar, Money, SectionLabel, Spinner } from '../ui.js';
+import { ConfirmModal } from './ConfirmModal.js';
 import { tr } from '../i18n.js';
 import { profileTap } from '../profileNav.js';
 
 interface Props {
   session: Session;
   playerId: string;
+  isHost: boolean;
+  onChanged: (session: Session) => void;
   onLeave: () => void;
 }
 
-export function SettlementScreen({ session, playerId, onLeave }: Props) {
+export function SettlementScreen({ session, playerId, isHost, onChanged, onLeave }: Props) {
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmReopen, setConfirmReopen] = useState(false);
+  const reopenable = isHost && canReopen(session.settledAt, (session.payments ?? []).map((p) => p.status));
+
+  async function reopen() {
+    setConfirmReopen(false);
+    setError(null);
+    try {
+      const { session: updated } = await api.reopen(session.id);
+      onChanged(updated);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
 
   useEffect(() => {
     api
@@ -101,6 +118,22 @@ export function SettlementScreen({ session, playerId, onLeave }: Props) {
       <button class="btn btn--primary btn--lg btn--block" onClick={onLeave}>
         {myTransfers.length > 0 ? tr.settlement.goToPayments : tr.settlement.done}
       </button>
+
+      {reopenable && (
+        <button class="btn btn--ghost btn--block" onClick={() => setConfirmReopen(true)}>
+          {tr.settlement.reopen}
+        </button>
+      )}
+
+      {confirmReopen && (
+        <ConfirmModal
+          title={tr.settlement.reopenTitle}
+          body={tr.settlement.reopenBody}
+          confirmLabel={tr.settlement.reopen}
+          onCancel={() => setConfirmReopen(false)}
+          onConfirm={reopen}
+        />
+      )}
     </div>
   );
 }

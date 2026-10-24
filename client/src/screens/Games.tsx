@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { HistoryResponse, MatchSummary } from '../../../src/shared/types.js';
+import type { HistoryResponse, MatchSummary, Session } from '../../../src/shared/types.js';
+import { canReopen } from '../../../src/shared/types.js';
 import { api } from '../api.js';
+import { ConfirmModal } from './ConfirmModal.js';
 import { formatCents } from '../money.js';
 import { ArrowRightIcon, ChevronDownIcon, CrownIcon, ReceiptIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, Spinner } from '../ui.js';
@@ -9,13 +11,28 @@ import { profileTap } from '../profileNav.js';
 
 interface Props {
   myAccountId: string;
+  onEnterSession: (session: Session, playerId: string) => void;
 }
 
 /** Recent finished games: each one's results and who has to pay whom. */
-export function GamesScreen({ myAccountId }: Props) {
+export function GamesScreen({ myAccountId, onEnterSession }: Props) {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [reopening, setReopening] = useState<string | null>(null);
+
+  // The host reopens a just-settled game and lands back at its (live again) table.
+  async function reopen(id: string) {
+    setReopening(null);
+    setError(null);
+    try {
+      await api.reopen(id);
+      const { session, playerId } = await api.join(id);
+      onEnterSession(session, playerId!);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
 
   useEffect(() => {
     api
@@ -37,8 +54,25 @@ export function GamesScreen({ myAccountId }: Props) {
       )}
 
       {data?.matches.map((m) => (
-        <GameCard key={m.id} match={m} myAccountId={myAccountId} open={openId === m.id} onToggle={() => setOpenId(openId === m.id ? null : m.id)} />
+        <GameCard
+          key={m.id}
+          match={m}
+          myAccountId={myAccountId}
+          open={openId === m.id}
+          onToggle={() => setOpenId(openId === m.id ? null : m.id)}
+          onReopen={() => setReopening(m.id)}
+        />
       ))}
+
+      {reopening && (
+        <ConfirmModal
+          title={tr.settlement.reopenTitle}
+          body={tr.settlement.reopenBody}
+          confirmLabel={tr.settlement.reopen}
+          onCancel={() => setReopening(null)}
+          onConfirm={() => reopen(reopening)}
+        />
+      )}
     </div>
   );
 }
@@ -48,6 +82,7 @@ interface CardProps {
   myAccountId: string;
   open: boolean;
   onToggle: () => void;
+  onReopen: () => void;
 }
 
 const statusPill = (status: string | null) =>
@@ -59,8 +94,10 @@ const statusPill = (status: string | null) =>
     <span class="pill pill--down paylabel">{tr.games.unpaid}</span>
   ) : null;
 
-function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
+function GameCard({ match, myAccountId, open, onToggle, onReopen }: CardProps) {
   const players = [...match.players].sort((a, b) => b.netCents - a.netCents);
+  const reopenable =
+    match.hostAccountId === myAccountId && canReopen(match.settledAt, match.transfers.map((t) => t.status));
   const winner = players[0];
   const me = match.players.find((p) => p.accountId === myAccountId);
   const date = new Date(match.settledAt);
@@ -136,6 +173,11 @@ function GameCard({ match, myAccountId, open, onToggle }: CardProps) {
                   </div>
                 );
               })
+            )}
+            {reopenable && (
+              <button class="btn btn--ghost btn--block" onClick={onReopen}>
+                {tr.settlement.reopen}
+              </button>
             )}
           </div>
         </div>

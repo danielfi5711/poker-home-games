@@ -3099,10 +3099,11 @@ form {
 /* ---------- odds tab ---------- */
 
 /* four-way segmented control; --i is the pressed button */
+/* segmented control with a sliding thumb: --i = selected index, --n = option count (Odds streets, Leaderboard period) */
 .streetseg {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--n, 4), 1fr);
   padding: 4px;
   border-radius: var(--r-md);
   background: rgba(0, 0, 0, 0.3);
@@ -3114,7 +3115,7 @@ form {
   top: 4px;
   bottom: 4px;
   inset-inline-start: 4px;
-  width: calc((100% - 8px) / 4);
+  width: calc((100% - 8px) / var(--n, 4));
   border-radius: 10px;
   background: var(--gold-soft);
   border: 1px solid var(--gold-line);

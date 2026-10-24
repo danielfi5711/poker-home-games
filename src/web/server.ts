@@ -19,6 +19,7 @@ import {
   recordCashOut,
   allSessions,
   settleSession,
+  reopenSession,
   paymentsFor,
   leaveSession,
   markPaid,
@@ -272,10 +273,11 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 
     // --- Tables & history ------------------------------------------------
 
-    // GET /api/history — all-time leaderboard + match history
+    // GET /api/history[?since=<ms>] — leaderboard + match history (all-time, or from `since` on)
     if (req.method === 'GET' && parts.length === 2 && parts[1] === 'history') {
       requireAuth(req);
-      return sendJson(res, 200, history());
+      const since = Number(url.searchParams.get('since'));
+      return sendJson(res, 200, history(Number.isFinite(since) ? since : 0));
     }
 
     // GET /api/profiles/:accountId — a player's info and all-time stats
@@ -336,6 +338,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       if (req.method === 'POST' && parts.length === 4 && parts[3] === 'settle') {
         const account = requireAuth(req);
         return sendJson(res, 200, settleSession(id, account.id));
+      }
+
+      // POST /api/sessions/:id/reopen — the host undoes a settle shortly after (see REOPEN_WINDOW_MS)
+      if (req.method === 'POST' && parts.length === 4 && parts[3] === 'reopen') {
+        const account = requireAuth(req);
+        return sendJson(res, 200, { session: reopenSession(id, account.id) });
       }
 
       // POST /api/sessions/:id/players/:playerId/buyins — request a buy-in (pending host approval, unless you are the host)

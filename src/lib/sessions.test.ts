@@ -237,3 +237,39 @@ test("a profile counts the player's games, places, balance over time and regular
 
   assert.throws(() => sessions.profile('nobody'), /Player not found/);
 });
+
+test('the host can reopen a just-settled game until a payment is marked or the window passes', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const g = settledWithDebt();
+  assert.throws(() => sessions.reopenSession(g.id, g.guest.id), /Only the host/);
+
+  const reopened = sessions.reopenSession(g.id, g.host.id);
+  assert.equal(reopened.status, 'active');
+  assert.equal(reopened.settledAt, null);
+  assert.equal(sessions.paymentsFor(g.guest.id).some((p) => p.id === g.paymentId), false);
+  assert.ok(!sessions.history().matches.some((m) => m.id === g.id));
+
+  // Settled again: a marked payment locks it.
+  sessions.settleSession(g.id, g.host.id);
+  const [payment] = sessions.paymentsFor(g.guest.id).filter((p) => p.sessionId === g.id);
+  sessions.markPaid(payment!.id, g.guest.id);
+  assert.throws(() => sessions.reopenSession(g.id, g.host.id), /already marked/);
+
+  // Untouched payments, but too late.
+  const late = settledWithDebt();
+  t.mock.timers.tick(15 * 60_000 + 1);
+  assert.throws(() => sessions.reopenSession(late.id, late.host.id), /too late/);
+});
+
+test('history from a date on leaves out older games', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const older = settledWithDebt();
+  t.mock.timers.tick(60_000);
+  const since = Date.now();
+  const newer = settledWithDebt();
+
+  const ids = sessions.history(since).matches.map((m) => m.id);
+  assert.ok(ids.includes(newer.id));
+  assert.ok(!ids.includes(older.id));
+  assert.ok(sessions.history().matches.some((m) => m.id === older.id));
+});

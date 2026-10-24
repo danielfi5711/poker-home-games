@@ -103,7 +103,7 @@ export const api = {
   payments: () => req<PaymentsResponse>('GET', '/payments'),
   markPaid: (id: string) => req<{ payment: Payment }>('POST', `/payments/${id}/paid`),
   respondPayment: (id: string, received: boolean) => req<{ payment: Payment }>('POST', `/payments/${id}/respond`, { received }),
-  history: () => req<HistoryResponse>('GET', '/history'),
+  history: (since?: number) => req<HistoryResponse>('GET', since ? `/history?since=${since}` : '/history'),
   profile: (accountId: string) => req<ProfileResponse>('GET', `/profiles/${accountId}`),
   sessions: () => req<{ sessions: Session[] }>('GET', '/sessions'),
   createSession: (name: string) => req<SessionResponse>('POST', '/sessions', { name }),
@@ -121,6 +121,7 @@ export const api = {
     req<{ session: Session }>('POST', `/sessions/${id}/players/${playerId}/cashout`, { amountCents }),
   settlementPreview: (id: string) => req<{ settlement: SettlementResult }>('GET', `/sessions/${id}/settlement`),
   settle: (id: string) => req<SettleResponse>('POST', `/sessions/${id}/settle`),
+  reopen: (id: string) => req<{ session: Session }>('POST', `/sessions/${id}/reopen`),
 };
 
 const SAVED_KEY = 'poker.activeSession';

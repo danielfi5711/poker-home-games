@@ -2,10 +2,9 @@
 
 An installable app (PWA — add it to your phone's home screen, no App Store
 needed) for tracking local poker nights: players request buy-ins, the host
-approves them (with a push notification, so they don't have to be staring at
-their phone), the host ends the game whenever they're ready, and the app
-works out who pays whom — plus an all-time leaderboard with
-winning/losing streaks and a full match history. No real money moves through
+approves them, the host ends the game whenever they're ready, and the app
+works out who pays whom — plus a leaderboard (this month, this year or all
+time) with winning/losing streaks and a full match history. No real money moves through
 the app; it's a calculator for a cash game your friends already play. Amounts
 are in shekels (₪).
 
@@ -21,9 +20,9 @@ are in shekels (₪).
    the same tables and leaderboard. The host taps **Start game** once
    everyone's seated.
 3. **Buy-ins are host-approved**: a player taps "Request a buy-in," enters an
-   amount, and it sits pending until the host approves or denies it — the
-   host gets a push notification the moment it comes in, even if the app
-   isn't open. The host's own buy-ins are approved automatically.
+   amount, and it sits pending until the host approves or denies it on the
+   table screen (players just tell the host at the table, so there's no
+   notification for it). The host's own buy-ins are approved automatically.
 4. **Cash-out**: a player enters what they're leaving the table with (even
    ₪0 is a valid cash-out). If someone leaves without entering theirs, the
    host can cash them out from their row on the table screen.
@@ -32,10 +31,13 @@ are in shekels (₪).
    total, so nothing is silently counted as ₪0. Settling computes each player's net and
    the minimum set of payments to square everyone up, and flags it if the
    buy-ins and cash-outs don't quite add up.
-6. Everyone at the table gets a notification saying exactly whom to pay (or
-   who pays them) and how much. The game then shows up in the **Games** tab
-   (bottom bar) with its results and payments, and folds into the
-   **Leaderboard** tab (balance, winning/losing streaks, biggest win/loss).
+6. Everyone sees the results and exactly whom to pay (or who pays them) and
+   how much. The game then shows up in the **Games** tab (bottom bar) with its
+   results and payments, and folds into the **Leaderboard** tab (balance,
+   winning/losing streaks, biggest win/loss — for this month, this year or all
+   time). Made a mistake? For 15 minutes after settling, and as long as nobody
+   has marked a payment yet, the host can **Reopen game** (on the results
+   screen or the game's card in the Games tab) to fix it and settle again.
 7. **Payments tab**: every debt you owe or are owed. Pay however you like,
    then tap **I've paid** — the receiver is asked "did it arrive?" — **Got
    it** marks it paid; **Not yet** puts it back to unpaid and notifies the
@@ -44,8 +46,9 @@ are in shekels (₪).
 
 ## Push notifications
 
-Hosts get notified (and players get notified back when their request is
-approved/denied) via standard Web Push — no third-party notification
+Only payments send notifications: the receiver hears when someone says they
+paid, and the payer hears when it's confirmed or when they still owe. Table
+events (buy-ins, cash-outs, settling) deliberately don't. It uses standard Web Push — no third-party notification
 service, no extra account needed beyond the keys below. It works on
 Android, and on iPhone too as long as the PWA is installed via "Add to Home
 Screen" (iOS 16.4+).
@@ -75,8 +78,8 @@ This runs on Render's free web-service tier:
    `npx web-push generate-vapid-keys` and set `VAPID_PUBLIC_KEY` /
    `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (e.g. `mailto:you@example.com`) in
    the Render dashboard — use the **same pair** in every environment.
-   Without them, the app still works; hosts just won't get pushed until they
-   reopen it.
+   Without them, the app still works; payment updates just show up the next
+   time someone opens it.
 5. Open the deployed URL on your phone and use the browser's "Add to Home
    Screen" (Safari) / "Install app" (Chrome) prompt to install it — that's
    the whole app-store-free "app" install. An Android user who wants a real

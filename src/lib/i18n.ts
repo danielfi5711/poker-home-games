@@ -30,6 +30,9 @@ const HE_ERRORS: Record<string, string> = {
   'That buy-in request no longer exists.': 'בקשת הקנייה הזו כבר לא קיימת.',
   'That request was already handled.': 'הבקשה הזו כבר טופלה.',
   'Approve or deny the pending buy-in requests before settling.': 'יש לאשר או לדחות את בקשות הקנייה הממתינות לפני ההתחשבנות.',
+  'It is too late to reopen this game.': 'כבר מאוחר מדי לפתוח מחדש את המשחק הזה.',
+  'A payment for this game was already marked — it can no longer be reopened.':
+    'כבר סומן תשלום במשחק הזה — אי אפשר לפתוח אותו מחדש.',
   'Payment not found.': 'התשלום לא נמצא.',
   'Player not found.': 'השחקן לא נמצא.',
   'Only the payer can do that.': 'רק המשלם יכול לעשות את זה.',

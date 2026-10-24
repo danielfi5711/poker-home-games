@@ -43,6 +43,14 @@ export function totalCashOutCents(player: Player): number {
 /** House rule: a single buy-in can be at most ₪50 (buy in again for more). Shared by server + client. */
 export const MAX_BUY_IN_CENTS = 50_00;
 
+/** How long after settling the host can reopen a game to fix a mistake (while every payment is still unpaid). */
+export const REOPEN_WINDOW_MS = 15 * 60_000;
+
+/** Whether a settled game can still be reopened, given its payments' statuses (the server checks too). */
+export function canReopen(settledAt: number | null, paymentStatuses: (PaymentStatus | null)[]): boolean {
+  return settledAt !== null && Date.now() - settledAt < REOPEN_WINDOW_MS && paymentStatuses.every((s) => s === null || s === 'unpaid');
+}
+
 export type SessionStatus = 'setup' | 'active' | 'settled';
 
 export interface Session {
@@ -173,6 +181,8 @@ export interface MatchSummary {
   id: string;
   name: string;
   settledAt: number;
+  /** Only the host can reopen a just-settled game (see `REOPEN_WINDOW_MS`). */
+  hostAccountId: string;
   players: MatchPlayerResult[];
   /** Minimal set of payments that squares everyone up for this match. */
   transfers: MatchTransfer[];

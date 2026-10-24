@@ -75,7 +75,14 @@ just ASCII, via a Unicode-aware regex.
   `longestLossStreak`, and `biggestWinCents`/`biggestLossCents`, which also
   feed the `HistoryHighlights` ("🔥 on a 3-game win streak", "💰 biggest win").
   Each `MatchSummary` also carries that game's `transfers` (by account and
-  name) for the Games tab.
+  name) for the Games tab. `history(sinceMs)` (`GET /api/history?since=`)
+  narrows everything to games settled from then on — the Leaderboard tab's
+  This month / This year / All time switch sends the start of the period on
+  the player's own clock. `reopenSession()` (`POST /api/sessions/:id/reopen`,
+  host-only) undoes a settle — back to `active`, payments dropped — but only
+  within `REOPEN_WINDOW_MS` (15 min) and while every payment is still
+  `unpaid`; `canReopen()` in `src/shared/types.ts` is the client's mirror of
+  that check (button on the Settlement screen and the host's Games card).
   `profile(accountId)` (`GET /api/profiles/:accountId`) reuses `history()` to
   build one player's `PlayerProfile`: their leaderboard row and rank,
   won/even/lost counts, running balance after each game (the chart), every
