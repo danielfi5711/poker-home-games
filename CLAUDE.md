@@ -195,10 +195,10 @@ just ASCII, via a Unicode-aware regex.
 - `scripts/gen-icons.mjs` — generates the PWA/`apple-touch-icon` PNGs with
   zero image-library dependencies (hand-rolled PNG/CRC32 writer over
   `node:zlib`). Re-run it if you change the icon art in that script.
-- `.github/workflows/keep-alive.yml` — pings `/healthz` every 10 minutes,
-  forever, so Render's free tier never spins the app down from inactivity.
-  Only free/unlimited because the repo is **public**; see the README for the
-  private-repo tradeoff if that ever changes.
+- No keep-alive ping (there used to be a GitHub Actions one): kept awake
+  24/7 it used up Render's 750 free hours/month on its own — shared with the
+  always-on `discord-gambling` bot — and got the service suspended
+  (2026-10-30). Letting it sleep when idle is the price of staying free.
 
 ## Languages (English / Hebrew)
 
