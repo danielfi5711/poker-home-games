@@ -89,10 +89,13 @@ This runs on Render's free web-service tier:
    the whole app-store-free "app" install. An Android user who wants a real
    downloadable `.apk` instead can use the one published under this repo's
    GitHub Releases (built as a Trusted Web Activity wrapping this same site).
-6. There's deliberately no keep-alive ping. Render's free tier gives 750
-   instance hours a month per workspace, shared with the `discord-gambling`
-   bot (which has to stay up 24/7), so this app is left to spin down after
-   ~15 minutes idle — the first open after a quiet spell takes ~30-50s.
+6. `.github/workflows/keep-alive.yml` pings `/healthz` every 10 minutes via
+   GitHub Actions, forever, for free — Render's free tier spins the app down
+   after ~15 minutes of no traffic otherwise, causing a slow cold start on
+   the next real request. This only runs free-of-charge with no Actions-minute
+   limit because the repo is **public**; a private repo would need a reduced
+   ping frequency (to stay within the free 2000-min/month quota) or an
+   external pinger like cron-job.org/UptimeRobot instead.
 
 ## Known limitations (first cut)
 
