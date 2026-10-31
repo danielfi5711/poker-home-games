@@ -46,8 +46,15 @@ const en = {
     otherBrowsers:
       'Open this page on your phone in Chrome or Safari, then use the browser menu to "Add to Home Screen" / "Install app." (Desktop browsers that don\'t support installing a PWA can\'t open this app.)',
   },
+  splash: {
+    tagline: 'Home games',
+    shuffling: 'Shuffling the deck…',
+    stacking: 'Stacking the chips…',
+    dealing: 'Dealing you in…',
+    waking: 'Waking up the table…',
+    ready: 'Ready',
+  },
   app: {
-    opening: 'Opening Poker Night…',
     backToTable: 'Back to table',
     settings: 'Settings',
     oneMoreThing: 'One more thing',
@@ -353,8 +360,15 @@ const he: Strings = {
     otherBrowsers:
       'יש לפתוח את הדף בטלפון בכרום או בספארי, ואז לבחור בתפריט הדפדפן "הוספה למסך הבית" / "התקנת אפליקציה". (דפדפני מחשב שלא תומכים בהתקנת PWA לא יכולים לפתוח את האפליקציה.)',
   },
+  splash: {
+    tagline: 'משחקי בית',
+    shuffling: 'מערבבים את החפיסה…',
+    stacking: "מסדרים את הצ'יפים…",
+    dealing: 'מחלקים קלפים…',
+    waking: 'מעירים את השולחן…',
+    ready: 'מוכן',
+  },
   app: {
-    opening: 'פותח את ערב פוקר…',
     backToTable: 'חזרה לשולחן',
     settings: 'הגדרות',
     oneMoreThing: 'עוד דבר אחד',

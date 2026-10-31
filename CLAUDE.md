@@ -159,6 +159,12 @@ just ASCII, via a Unicode-aware regex.
   `../../src/shared/*.js` (same convention as `discord-gambling`'s client —
   note the `.js` extension on a `.ts`/`.tsx` import target; that's the
   ESM/Bundler-resolution convention this repo follows, not a typo).
+  - `client/src/Splash.tsx` — the opening screen while `App` boots: a drawn
+    (inline SVG) royal-flush/table scene, the app name, and a loading line
+    with a percentage. Boot has no real progress to measure, so the bar eases
+    toward 90% and runs to 100% once `/api/auth/me` (and fonts) are done; it
+    stays up at least ~1.1s so the deal-in plays out, and says the table is
+    waking up after 5s.
   - `client/src/api.ts` — stores the bearer token in `localStorage`
     (`poker.authToken`) and attaches it to every request automatically.
   - `client/src/push.ts` — `ensurePushSubscription()`, called after

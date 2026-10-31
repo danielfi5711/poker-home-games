@@ -26,6 +26,7 @@ import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon, Per
 import { Avatar, ScreenHead, Spinner } from './ui.js';
 import { ensurePushSubscription } from './push.js';
 import { refreshAvatars } from './avatars.js';
+import { Splash } from './Splash.js';
 import { tr, useLang } from './i18n.js';
 
 type View = 'login' | 'home' | 'session' | 'settings' | 'profile';
@@ -47,6 +48,7 @@ function tabFromUrl(url: string): HomeTab | null {
 
 export function App() {
   const [booting, setBooting] = useState(true);
+  const [splashGone, setSplashGone] = useState(false);
   const [view, setView] = useState<View>('login');
   const [account, setAccount] = useState<Account | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -254,146 +256,143 @@ export function App() {
 
   const showNav = !!(account && account.phone && view !== 'login');
 
-  if (booting) {
-    return (
-      <div class="app">
-        <main class="app__main">
-          <Spinner label={tr.app.opening} />
-        </main>
-      </div>
-    );
-  }
+  // The splash stays first in the tree from booting to booted, so it isn't remounted mid-animation.
+  const splash = !splashGone && <Splash done={!booting} onFinished={() => setSplashGone(true)} />;
+  if (booting) return <>{splash}</>;
 
   return (
-    <div class={`app ${showNav ? "app--nav" : ""}`}>
-      {view !== "login" && (
-        <header class="topbar">
-          <button class="brand" onClick={() => (account ? openHomeTab("tables") : setView("login"))}>
-            <ChipIcon size={26} />
-            <span class="brand__name">{tr.appName}</span>
-          </button>
-          {account && (
-            <div class="topbar__actions">
-              {session && session.status !== "settled" && view !== "session" && (
-                <button class="livechip" onClick={() => setView("session")}>
-                  <span class="livechip__dot" />
-                  {tr.app.backToTable}
-                  {pendingCount > 0 && <span class="count">{pendingCount}</span>}
+    <>
+      {splash}
+      <div class={`app ${showNav ? "app--nav" : ""}`}>
+        {view !== "login" && (
+          <header class="topbar">
+            <button class="brand" onClick={() => (account ? openHomeTab("tables") : setView("login"))}>
+              <ChipIcon size={26} />
+              <span class="brand__name">{tr.appName}</span>
+            </button>
+            {account && (
+              <div class="topbar__actions">
+                {session && session.status !== "settled" && view !== "session" && (
+                  <button class="livechip" onClick={() => setView("session")}>
+                    <span class="livechip__dot" />
+                    {tr.app.backToTable}
+                    {pendingCount > 0 && <span class="count">{pendingCount}</span>}
+                  </button>
+                )}
+                <button
+                  class={`acctbtn ${view === "settings" ? "acctbtn--active" : ""}`}
+                  onClick={toggleSettings}
+                  aria-label={tr.app.settings}
+                  aria-pressed={view === "settings"}
+                >
+                  <Avatar id={account.id} name={account.displayName} size="sm" />
+                  <span class="acctbtn__gear">
+                    <GearIcon size={11} />
+                  </span>
                 </button>
+              </div>
+            )}
+          </header>
+        )}
+
+        <main class="app__main">
+          {view === "login" && <Login onAuthed={onAuthed} />}
+
+          {needsPhone && account && (
+            <div class="view">
+              <ScreenHead title={tr.app.oneMoreThing} sub={tr.app.addPhoneSub} />
+              <div class="surface surface--pad">
+                <PhoneForm submitLabel={tr.app.continue} onSaved={setAccount} />
+              </div>
+            </div>
+          )}
+
+          {!needsPhone && view === "home" && account && (
+            <div key={homeTab} class={`tabpane tabpane--${tabMotion}`}>
+              {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
+              {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
+              {homeTab === "games" && <GamesScreen myAccountId={account.id} onEnterSession={enterSession} />}
+              {homeTab === "odds" && <OddsScreen />}
+              {homeTab === "payments" && (
+                <PaymentsScreen myAccountId={account.id} payments={payments} error={paymentsError} onChanged={refreshPayments} />
               )}
-              <button
-                class={`acctbtn ${view === "settings" ? "acctbtn--active" : ""}`}
-                onClick={toggleSettings}
-                aria-label={tr.app.settings}
-                aria-pressed={view === "settings"}
-              >
-                <Avatar id={account.id} name={account.displayName} size="sm" />
-                <span class="acctbtn__gear">
-                  <GearIcon size={11} />
-                </span>
+            </div>
+          )}
+
+          {!needsPhone && view === "session" && session && playerId && me && (
+            <>
+              {session.status === "active" && (
+                <TableScreen
+                  session={session}
+                  playerId={playerId}
+                  isHost={isHost}
+                  onChanged={setSession}
+                  onSettled={setSession}
+                  onLeave={leaveSession}
+                />
+              )}
+              {session.status === "settled" && (
+                <SettlementScreen
+                  session={session}
+                  playerId={playerId}
+                  isHost={isHost}
+                  onChanged={setSession}
+                  onLeave={() => {
+                    leaveSession();
+                    openHomeTab("payments");
+                  }}
+                />
+              )}
+            </>
+          )}
+
+          {!needsPhone && view === "session" && sessionId && !session && !error && <Spinner label={tr.app.loadingGame} />}
+          {!needsPhone && view === "session" && error && (
+            <div class="view">
+              <p class="error">{error}</p>
+              <button class="btn btn--block" onClick={leaveSession}>
+                {tr.common.backToTables}
               </button>
             </div>
           )}
-        </header>
-      )}
 
-      <main class="app__main">
-        {view === "login" && <Login onAuthed={onAuthed} />}
+          {!needsPhone && view === "profile" && account && profileStack.length > 0 && (
+            <ProfileScreen accountId={profileStack[profileStack.length - 1]!} myAccountId={account.id} onBack={closeProfile} />
+          )}
 
-        {needsPhone && account && (
-          <div class="view">
-            <ScreenHead title={tr.app.oneMoreThing} sub={tr.app.addPhoneSub} />
-            <div class="surface surface--pad">
-              <PhoneForm submitLabel={tr.app.continue} onSaved={setAccount} />
-            </div>
-          </div>
+          {view === "settings" && account && (
+            <SettingsScreen account={account} onAccountChanged={setAccount} onLogout={logout} onBack={closeSettings} />
+          )}
+        </main>
+
+        {showNav && (
+          <nav class="bottomnav" aria-label="Main">
+            {/* One highlight that slides to the active tab (hidden on screens that aren't a tab). */}
+            <span
+              class={`bottomnav__pill ${view === 'home' ? '' : 'bottomnav__pill--hidden'}`}
+              style={{ '--tab': Math.max(0, HOME_TABS.findIndex((t) => t.id === homeTab)) }}
+              aria-hidden="true"
+            />
+            {HOME_TABS.map(({ id, icon: Icon }) => {
+              const active = view === 'home' && homeTab === id;
+              return (
+                <button
+                  key={id}
+                  class={`bottomnav__item ${active ? 'bottomnav__item--active' : ''}`}
+                  onClick={() => openHomeTab(id)}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <span class="bottomnav__icon">
+                    <Icon size={22} />
+                    {id === 'payments' && badge > 0 && <span class="count bottomnav__badge">{badge}</span>}
+                  </span>
+                  <span>{tr.app.tabs[id]}</span>
+                </button>
+              );
+            })}
+          </nav>
         )}
-
-        {!needsPhone && view === "home" && account && (
-          <div key={homeTab} class={`tabpane tabpane--${tabMotion}`}>
-            {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
-            {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
-            {homeTab === "games" && <GamesScreen myAccountId={account.id} onEnterSession={enterSession} />}
-            {homeTab === "odds" && <OddsScreen />}
-            {homeTab === "payments" && (
-              <PaymentsScreen myAccountId={account.id} payments={payments} error={paymentsError} onChanged={refreshPayments} />
-            )}
-          </div>
-        )}
-
-        {!needsPhone && view === "session" && session && playerId && me && (
-          <>
-            {session.status === "active" && (
-              <TableScreen
-                session={session}
-                playerId={playerId}
-                isHost={isHost}
-                onChanged={setSession}
-                onSettled={setSession}
-                onLeave={leaveSession}
-              />
-            )}
-            {session.status === "settled" && (
-              <SettlementScreen
-                session={session}
-                playerId={playerId}
-                isHost={isHost}
-                onChanged={setSession}
-                onLeave={() => {
-                  leaveSession();
-                  openHomeTab("payments");
-                }}
-              />
-            )}
-          </>
-        )}
-
-        {!needsPhone && view === "session" && sessionId && !session && !error && <Spinner label={tr.app.loadingGame} />}
-        {!needsPhone && view === "session" && error && (
-          <div class="view">
-            <p class="error">{error}</p>
-            <button class="btn btn--block" onClick={leaveSession}>
-              {tr.common.backToTables}
-            </button>
-          </div>
-        )}
-
-        {!needsPhone && view === "profile" && account && profileStack.length > 0 && (
-          <ProfileScreen accountId={profileStack[profileStack.length - 1]!} myAccountId={account.id} onBack={closeProfile} />
-        )}
-
-        {view === "settings" && account && (
-          <SettingsScreen account={account} onAccountChanged={setAccount} onLogout={logout} onBack={closeSettings} />
-        )}
-      </main>
-
-      {showNav && (
-        <nav class="bottomnav" aria-label="Main">
-          {/* One highlight that slides to the active tab (hidden on screens that aren't a tab). */}
-          <span
-            class={`bottomnav__pill ${view === 'home' ? '' : 'bottomnav__pill--hidden'}`}
-            style={{ '--tab': Math.max(0, HOME_TABS.findIndex((t) => t.id === homeTab)) }}
-            aria-hidden="true"
-          />
-          {HOME_TABS.map(({ id, icon: Icon }) => {
-            const active = view === 'home' && homeTab === id;
-            return (
-              <button
-                key={id}
-                class={`bottomnav__item ${active ? 'bottomnav__item--active' : ''}`}
-                onClick={() => openHomeTab(id)}
-                aria-current={active ? 'page' : undefined}
-              >
-                <span class="bottomnav__icon">
-                  <Icon size={22} />
-                  {id === 'payments' && badge > 0 && <span class="count bottomnav__badge">{badge}</span>}
-                </span>
-                <span>{tr.app.tabs[id]}</span>
-              </button>
-            );
-          })}
-        </nav>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

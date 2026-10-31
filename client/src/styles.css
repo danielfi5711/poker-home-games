@@ -952,6 +952,238 @@ form {
   }
 }
 
+/* ---------- opening screen (Splash.tsx) ---------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #040913;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(var(--safe-t) + 13vh) 32px calc(var(--safe-b) + 54px);
+}
+
+.splash--out {
+  animation: splash-out 480ms var(--ease-in) both;
+  pointer-events: none;
+}
+
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: blur(6px);
+  }
+}
+
+.splash__scene {
+  /* the card ranks are LTR text even in Hebrew */
+  direction: ltr;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: splash-scene 1400ms var(--ease) both;
+}
+
+@keyframes splash-scene {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+/* cards start squared up and fan open around the pivot under the fan */
+.splash__card {
+  transform-box: view-box;
+  transform-origin: 195px 580px;
+  transform: rotate(var(--a));
+  animation: splash-fan 900ms var(--spring-soft) calc(260ms + var(--d)) both;
+}
+
+@keyframes splash-fan {
+  from {
+    transform: translateY(46px) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+.splash__rank {
+  font: 800 24px var(--font-display);
+  fill: #10203f;
+}
+
+.splash__suit-sm {
+  font-size: 17px;
+  fill: #10203f;
+}
+
+.splash__suit {
+  font-size: 62px;
+  fill: #10203f;
+}
+
+.splash__suit-ace {
+  font-size: 82px;
+  fill: url(#sp-gold);
+  stroke: #8a5e17;
+  stroke-width: 0.8;
+}
+
+.splash__chips {
+  animation: splash-chips 1100ms var(--ease) 420ms both;
+}
+
+.splash__chips--r {
+  animation-delay: 520ms;
+}
+
+@keyframes splash-chips {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+}
+
+.splash__bokeh {
+  animation: splash-drift 9s ease-in-out infinite alternate;
+}
+
+@keyframes splash-drift {
+  to {
+    transform: translate(-8px, -22px);
+  }
+}
+
+.splash__head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  opacity: 0;
+}
+
+.splash__head.is-in {
+  animation: splash-title 900ms var(--ease) 120ms both;
+}
+
+@keyframes splash-title {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    letter-spacing: 0.08em;
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.splash__kicker {
+  color: var(--gold);
+  opacity: 0.75;
+  font-size: 13px;
+  letter-spacing: 0.6em;
+  margin-inline-start: 0.6em;
+  margin-bottom: 14px;
+}
+
+.splash__title {
+  margin: 0;
+  font: 800 clamp(46px, 14vw, 64px) / 1 var(--font-display);
+  letter-spacing: -0.02em;
+  background: linear-gradient(100deg, #bf8a2e 0%, #fbe3a1 22%, #e9c068 40%, #fff6dc 50%, #e9c068 60%, #bf8a2e 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 22px rgba(233, 192, 104, 0.28));
+  animation: splash-shine 2.6s var(--ease) 500ms infinite;
+}
+
+@keyframes splash-shine {
+  from {
+    background-position: 100% 0;
+  }
+  60%,
+  to {
+    background-position: 0% 0;
+  }
+}
+
+.splash__tagline {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font: 600 12px var(--font-body);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.splash__foot {
+  position: relative;
+  animation: fade 500ms var(--ease) 300ms both;
+}
+
+.splash__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.splash__label {
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+
+.splash__pct {
+  font: 700 22px var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--gold-hi);
+}
+
+.splash__track {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.splash__fill {
+  position: relative;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gold-grad);
+  box-shadow: 0 0 12px rgba(233, 192, 104, 0.7);
+}
+
+/* a glint that keeps running along the filled part */
+.splash__fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  background-size: 60px 100%;
+  background-repeat: no-repeat;
+  animation: splash-glint 1.3s linear infinite;
+}
+
+@keyframes splash-glint {
+  from {
+    background-position: -60px 0;
+  }
+  to {
+    background-position: calc(100% + 60px) 0;
+  }
+}
+
 /* ---------- bottom nav ---------- */
 
 .bottomnav {
