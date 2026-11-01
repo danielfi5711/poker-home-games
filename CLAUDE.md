@@ -180,8 +180,8 @@ just ASCII, via a Unicode-aware regex.
     `useCachedLoad(key, load)` is how the Tables/Leaderboard/Games tabs load:
     the last result per key is kept in memory (cleared on login/logout), so
     switching back to a tab shows it at once and refreshes quietly — the
-    card-fan `Spinner` only appears on a tab's first load, and only after
-    350ms.
+    skeleton-rows `Spinner` only appears on a tab's first load, and only after
+    250ms. No spinners or card animations for loading — the user rejected both.
   - `client/src/push.ts` — `ensurePushSubscription()`, called after
     login/boot: requests Notification permission, subscribes via the service
     worker's `PushManager`, and registers the subscription with the server.

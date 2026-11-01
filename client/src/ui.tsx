@@ -85,21 +85,26 @@ export function Empty({ icon, title, children }: { icon: ComponentChildren; titl
 }
 
 /**
- * Three small cards fanning open and shut — the opening screen's cards in
- * miniature, no words (`label` is for screen readers only). Centered on the
- * screen (portaled into <body>, so an animated screen container can't pin it
- * to the top).
+ * Loading placeholder: a few faint rows shaped like the list that's coming,
+ * with a soft light sweeping over them, so the screen keeps its layout and
+ * the real rows simply take their place. `label` is for screen readers.
  */
 export function Spinner({ label = tr.common.loading }: { label?: string }) {
-  return createPortal(
-    <div class="loading" role="status" aria-label={label}>
-      <span class="loading__cards" aria-hidden="true">
-        <span class="loading__card" style={{ '--a': '-30deg' }} />
-        <span class="loading__card" style={{ '--a': '30deg' }} />
-        <span class="loading__card" style={{ '--a': '0deg' }} />
-      </span>
-    </div>,
-    document.body,
+  return (
+    <div class="skeleton" role="status" aria-label={label}>
+      <ul class="surface rows skeleton__list" aria-hidden="true">
+        {[62, 48, 56, 40].map((w) => (
+          <li key={w} class="row">
+            <span class="sk sk--avatar" />
+            <span class="row__main">
+              <span class="sk sk--line" style={{ width: `${w}%` }} />
+              <span class="sk sk--line sk--sub" />
+            </span>
+            <span class="sk sk--amount" />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

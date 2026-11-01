@@ -906,58 +906,68 @@ form {
   max-width: 280px;
 }
 
-.loading {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-  /* only for loads slow enough to notice — quick ones never flash it */
-  animation: fade 200ms var(--ease) 350ms both;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* loading placeholder (Spinner in ui.tsx): faint rows in the shape of the
+   list that's coming. Shown only for loads slow enough to notice. */
+.skeleton {
+  animation: fade 220ms var(--ease) 250ms both;
 }
 
-.loading__cards {
-  position: relative;
-  width: 30px;
-  height: 42px;
+.skeleton__list {
+  overflow: hidden;
 }
 
-/* the middle card (last, on top) carries the spade; all three pivot on a
-   point below them, like a hand of cards */
-.loading__card {
+.skeleton .skeleton__list > li {
+  animation: none;
+}
+
+.sk {
+  display: block;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+}
+
+.sk--avatar {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+.sk--line {
+  height: 12px;
+}
+
+.sk--sub {
+  width: 30%;
+  height: 9px;
+  margin-top: 6px;
+  opacity: 0.7;
+}
+
+.sk--amount {
+  flex: none;
+  width: 54px;
+  height: 14px;
+}
+
+/* the sweep: one soft band crossing the whole list (a transform, so it's smooth) */
+.skeleton__list::after {
+  content: '';
   position: absolute;
   inset: 0;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #fffdf7, #e8dfcb);
-  box-shadow:
-    inset 0 0 0 1px rgba(191, 138, 46, 0.55),
-    0 4px 10px rgba(0, 0, 0, 0.45);
-  transform-origin: 50% 135%;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
+  transform: translateX(-100%);
   will-change: transform;
-  animation: loading-fan 620ms var(--ease) infinite alternate;
+  animation: sk-sweep 1.4s ease-in-out infinite;
 }
 
-.loading__card:last-child::after {
-  content: '♠';
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #10203f;
-  font-size: 19px;
-  line-height: 1;
+[dir='rtl'] .skeleton__list::after {
+  animation-direction: reverse;
 }
 
-@keyframes loading-fan {
-  0%,
-  12% {
-    transform: rotate(0deg);
-  }
-  88%,
-  100% {
-    transform: rotate(var(--a)) translateY(-2px);
+@keyframes sk-sweep {
+  to {
+    transform: translateX(100%);
   }
 }
 
