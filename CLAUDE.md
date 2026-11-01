@@ -171,7 +171,10 @@ just ASCII, via a Unicode-aware regex.
     `filter`, `background-position` or a size). The bar is a `scaleX` Web
     Animation with the waiting curve baked into keyframes; the title shine
     is a sliding masked window over a bright copy of the title. Only the
-    percent text is set from JS (by ref, not state).
+    percent text is set from JS (by ref, not state). All of it is held paused
+    (`.splash:not(.splash--go)`) until the fonts are in and the first frame
+    is drawn, or a slow first draw eats the fan-open; and it is exempt from
+    the global `prefers-reduced-motion` kill switch on purpose.
   - `client/src/api.ts` — stores the bearer token in `localStorage`
     (`poker.authToken`) and attaches it to every request automatically.
   - `client/src/push.ts` — `ensurePushSubscription()`, called after

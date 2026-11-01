@@ -84,12 +84,20 @@ export function Empty({ icon, title, children }: { icon: ComponentChildren; titl
   );
 }
 
-/** Centered on the screen (portaled into <body>, so an animated screen container can't pin it to the top). */
+/**
+ * Three small cards fanning open and shut — the opening screen's cards in
+ * miniature, no words (`label` is for screen readers only). Centered on the
+ * screen (portaled into <body>, so an animated screen container can't pin it
+ * to the top).
+ */
 export function Spinner({ label = tr.common.loading }: { label?: string }) {
   return createPortal(
-    <div class="loading" role="status">
-      <span class="loading__chip" />
-      <span>{label}</span>
+    <div class="loading" role="status" aria-label={label}>
+      <span class="loading__cards" aria-hidden="true">
+        <span class="loading__card" style={{ '--a': '-30deg' }} />
+        <span class="loading__card" style={{ '--a': '30deg' }} />
+        <span class="loading__card" style={{ '--a': '0deg' }} />
+      </span>
     </div>,
     document.body,
   );

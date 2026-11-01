@@ -911,26 +911,52 @@ form {
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  animation: fade 200ms var(--ease) 220ms both;
+  animation: fade 200ms var(--ease) 150ms both;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  color: var(--ink-3);
-  font-size: 14px;
 }
 
-.loading__chip {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 3px dashed var(--gold);
-  animation: spin 1.2s linear infinite;
+.loading__cards {
+  position: relative;
+  width: 30px;
+  height: 42px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* the middle card (last, on top) carries the spade; all three pivot on a
+   point below them, like a hand of cards */
+.loading__card {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #fffdf7, #e8dfcb);
+  box-shadow:
+    inset 0 0 0 1px rgba(191, 138, 46, 0.55),
+    0 4px 10px rgba(0, 0, 0, 0.45);
+  transform-origin: 50% 135%;
+  will-change: transform;
+  animation: loading-fan 620ms var(--ease) infinite alternate;
+}
+
+.loading__card:last-child::after {
+  content: '♠';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #10203f;
+  font-size: 19px;
+  line-height: 1;
+}
+
+@keyframes loading-fan {
+  0%,
+  12% {
+    transform: rotate(0deg);
+  }
+  88%,
+  100% {
+    transform: rotate(var(--a)) translateY(-2px);
   }
 }
 
@@ -960,6 +986,14 @@ form {
     opacity: 0;
     transform: scale(1.06);
   }
+}
+
+/* Held on their first frame until Splash.tsx adds .splash--go, once the scene
+   is actually on screen — otherwise a slow first draw eats the fan-open. */
+.splash:not(.splash--go) *,
+.splash:not(.splash--go) *::before,
+.splash:not(.splash--go) *::after {
+  animation-play-state: paused;
 }
 
 .splash__scene {
@@ -1084,8 +1118,8 @@ form {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  opacity: 0;
   will-change: transform, opacity;
+  animation: splash-title 900ms var(--ease) 120ms both;
 }
 
 /* a soft gold glow behind the title — static, so it's drawn once */
@@ -1095,10 +1129,6 @@ form {
   inset: 0 -24px -12px;
   z-index: -1;
   background: radial-gradient(closest-side at 50% 62%, rgba(233, 192, 104, 0.2), transparent);
-}
-
-.splash__head.is-in {
-  animation: splash-title 900ms var(--ease) 120ms both;
 }
 
 @keyframes splash-title {
@@ -3310,10 +3340,11 @@ form {
 
 /* ---------- motion preferences ---------- */
 
+/* The opening screen is exempt: it's a short intro that's nothing without its motion. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :not(.splash, .splash *),
+  :not(.splash *)::before,
+  :not(.splash *)::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;

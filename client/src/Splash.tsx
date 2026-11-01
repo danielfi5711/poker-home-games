@@ -40,11 +40,15 @@ export function Splash({ done, onFinished }: { done: boolean; onFinished: () => 
   const [stage, setStage] = useState<Stage>('shuffling');
   const [leaving, setLeaving] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
+  // Everything waits for `go`: the scene's first frame is heavy to draw, and
+  // animations started before it reaches the screen would already be over by
+  // then (the cards would appear fanned instead of fanning open).
+  const [go, setGo] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
   const pctRef = useRef<HTMLSpanElement>(null);
-  const doneRef = useRef(done && fontsReady);
-  doneRef.current = done && fontsReady;
+  const doneRef = useRef(done);
+  doneRef.current = done;
   const finishedRef = useRef(onFinished);
   finishedRef.current = onFinished;
   const scene = useMemo(() => <SplashScene />, []);
@@ -66,7 +70,7 @@ export function Splash({ done, onFinished }: { done: boolean; onFinished: () => 
   useEffect(() => {
     let alive = true;
     const ready = () => alive && setFontsReady(true);
-    const timeout = setTimeout(ready, 1500);
+    const timeout = setTimeout(ready, 1000);
     document.fonts?.ready.then(ready, ready) ?? ready();
     return () => {
       alive = false;
@@ -74,7 +78,21 @@ export function Splash({ done, onFinished }: { done: boolean; onFinished: () => 
     };
   }, []);
 
+  // Start once the fonts are in and the paused first frame has been drawn.
   useEffect(() => {
+    if (!fontsReady) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setGo(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [fontsReady]);
+
+  useEffect(() => {
+    if (!go) return;
     const fill = fillRef.current!;
     const start = performance.now();
     // The waiting curve, sampled into keyframes so the compositor runs it.
@@ -134,14 +152,14 @@ export function Splash({ done, onFinished }: { done: boolean; onFinished: () => 
       grow.cancel();
       finish?.cancel();
     };
-  }, []);
+  }, [go]);
 
   const label = tr.splash[stage];
 
   return createPortal(
-    <div ref={rootRef} class={`splash ${leaving ? 'splash--out' : ''}`} role="status" aria-label={label}>
+    <div ref={rootRef} class={`splash ${go ? 'splash--go' : ''} ${leaving ? 'splash--out' : ''}`} role="status" aria-label={label}>
       {scene}
-      <div class={`splash__head ${fontsReady ? 'is-in' : ''}`}>
+      <div class="splash__head">
         <span class="splash__kicker">♠ ♥ ♣ ♦</span>
         <div class="splash__titlebox">
           <h1 class="splash__title">{tr.appName}</h1>
