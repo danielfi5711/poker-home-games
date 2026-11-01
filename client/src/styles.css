@@ -971,11 +971,12 @@ form {
   pointer-events: none;
 }
 
+/* Only opacity/transform animate on the splash: both run on the GPU. A blur
+   or a layout property here re-draws the whole scene every frame on a phone. */
 @keyframes splash-out {
   to {
     opacity: 0;
     transform: scale(1.06);
-    filter: blur(6px);
   }
 }
 
@@ -984,9 +985,28 @@ form {
   direction: ltr;
   position: absolute;
   inset: 0;
+  will-change: transform, opacity;
+  animation: splash-scene 1400ms var(--ease) both;
+}
+
+.splash__layer {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  animation: splash-scene 1400ms var(--ease) both;
+}
+
+.splash__cards {
+  will-change: transform;
+  filter: drop-shadow(0 8px 9px rgba(0, 0, 0, 0.55));
+}
+
+.splash__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(4, 9, 19, 0.75), rgba(4, 9, 19, 0) 30%, rgba(4, 9, 19, 0) 72%, rgba(4, 9, 19, 0.9)),
+    radial-gradient(70% 70% at 50% 48%, transparent 55%, rgba(0, 0, 0, 0.7));
 }
 
 @keyframes splash-scene {
@@ -1037,11 +1057,8 @@ form {
 }
 
 .splash__chips {
-  animation: splash-chips 1100ms var(--ease) 420ms both;
-}
-
-.splash__chips--r {
-  animation-delay: 520ms;
+  will-change: transform, opacity;
+  animation: splash-chips 1100ms var(--ease) 460ms both;
 }
 
 @keyframes splash-chips {
@@ -1052,6 +1069,7 @@ form {
 }
 
 .splash__bokeh {
+  will-change: transform;
   animation: splash-drift 9s ease-in-out infinite alternate;
 }
 
@@ -1068,6 +1086,16 @@ form {
   align-items: center;
   text-align: center;
   opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* a soft gold glow behind the title — static, so the shine never re-blurs it */
+.splash__head::before {
+  content: '';
+  position: absolute;
+  inset: 0 -24px -12px;
+  z-index: -1;
+  background: radial-gradient(closest-side at 50% 62%, rgba(233, 192, 104, 0.2), transparent);
 }
 
 .splash__head.is-in {
@@ -1077,9 +1105,7 @@ form {
 @keyframes splash-title {
   from {
     opacity: 0;
-    transform: translateY(18px);
-    letter-spacing: 0.08em;
-    filter: blur(8px);
+    transform: translateY(18px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -1104,7 +1130,6 @@ form {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 6px 22px rgba(233, 192, 104, 0.28));
   animation: splash-shine 2.6s var(--ease) 500ms infinite;
 }
 
@@ -1158,6 +1183,7 @@ form {
 
 .splash__fill {
   position: relative;
+  width: 0;
   height: 100%;
   border-radius: inherit;
   background: var(--gold-grad);
