@@ -55,7 +55,7 @@ export function App() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [returnView, setReturnView] = useState<View>('home');
   const [homeTab, setHomeTab] = useState<HomeTab>(() => tabFromUrl(location.href) ?? 'tables');
-  const [tabMotion, setTabMotion] = useState<'next' | 'prev' | 'rise'>('rise');
+  const [tabMotion, setTabMotion] = useState<'tab' | 'rise'>('rise');
   // Profiles opened from a profile stack up, so Back walks back through them.
   const [profileStack, setProfileStack] = useState<string[]>([]);
   const [profileReturn, setProfileReturn] = useState<View>('home');
@@ -212,10 +212,8 @@ export function App() {
   }
 
   function openHomeTab(tab: HomeTab) {
-    // Switching between tabs slides the new one in from the side it sits on in the nav.
-    const from = HOME_TABS.findIndex((t) => t.id === homeTab);
-    const to = HOME_TABS.findIndex((t) => t.id === tab);
-    setTabMotion(view === 'home' && from !== to ? (to > from ? 'next' : 'prev') : 'rise');
+    // Switching between tabs fades the new one through; coming from another screen it rises in.
+    setTabMotion(view === 'home' && tab !== homeTab ? 'tab' : 'rise');
     setHomeTab(tab);
     setView('home');
   }

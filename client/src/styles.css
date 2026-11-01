@@ -359,40 +359,22 @@ input {
   }
 }
 
-/* a home tab slides in from the side its button sits on in the nav */
-.tabpane--next {
-  animation: tab-from-end var(--enter) var(--ease) both;
+/* switching home tabs: the new tab fades through — fades in while settling
+   up from slightly smaller. Short, and transform/opacity only so it stays smooth. */
+.tabpane--tab {
+  transform-origin: 50% 25vh;
+  animation: tab-in 240ms var(--ease) both;
 }
 
-.tabpane--prev {
-  animation: tab-from-start var(--enter) var(--ease) both;
-}
-
-.tabpane--next > .view,
-.tabpane--prev > .view {
+.tabpane--tab > .view {
   animation: none;
 }
 
-@keyframes tab-from-end {
+@keyframes tab-in {
   from {
     opacity: 0;
-    transform: translateX(22px);
+    transform: scale(0.965);
   }
-}
-
-@keyframes tab-from-start {
-  from {
-    opacity: 0;
-    transform: translateX(-22px);
-  }
-}
-
-[dir='rtl'] .tabpane--next {
-  animation-name: tab-from-start;
-}
-
-[dir='rtl'] .tabpane--prev {
-  animation-name: tab-from-end;
 }
 
 /* list items arrive one after another (only on first appearance — keyed rows
