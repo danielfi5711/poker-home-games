@@ -177,6 +177,11 @@ just ASCII, via a Unicode-aware regex.
     the global `prefers-reduced-motion` kill switch on purpose.
   - `client/src/api.ts` — stores the bearer token in `localStorage`
     (`poker.authToken`) and attaches it to every request automatically.
+    `useCachedLoad(key, load)` is how the Tables/Leaderboard/Games tabs load:
+    the last result per key is kept in memory (cleared on login/logout), so
+    switching back to a tab shows it at once and refreshes quietly — the
+    card-fan `Spinner` only appears on a tab's first load, and only after
+    350ms.
   - `client/src/push.ts` — `ensurePushSubscription()`, called after
     login/boot: requests Notification permission, subscribes via the service
     worker's `PushManager`, and registers the subscription with the server.

@@ -911,7 +911,8 @@ form {
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  animation: fade 200ms var(--ease) 150ms both;
+  /* only for loads slow enough to notice — quick ones never flash it */
+  animation: fade 200ms var(--ease) 350ms both;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1038,7 +1039,7 @@ form {
   }
 }
 
-/* cards start squared up and fan open around the pivot under the fan,
+/* cards open the rest of the way around the pivot under the fan,
    stage (195, 580) = this box's (88, 216) */
 .splash__card {
   position: absolute;
@@ -1049,7 +1050,7 @@ form {
   transform-origin: 88px 216px;
   transform: rotate(var(--a));
   will-change: transform, opacity;
-  animation: splash-fan 900ms var(--spring-soft) calc(260ms + var(--d)) both;
+  animation: splash-fan 850ms var(--ease) calc(260ms + var(--d)) both;
 }
 
 .splash__card svg {
@@ -1057,9 +1058,10 @@ form {
   overflow: visible;
 }
 
+/* a small move: they start half-fanned and just off their spot, and settle in */
 @keyframes splash-fan {
   from {
-    transform: translateY(46px) rotate(0deg);
+    transform: translateY(14px) rotate(calc(var(--a) * 0.5));
     opacity: 0;
   }
   30% {

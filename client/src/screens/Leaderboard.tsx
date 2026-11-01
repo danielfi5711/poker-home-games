@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import type { HistoryResponse, LeaderboardEntry } from '../../../src/shared/types.js';
-import { api } from '../api.js';
+import { api, useCachedLoad } from '../api.js';
 import { CrownIcon, TrophyIcon } from '../icons.js';
 import { Avatar, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
 import { tr } from '../i18n.js';
@@ -105,21 +105,8 @@ function periodStart(period: Period): number {
 
 export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
   const [period, setPeriod] = useState<Period>('all');
-  const [data, setData] = useState<HistoryResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
   // Switching periods keeps the old standings on screen until the new ones arrive.
-  useEffect(() => {
-    let current = true;
-    setError(null);
-    api
-      .history(periodStart(period))
-      .then((r) => current && setData(r))
-      .catch((err) => current && setError((err as Error).message));
-    return () => {
-      current = false;
-    };
-  }, [period]);
+  const { data, error } = useCachedLoad<HistoryResponse>(`history:${period}`, () => api.history(periodStart(period)));
 
   const board = data?.leaderboard ?? [];
   const h = data?.highlights;

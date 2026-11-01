@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import type { Session } from '../../../src/shared/types.js';
-import { api } from '../api.js';
+import { api, useCachedLoad } from '../api.js';
 import { autoSessionName } from '../sessionName.js';
 import { tr } from '../i18n.js';
 import { CardsIcon, ChevronRightIcon, ChipStackArt, PlusIcon } from '../icons.js';
@@ -19,16 +19,11 @@ function potCents(s: Session): number {
 
 /** Start a new table or rejoin one that's still in progress. */
 export function TablesScreen({ onEnterSession }: Props) {
-  const [sessions, setSessions] = useState<Session[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const loaded = useCachedLoad('sessions', () => api.sessions().then((r) => r.sessions));
+  const sessions: Session[] | null = loaded.data;
+  const [actionError, setError] = useState<string | null>(null);
+  const error = actionError ?? loaded.error;
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    api
-      .sessions()
-      .then((r) => setSessions(r.sessions))
-      .catch((err) => setError((err as Error).message));
-  }, []);
 
   async function createTable() {
     setBusy(true);

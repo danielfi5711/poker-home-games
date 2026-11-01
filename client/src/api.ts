@@ -28,6 +28,7 @@ export function loadToken(): string | null {
 }
 
 export function saveToken(token: string | null): void {
+  screenCache.clear();
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
@@ -187,4 +188,38 @@ export function usePolledSession(sessionId: string | null, intervalMs = 3000) {
   }, [sessionId, intervalMs, reload]);
 
   return { session, error, reload, setSession };
+}
+
+/** Last data each home tab loaded, by key, so returning to a tab shows it at once. */
+const screenCache = new Map<string, unknown>();
+
+/**
+ * Loads a home tab's data, remembering the last result under `key`. Coming
+ * back to a tab shows what it had right away (no loader) and refreshes it
+ * quietly behind the scenes. When `key` changes to one not loaded yet, the
+ * previous data stays up until the new data arrives. `error` is only set
+ * when there's nothing to show.
+ */
+export function useCachedLoad<T>(key: string, load: () => Promise<T>) {
+  const [data, setData] = useState<T | null>(() => (screenCache.get(key) as T | undefined) ?? null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    if (screenCache.has(key)) setData(screenCache.get(key) as T);
+    setError(null);
+    load()
+      .then((r) => {
+        screenCache.set(key, r);
+        if (current) setData(r);
+      })
+      .catch((err) => {
+        if (current && !screenCache.has(key)) setError((err as Error).message);
+      });
+    return () => {
+      current = false;
+    };
+  }, [key]);
+
+  return { data, error };
 }

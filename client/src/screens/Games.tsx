@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import type { HistoryResponse, MatchSummary, Session } from '../../../src/shared/types.js';
 import { canReopen } from '../../../src/shared/types.js';
-import { api } from '../api.js';
+import { api, useCachedLoad } from '../api.js';
 import { ConfirmModal } from './ConfirmModal.js';
 import { formatCents } from '../money.js';
 import { ArrowRightIcon, ChevronDownIcon, CrownIcon, ReceiptIcon } from '../icons.js';
@@ -16,8 +16,10 @@ interface Props {
 
 /** Recent finished games: each one's results and who has to pay whom. */
 export function GamesScreen({ myAccountId, onEnterSession }: Props) {
-  const [data, setData] = useState<HistoryResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const loaded = useCachedLoad<HistoryResponse>('history:games', () => api.history());
+  const data = loaded.data;
+  const [actionError, setError] = useState<string | null>(null);
+  const error = actionError ?? loaded.error;
   const [openId, setOpenId] = useState<string | null>(null);
   const [reopening, setReopening] = useState<string | null>(null);
 
@@ -33,13 +35,6 @@ export function GamesScreen({ myAccountId, onEnterSession }: Props) {
       setError((err as Error).message);
     }
   }
-
-  useEffect(() => {
-    api
-      .history()
-      .then(setData)
-      .catch((err) => setError((err as Error).message));
-  }, []);
 
   return (
     <div class="view">
