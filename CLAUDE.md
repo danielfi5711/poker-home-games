@@ -164,10 +164,14 @@ just ASCII, via a Unicode-aware regex.
     with a percentage. Boot has no real progress to measure, so the bar eases
     toward 90% and runs to 100% once `/api/auth/me` (and fonts) are done; it
     stays up at least ~1.1s so the deal-in plays out, and says the table is
-    waking up after 5s. Keep it smooth on phones: each moving part of the
-    scene is its own `<svg>` layer animated only by `transform`/`opacity`
-    (never animate inside an SVG filter, or animate `filter`/`letter-spacing`),
-    and the bar/percent are written to the DOM by ref, not via state.
+    waking up after 5s. It must hold 60fps on phones while the app boots, so
+    every animation in it runs on the GPU compositor: only
+    `transform`/`opacity`, on HTML elements (each card is its own `<div>` on
+    a 390×844 stage scaled to cover; never animate an SVG's insides, a
+    `filter`, `background-position` or a size). The bar is a `scaleX` Web
+    Animation with the waiting curve baked into keyframes; the title shine
+    is a sliding masked window over a bright copy of the title. Only the
+    percent text is set from JS (by ref, not state).
   - `client/src/api.ts` — stores the bearer token in `localStorage`
     (`poker.authToken`) and attaches it to every request automatically.
   - `client/src/push.ts` — `ensurePushSubscription()`, called after

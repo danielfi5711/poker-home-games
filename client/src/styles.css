@@ -989,16 +989,22 @@ form {
   animation: splash-scene 1400ms var(--ease) both;
 }
 
+/* the 390×844 design, scaled (by Splash.tsx) to cover the screen */
+.splash__stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 390px;
+  height: 844px;
+  margin: -422px 0 0 -195px;
+  transform: scale(var(--stage-scale, 1));
+}
+
 .splash__layer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-}
-
-.splash__cards {
-  will-change: transform;
-  filter: drop-shadow(0 8px 9px rgba(0, 0, 0, 0.55));
 }
 
 .splash__shade {
@@ -1016,12 +1022,23 @@ form {
   }
 }
 
-/* cards start squared up and fan open around the pivot under the fan */
+/* cards start squared up and fan open around the pivot under the fan,
+   stage (195, 580) = this box's (88, 216) */
 .splash__card {
-  transform-box: view-box;
-  transform-origin: 195px 580px;
+  position: absolute;
+  left: 107px;
+  top: 364px;
+  width: 176px;
+  height: 232px;
+  transform-origin: 88px 216px;
   transform: rotate(var(--a));
+  will-change: transform, opacity;
   animation: splash-fan 900ms var(--spring-soft) calc(260ms + var(--d)) both;
+}
+
+.splash__card svg {
+  display: block;
+  overflow: visible;
 }
 
 @keyframes splash-fan {
@@ -1089,7 +1106,7 @@ form {
   will-change: transform, opacity;
 }
 
-/* a soft gold glow behind the title — static, so the shine never re-blurs it */
+/* a soft gold glow behind the title — static, so it's drawn once */
 .splash__head::before {
   content: '';
   position: absolute;
@@ -1121,25 +1138,61 @@ form {
   margin-bottom: 14px;
 }
 
+.splash__titlebox {
+  position: relative;
+}
+
 .splash__title {
+  display: block;
   margin: 0;
   font: 800 clamp(46px, 14vw, 64px) / 1 var(--font-display);
   letter-spacing: -0.02em;
-  background: linear-gradient(100deg, #bf8a2e 0%, #fbe3a1 22%, #e9c068 40%, #fff6dc 50%, #e9c068 60%, #bf8a2e 100%);
-  background-size: 250% 100%;
+  background: linear-gradient(100deg, #bf8a2e 0%, #fbe3a1 30%, #e9c068 55%, #bf8a2e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: splash-shine 2.6s var(--ease) 500ms infinite;
 }
 
-@keyframes splash-shine {
+/* The shine sweeps a bright copy of the title across it: the window slides
+   right while the copy inside slides left by the same amount, so the copy
+   stays put and only the soft-edged window moves. Both are transforms, so the
+   GPU runs it without repainting the text. */
+.splash__shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 50%, transparent 65%);
+  mask-image: linear-gradient(100deg, transparent 35%, #000 50%, transparent 65%);
+  will-change: transform;
+  animation: splash-shine-window 2.6s var(--ease) 1100ms infinite both;
+}
+
+.splash__title--shine {
+  background: linear-gradient(#fffaf0, #fbe3a1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  will-change: transform;
+  animation: splash-shine-copy 2.6s var(--ease) 1100ms infinite both;
+}
+
+@keyframes splash-shine-window {
   from {
-    background-position: 100% 0;
+    transform: translateX(-100%);
   }
   60%,
   to {
-    background-position: 0% 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes splash-shine-copy {
+  from {
+    transform: translateX(100%);
+  }
+  60%,
+  to {
+    transform: translateX(-100%);
   }
 }
 
@@ -1181,32 +1234,37 @@ form {
   overflow: hidden;
 }
 
+[dir='rtl'] .splash__track {
+  transform: scaleX(-1);
+}
+
+/* full width, scaled by Splash.tsx's Web Animations — a scale runs on the GPU, a width doesn't */
 .splash__fill {
   position: relative;
-  width: 0;
   height: 100%;
-  border-radius: inherit;
   background: var(--gold-grad);
-  box-shadow: 0 0 12px rgba(233, 192, 104, 0.7);
+  transform-origin: left;
+  transform: scaleX(0);
 }
 
 /* a glint that keeps running along the filled part */
-.splash__fill::after {
-  content: '';
+.splash__glint {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
-  background-size: 60px 100%;
-  background-repeat: no-repeat;
+  will-change: transform;
   animation: splash-glint 1.3s linear infinite;
 }
 
 @keyframes splash-glint {
   from {
-    background-position: -60px 0;
+    transform: translateX(-100%);
   }
   to {
-    background-position: calc(100% + 60px) 0;
+    transform: translateX(334%);
   }
 }
 
