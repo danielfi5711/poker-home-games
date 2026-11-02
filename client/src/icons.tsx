@@ -354,29 +354,6 @@ export function UsersIcon({ size = 16 }: IconProps) {
   );
 }
 
-/** Decorative stack of poker chips for hero cards. */
-export function ChipStackArt({ size = 130 }: IconProps) {
-  const chip = (cx: number, cy: number, fill: string, edge: string, key: string) => (
-    <g key={key}>
-      <ellipse cx={cx} cy={cy + 5} rx="34" ry="12" fill="rgba(0,0,0,.35)" />
-      <ellipse cx={cx} cy={cy + 3} rx="34" ry="12" fill={edge} />
-      <ellipse cx={cx} cy={cy} rx="34" ry="12" fill={fill} />
-      <ellipse cx={cx} cy={cy} rx="34" ry="12" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 9" opacity=".8" />
-      <ellipse cx={cx} cy={cy} rx="20" ry="7" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.5" />
-    </g>
-  );
-  return (
-    <svg width={size} height={size} viewBox="0 0 130 130" aria-hidden="true">
-      {chip(70, 104, '#c94040', '#8f2626', 'a')}
-      {chip(70, 92, '#2f6fd1', '#1f4c94', 'b')}
-      {chip(70, 80, '#1d1d1d', '#000', 'c')}
-      {chip(70, 68, '#e9c068', '#a9771f', 'd')}
-      {chip(78, 46, '#c94040', '#8f2626', 'e')}
-      {chip(84, 26, '#e9c068', '#a9771f', 'f')}
-    </svg>
-  );
-}
-
 export function CameraIcon({ size = 16 }: IconProps) {
   return (
     <Stroke size={size}>
