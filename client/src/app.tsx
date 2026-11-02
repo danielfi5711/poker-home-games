@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Account, PaymentView, Session } from '../../src/shared/types.js';
+import type { Account, Payment, Session } from '../../src/shared/types.js';
 import {
   api,
   ApiError,
@@ -16,7 +16,6 @@ import { LeaderboardScreen } from './screens/Leaderboard.js';
 import { GamesScreen } from './screens/Games.js';
 import { OddsScreen } from './screens/Odds.js';
 import { PaymentsScreen, paymentsNeedingAction } from './screens/Payments.js';
-import { PhoneForm } from './screens/PhoneForm.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
@@ -59,7 +58,7 @@ export function App() {
   // Profiles opened from a profile stack up, so Back walks back through them.
   const [profileStack, setProfileStack] = useState<string[]>([]);
   const [profileReturn, setProfileReturn] = useState<View>('home');
-  const [payments, setPayments] = useState<PaymentView[] | null>(null);
+  const [payments, setPayments] = useState<Payment[] | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
   const lang = useLang();
@@ -90,11 +89,11 @@ export function App() {
   // faster on the Payments tab itself, where a confirmation can land any second.
   const onPaymentsTab = view === 'home' && homeTab === 'payments';
   useEffect(() => {
-    if (!account?.phone) return;
+    if (!account) return;
     refreshPayments();
     const timer = setInterval(refreshPayments, onPaymentsTab ? 8000 : 30000);
     return () => clearInterval(timer);
-  }, [account?.id, account?.phone, onPaymentsTab]);
+  }, [account?.id, onPaymentsTab]);
 
   // Friends' profile pictures: a tiny id -> version map, so a slow refresh is plenty.
   useEffect(() => {
@@ -248,11 +247,9 @@ export function App() {
   const isHost = !!(session && playerId && session.hostPlayerId === playerId);
   const pendingCount =
     isHost && session ? Object.values(session.players).reduce((n, p) => n + p.buyIns.filter((b) => b.status === 'pending').length, 0) : 0;
-  // Accounts made before phones were required must add one before using the app.
-  const needsPhone = !!account && !account.phone && view !== 'login' && view !== 'settings';
   const badge = account && payments ? paymentsNeedingAction(payments, account.id) : 0;
 
-  const showNav = !!(account && account.phone && view !== 'login');
+  const showNav = !!(account && view !== 'login');
 
   // The splash stays first in the tree from booting to booted, so it isn't remounted mid-animation.
   const splash = !splashGone && <Splash done={!booting} onFinished={() => setSplashGone(true)} />;
@@ -296,16 +293,7 @@ export function App() {
         <main class="app__main">
           {view === "login" && <Login onAuthed={onAuthed} />}
 
-          {needsPhone && account && (
-            <div class="view">
-              <ScreenHead title={tr.app.oneMoreThing} sub={tr.app.addPhoneSub} />
-              <div class="surface surface--pad">
-                <PhoneForm submitLabel={tr.app.continue} onSaved={setAccount} />
-              </div>
-            </div>
-          )}
-
-          {!needsPhone && view === "home" && account && (
+          {view === "home" && account && (
             <div key={homeTab} class={`tabpane tabpane--${tabMotion}`}>
               {homeTab === "tables" && <TablesScreen onEnterSession={enterSession} />}
               {homeTab === "leaderboard" && <LeaderboardScreen myAccountId={account.id} />}
@@ -317,7 +305,7 @@ export function App() {
             </div>
           )}
 
-          {!needsPhone && view === "session" && session && playerId && me && (
+          {view === "session" && session && playerId && me && (
             <>
               {session.status === "active" && (
                 <TableScreen
@@ -344,8 +332,8 @@ export function App() {
             </>
           )}
 
-          {!needsPhone && view === "session" && sessionId && !session && !error && <Spinner label={tr.app.loadingGame} />}
-          {!needsPhone && view === "session" && error && (
+          {view === "session" && sessionId && !session && !error && <Spinner label={tr.app.loadingGame} />}
+          {view === "session" && error && (
             <div class="view">
               <p class="error">{error}</p>
               <button class="btn btn--block" onClick={leaveSession}>
@@ -354,7 +342,7 @@ export function App() {
             </div>
           )}
 
-          {!needsPhone && view === "profile" && account && profileStack.length > 0 && (
+          {view === "profile" && account && profileStack.length > 0 && (
             <ProfileScreen accountId={profileStack[profileStack.length - 1]!} myAccountId={account.id} onBack={closeProfile} />
           )}
 

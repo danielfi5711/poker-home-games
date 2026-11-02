@@ -2,9 +2,7 @@ import { useState } from 'preact/hooks';
 import type { Account } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { ConfirmModal } from './ConfirmModal.js';
-import { PhoneForm } from './PhoneForm.js';
-import { formatPhone } from '../phone.js';
-import { ArrowLeftIcon, CameraIcon, LogoutIcon, PhoneIcon, UserIcon } from '../icons.js';
+import { ArrowLeftIcon, CameraIcon, LogoutIcon, UserIcon } from '../icons.js';
 import { photoToJpeg, setAvatarVersions, useAvatarUrl } from '../avatars.js';
 import { Avatar, LangSwitch, ScreenHead, SectionLabel } from '../ui.js';
 import { tr } from '../i18n.js';
@@ -17,7 +15,7 @@ interface Props {
 }
 
 export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: Props) {
-  const [editing, setEditing] = useState<'name' | 'phone' | null>(null);
+  const [editing, setEditing] = useState<'name' | null>(null);
   const [newUsername, setNewUsername] = useState(account.username);
   const [currentPassword, setCurrentPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -113,9 +111,6 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
         </label>
         <span class="row__main">
           <span class="profile__name">{account.displayName}</span>
-          <span class="row__sub">
-            {account.phone ? <bdi dir="ltr">{formatPhone(account.phone)}</bdi> : tr.settings.noPhone}
-          </span>
           <span class="profile__photoactions">
             {photoBusy ? (
               <span class="profile__photolink">{tr.settings.uploadingPhoto}</span>
@@ -186,36 +181,6 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
           </div>
         )}
 
-        <div class="setting">
-          <span class="setting__icon">
-            <PhoneIcon />
-          </span>
-          <span class="setting__main">
-            <span class="setting__label">{tr.settings.phoneLabel}</span>
-            <span class="setting__value">
-              {account.phone ? <bdi dir="ltr">{formatPhone(account.phone)}</bdi> : tr.settings.notSet}
-            </span>
-          </span>
-          {editing !== 'phone' && (
-            <button class="btn btn--sm" onClick={() => setEditing('phone')}>
-              {tr.settings.change}
-            </button>
-          )}
-        </div>
-        {editing === 'phone' && (
-          <div style={{ padding: '0 16px 16px' }}>
-            <PhoneForm
-              initial={account.phone ?? ''}
-              submitLabel={tr.settings.saveNumber}
-              onCancel={() => setEditing(null)}
-              onSaved={(updated) => {
-                onAccountChanged(updated);
-                setEditing(null);
-                flash(tr.settings.phoneUpdated);
-              }}
-            />
-          </div>
-        )}
       </div>
 
       <SectionLabel>{tr.settings.language}</SectionLabel>

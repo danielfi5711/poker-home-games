@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
-import { AuthError, accountForToken, changeUsername, login, logout, register, setLang, setPhone } from '../lib/accounts.js';
+import { AuthError, accountForToken, changeUsername, login, logout, register, setLang } from '../lib/accounts.js';
 import { translateError } from '../lib/i18n.js';
 import {
   SessionError,
@@ -147,7 +147,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     // POST /api/auth/register
     if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'register') {
       const body = await readJsonBody(req);
-      const result = register(str(body, 'username'), str(body, 'password'), str(body, 'phone'), requestLang(req));
+      const result = register(str(body, 'username'), str(body, 'password'), requestLang(req));
       return sendJson(res, 201, result);
     }
 
@@ -177,13 +177,6 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       const body = await readJsonBody(req);
       const updated = changeUsername(account.id, str(body, 'newUsername'), str(body, 'currentPassword'));
       return sendJson(res, 200, { account: updated });
-    }
-
-    // PUT /api/auth/phone
-    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'phone') {
-      const account = requireAuth(req);
-      const body = await readJsonBody(req);
-      return sendJson(res, 200, { account: setPhone(account.id, str(body, 'phone')) });
     }
 
     // PUT /api/auth/lang

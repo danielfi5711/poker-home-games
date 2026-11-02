@@ -94,13 +94,8 @@ export interface Payment {
   createdAt: number;
 }
 
-/** A payment as its payer/receiver sees it — with the receiver's phone. */
-export interface PaymentView extends Payment {
-  toPhone: string | null;
-}
-
 export interface PaymentsResponse {
-  payments: PaymentView[];
+  payments: Payment[];
 }
 
 /** A logged-in player. Never carries the password hash — that never leaves the server. */
@@ -108,8 +103,6 @@ export interface Account {
   id: string;
   username: string;
   displayName: string;
-  /** Israeli mobile, normalized to 05XXXXXXXX — friends can pay you with it. Null on accounts made before it was required. */
-  phone: string | null;
   /** UI language — also the language of this account's push notifications. */
   lang: Lang;
   createdAt: number;
@@ -208,7 +201,6 @@ export interface HistoryHighlights {
 export interface RegisterRequest {
   username: string;
   password: string;
-  phone: string;
 }
 
 export interface LoginRequest {

@@ -13,7 +13,6 @@ export function Login({ onAuthed }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +21,7 @@ export function Login({ onAuthed }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const result = mode === 'login' ? await api.login(username, password) : await api.register(username, password, phone);
+      const result = mode === 'login' ? await api.login(username, password) : await api.register(username, password);
       saveToken(result.token);
       onAuthed(result.account);
     } catch (err) {
@@ -92,22 +91,6 @@ export function Login({ onAuthed }: Props) {
               autocomplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </label>
-
-          {mode === 'register' && (
-            <label class="field">
-              {tr.login.phone} <span class="muted">{tr.login.phoneWhy}</span>
-              <input
-                type="tel"
-                inputMode="tel"
-                dir="ltr"
-                value={phone}
-                onInput={(e) => setPhone(e.currentTarget.value)}
-                placeholder="050-123-4567"
-                required
-                autocomplete="tel"
-              />
-            </label>
-          )}
 
           <button class="btn btn--primary btn--lg btn--block" type="submit" disabled={busy}>
             {busy ? (mode === 'login' ? tr.login.loggingIn : tr.login.creating) : mode === 'login' ? tr.login.logIn : tr.login.create}

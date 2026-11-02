@@ -45,9 +45,7 @@ are in shekels (₪).
 7. **Payments tab**: every debt you owe or are owed. Pay however you like,
    then tap **I've paid** — the receiver is asked "did it arrive?" — **Got
    it** marks it paid; **Not yet** puts it back to unpaid and notifies the
-   payer they still owe. A phone number (Israeli mobile) is required at
-   sign-up; older accounts are asked for one on their next open.
-
+   payer they still owe.
 ## Push notifications
 
 Only payments send notifications: the receiver hears when someone says they

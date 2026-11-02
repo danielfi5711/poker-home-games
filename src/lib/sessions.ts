@@ -12,7 +12,6 @@ import type {
   LeaderboardEntry,
   MatchSummary,
   Payment,
-  PaymentView,
   Player,
   PlayerProfile,
   ProfileMatch,
@@ -403,13 +402,12 @@ function updatePayment(sessionId: string, paymentId: string, mutate: (p: Payment
   return findPayment(paymentId).payment;
 }
 
-/** Every payment you owe or are owed, newest first, with the receiver's phone. */
-export function paymentsFor(accountId: string): PaymentView[] {
+/** Every payment you owe or are owed, newest first. */
+export function paymentsFor(accountId: string): Payment[] {
   return Object.values(data().sessions)
     .flatMap((s) => s.payments ?? [])
     .filter((p) => p.fromAccountId === accountId || p.toAccountId === accountId)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .map((p) => ({ ...p, toPhone: getAccount(p.toAccountId)?.phone ?? null }));
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 /**
