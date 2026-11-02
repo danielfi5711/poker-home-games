@@ -22,9 +22,9 @@ const accounts = await import('./accounts.js');
 const sessions = await import('./sessions.js');
 type Account = ReturnType<typeof accounts.register>['account'];
 
-let phone = 0;
+let seq = 0;
 function newAccount(name: string): Account {
-  return accounts.register(`${name}${phone}`, 'secret123', `05200000${String(phone++).padStart(2, '0')}`).account;
+  return accounts.register(`${name}${seq++}`, 'secret123').account;
 }
 
 before(async () => {

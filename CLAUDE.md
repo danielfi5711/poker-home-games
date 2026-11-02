@@ -148,9 +148,10 @@ just ASCII, via a Unicode-aware regex.
   time, even on an `unpaid` payment (cash, forgot to tap). The app doesn't
   link to any payment app — players pay however they like (there used to be
   an "Open Bit" flow; it was removed on purpose).
-  `Account.phone` (Israeli mobile, normalized `05XXXXXXXX`) is required at
-  register and settable via `PUT /api/auth/phone`; older accounts have
-  `null` and the client blocks on a phone form until set.
+  There are **no phone numbers** in the app (removed on purpose 2026-11-02 —
+  don't bring them back): sign-up is username + password only, and
+  `initAccounts()`'s `stripPhones()` deletes any leftover stored `phone` field
+  from accounts on startup (nothing else on the account is touched).
 - `client/` — Preact + Vite, built as a PWA via `vite-plugin-pwa`
   (`vite.config.ts`), using the `injectManifest` strategy (not the default
   `generateSW`) because `client/src/sw.ts` needs its own `push` /
@@ -232,8 +233,8 @@ just ASCII, via a Unicode-aware regex.
   `useLang()` in `App` and `InstallGate`. The switch (`LangSwitch` in
   `ui.tsx`) is on the login screen, install gate and Settings.
 - RTL: use logical CSS (`inset-inline-*`, `margin-inline-*`), give
-  direction arrows `class="dir-icon"` (mirrored in RTL), wrap phone numbers
-  in `<bdi dir="ltr">`. Hebrew glyphs come from Rubik (Sora/Inter have none).
+  direction arrows `class="dir-icon"` (mirrored in RTL), wrap LTR runs
+  (numbers, Latin names) inside Hebrew text in `<bdi dir="ltr">` where needed. Hebrew glyphs come from Rubik (Sora/Inter have none).
 - Hebrew copy is gender-neutral about other players (a name doesn't tell
   us), uses noun/infinitive forms for buttons; buy-in = "קנייה",
   cash-out = "פדיון", settle up = "התחשבנות".

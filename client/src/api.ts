@@ -84,9 +84,8 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
-  register: (username: string, password: string, phone: string) =>
-    req<AuthResponse>('POST', '/auth/register', { username, password, phone }),
-  setPhone: (phone: string) => req<{ account: Account }>('PUT', '/auth/phone', { phone }),
+  register: (username: string, password: string) =>
+    req<AuthResponse>('POST', '/auth/register', { username, password }),
   setLang: (lang: Lang) => req<{ account: Account }>('PUT', '/auth/lang', { lang }),
   login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
   logout: () => req<{ ok: true }>('POST', '/auth/logout'),

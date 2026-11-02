@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import type { PaymentView } from '../../../src/shared/types.js';
+import type { Payment } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { formatCents } from '../money.js';
 import { ArrowRightIcon, CheckIcon, ChevronRightIcon, WalletIcon } from '../icons.js';
@@ -8,13 +8,13 @@ import { tr } from '../i18n.js';
 
 interface Props {
   myAccountId: string;
-  payments: PaymentView[] | null;
+  payments: Payment[] | null;
   error: string | null;
   onChanged: () => void;
 }
 
 /** Items that need *you* to do something — drives the bottom-nav badge. */
-export function paymentsNeedingAction(payments: PaymentView[], myAccountId: string): number {
+export function paymentsNeedingAction(payments: Payment[], myAccountId: string): number {
   return payments.filter(
     (p) =>
       (p.fromAccountId === myAccountId && p.status !== 'confirmed') ||
@@ -22,11 +22,11 @@ export function paymentsNeedingAction(payments: PaymentView[], myAccountId: stri
   ).length;
 }
 
-const sum = (list: PaymentView[]) => list.reduce((n, p) => n + p.amountCents, 0);
+const sum = (list: Payment[]) => list.reduce((n, p) => n + p.amountCents, 0);
 
 export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Props) {
   // "I've paid" lives in a sheet behind a tap on the card, so it can't be hit by accident.
-  const [paying, setPaying] = useState<PaymentView | null>(null);
+  const [paying, setPaying] = useState<Payment | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -40,7 +40,7 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
     (a, b) => Number(b.status === 'awaiting_confirmation') - Number(a.status === 'awaiting_confirmation'),
   );
 
-  async function markPaid(p: PaymentView) {
+  async function markPaid(p: Payment) {
     setBusyId(p.id);
     setActionError(null);
     try {
@@ -54,7 +54,7 @@ export function PaymentsScreen({ myAccountId, payments, error, onChanged }: Prop
     }
   }
 
-  async function respond(p: PaymentView, received: boolean) {
+  async function respond(p: Payment, received: boolean) {
     setBusyId(p.id);
     setActionError(null);
     try {
