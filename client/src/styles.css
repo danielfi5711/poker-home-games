@@ -2862,36 +2862,390 @@ form {
   gap: 10px;
 }
 
+/* Each card's mood is in its lettering (FxText), with a matching faint glow
+   behind it: heat rising from below, frost and gold light from above, a red
+   pool sinking to the bottom. */
 .highlight {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 13px 14px;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 15px 15px 13px;
   border-radius: var(--r-lg);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background-color: var(--surface);
+  background-image: var(--hl-glow, none);
+  border: 1px solid var(--hl-line, var(--line));
 }
 
-.highlight__icon {
-  font-size: 20px;
+.highlight--fire {
+  --hl-glow: radial-gradient(130% 75% at 50% 118%, rgba(255, 106, 40, 0.2), transparent 70%);
+  --hl-line: rgba(255, 140, 70, 0.2);
+}
+
+.highlight--ice {
+  --hl-glow: radial-gradient(130% 75% at 50% -18%, rgba(175, 225, 255, 0.15), transparent 70%);
+  --hl-line: rgba(185, 228, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(225, 245, 255, 0.16);
+}
+
+.highlight--gold {
+  --hl-glow: radial-gradient(130% 75% at 50% -18%, rgba(233, 192, 104, 0.17), transparent 70%);
+  --hl-line: rgba(233, 192, 104, 0.26);
+  box-shadow: inset 0 1px 0 rgba(251, 227, 161, 0.14);
+}
+
+.highlight--sink {
+  --hl-glow: linear-gradient(to bottom, transparent 35%, rgba(242, 121, 122, 0.09));
+  --hl-line: rgba(242, 121, 122, 0.15);
 }
 
 .highlight__label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 15px;
+  line-height: 1.05;
+}
+
+.highlight__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 7px;
+  row-gap: 2px;
+  max-width: 100%;
+}
+
+.highlight__num {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.highlight__unit {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink-3);
 }
 
 .highlight__who {
-  font-weight: 700;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  margin-top: auto;
+  padding-top: 4px;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink-2);
 }
 
-.streak {
-  font-size: 11.5px;
+.highlight__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight--fire .highlight__label {
+  font-size: 20px;
+}
+
+.highlight--fire .highlight__num {
+  font-size: 42px;
+}
+
+.highlight--ice .highlight__label {
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
+/* Hebrew has no caps or tracking to lean on, so the thin Heebo gets a bit more size */
+[dir='rtl'] .highlight--ice .highlight__label {
+  font-size: 15.5px;
+}
+
+.highlight--ice .highlight__num {
+  font-size: 40px;
+}
+
+.highlight--gold .highlight__label {
+  font-size: 18px;
+  font-style: italic;
   font-weight: 700;
+}
+
+.highlight--gold .highlight__num {
+  font-size: 32px;
+}
+
+.highlight--sink .highlight__label {
+  font-size: 15.5px;
+}
+
+.highlight--sink .highlight__num {
+  --sag: 0.2em;
+  --tilt: 7deg;
+  font-size: 28px;
+}
+
+/* the streak badge on a leaderboard row / profile */
+.streak {
+  font-size: 13px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.streak--win {
+  background: rgba(255, 112, 48, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 140, 70, 0.16);
+}
+
+.streak--loss {
+  background: rgba(160, 215, 255, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(185, 228, 255, 0.16);
+}
+
+.streak .fx--fire {
+  font-size: 14.5px;
+}
+
+.streak .fx--ice {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* ---------- mood lettering (FxText) ---------- */
+
+:root {
+  --fx-dir: 1; /* which way glints sweep: with the reading direction */
+}
+
+[dir='rtl'] {
+  --fx-dir: -1;
+}
+
+/* Gradient-filled text. The padding (cancelled by the margin) gives italics and
+   overlays room so nothing is clipped at the glyph edges. */
+.fx {
+  --pad-y: 0.1em;
+  --pad-x: 0.16em;
+  position: relative;
+  display: inline-block;
+  max-width: calc(100% + 2 * var(--pad-x));
+  padding: var(--pad-y) var(--pad-x);
+  margin: calc(-1 * var(--pad-y)) calc(-1 * var(--pad-x));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* glint: a soft-edged window slides across while the bright copy inside it
+   slides back by the same amount, so only the window moves (same trick as the
+   splash title shine) */
+.fx__shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(100deg, transparent 32%, #000 50%, transparent 68%);
+  mask-image: linear-gradient(100deg, transparent 32%, #000 50%, transparent 68%);
+  will-change: transform;
+  animation: fx-window var(--fx-cycle, 5s) var(--ease) var(--fx-delay, 900ms) infinite both;
+}
+
+.fx__copy {
+  display: block;
+  padding: var(--pad-y) var(--pad-x);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  will-change: transform;
+  animation: fx-copy var(--fx-cycle, 5s) var(--ease) var(--fx-delay, 900ms) infinite both;
+}
+
+.highlight__num .fx__shine,
+.highlight__num .fx__copy {
+  --fx-delay: 1050ms;
+}
+
+@keyframes fx-window {
+  from {
+    transform: translateX(calc(-100% * var(--fx-dir)));
+  }
+  45%,
+  to {
+    transform: translateX(calc(100% * var(--fx-dir)));
+  }
+}
+
+@keyframes fx-copy {
+  from {
+    transform: translateX(calc(100% * var(--fx-dir)));
+  }
+  45%,
+  to {
+    transform: translateX(calc(-100% * var(--fx-dir)));
+  }
+}
+
+/* fire: condensed italic caps, yellow at the base burning up to red, with a
+   brighter copy flickering over the lower part like embers breathing */
+.fx--fire {
+  font-family: 'Barlow Condensed', 'Karantina', var(--font-display);
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  background-image: linear-gradient(to top, #ffd84a 0%, #ffa233 34%, #ff5f2c 66%, #e5352f 100%);
+}
+
+/* Hebrew has no italic here: lean the letters forward (leftward) instead */
+[dir='rtl'] .fx--fire {
+  font-style: normal;
+  transform: skewX(8deg);
+}
+
+/* Karantina runs small next to Barlow: give the Hebrew words a bit more size */
+[dir='rtl'] .highlight--fire .highlight__label {
+  font-size: 25px;
+}
+
+[dir='rtl'] .streak .fx--fire {
+  font-size: 17px;
+}
+
+.fx--fire.fx--live::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  padding: var(--pad-y) var(--pad-x);
+  pointer-events: none;
+  background-image: linear-gradient(to top, #fffbe3 0%, #ffe07a 38%, #ffab45 70%, rgba(255, 120, 50, 0) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-mask-image: linear-gradient(to top, #000 20%, transparent 85%);
+  mask-image: linear-gradient(to top, #000 20%, transparent 85%);
+  opacity: 0.2;
+  will-change: opacity;
+  animation: fx-flicker 3.2s linear infinite;
+}
+
+.highlight__num.fx--fire::after {
+  animation-delay: -1.3s;
+}
+
+@keyframes fx-flicker {
+  0% { opacity: 0.2; }
+  7% { opacity: 0.62; }
+  11% { opacity: 0.34; }
+  19% { opacity: 0.74; }
+  31% { opacity: 0.4; }
+  38% { opacity: 0.82; }
+  50% { opacity: 0.3; }
+  58% { opacity: 0.66; }
+  69% { opacity: 0.24; }
+  78% { opacity: 0.7; }
+  89% { opacity: 0.42; }
+  100% { opacity: 0.2; }
+}
+
+/* ice: thin, wide-set geometric caps in frosted white-to-glacier blue, with a
+   narrow crisp glint passing over now and then */
+.fx--ice {
+  font-family: 'Josefin Sans', 'Heebo', var(--font-body);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 0.17em;
+  background-image: linear-gradient(172deg, #ffffff 10%, #d4efff 40%, #98d1f3 70%, #63ade0 100%);
+}
+
+.fx--ice .fx__shine {
+  --fx-cycle: 6.5s;
+  --fx-delay: 2.2s;
+  -webkit-mask-image: linear-gradient(100deg, transparent 43%, #000 50%, transparent 57%);
+  mask-image: linear-gradient(100deg, transparent 43%, #000 50%, transparent 57%);
+}
+
+.fx--ice .fx__copy {
+  --fx-cycle: 6.5s;
+  --fx-delay: 2.2s;
+  background-image: linear-gradient(#ffffff, #f2fbff);
+}
+
+.highlight__num.fx--ice .fx__shine,
+.highlight__num.fx--ice .fx__copy {
+  --fx-delay: 2.35s;
+}
+
+/* the tracking also pads the end of the word; take it back so it stays centred */
+.fx--ice {
+  margin-inline-end: calc(-1 * var(--pad-x) - 0.17em);
+}
+
+[dir='rtl'] .fx--ice {
+  margin-inline-end: calc(-1 * var(--pad-x));
+}
+
+/* gold: a high-contrast serif in banded metallic gold, with a slow shine */
+.fx--gold {
+  font-family: 'Playfair Display', 'Frank Ruhl Libre', Georgia, serif;
+  font-weight: 900;
+  font-variant-numeric: lining-nums;
+  background-image: linear-gradient(180deg, #fff2c6 0%, #f7d47d 30%, #c38a2a 54%, #e4b452 70%, #fde6a6 100%);
+}
+
+[dir='rtl'] .fx--gold {
+  font-style: normal;
+}
+
+/* price-tag currency: small and raised, so the figure carries the weight */
+.fx--gold .fx__cur {
+  font-size: 0.56em;
+  vertical-align: 0.62em;
+  margin-inline-end: 0.08em;
+}
+
+.fx--gold .fx__copy {
+  background-image: linear-gradient(180deg, #ffffff, #fff4d2);
+}
+
+/* sink: heavy letters in a dull red that darkens toward the bottom, each one
+   sagging and tipping a little more than the last — the word runs out of air */
+.fx--sink {
+  --sag-dir: 1;
+  font-family: 'Rubik', var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.005em;
+}
+
+[dir='rtl'] .fx--sink:not([dir='ltr']) {
+  --sag-dir: -1;
+}
+
+.fx--sink .fx__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.fx__ch {
+  display: inline-block;
+  background-image: linear-gradient(180deg, #f0b3b1 0%, #de7377 48%, #a5434d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transform-origin: 50% 100%;
+  transform: translateY(calc((0.35 * var(--k) + 0.65 * var(--k) * var(--k)) * var(--sag, 0.3em))) rotate(calc(var(--k) * var(--tilt, 9deg) * var(--sag-dir)));
+}
+
+/* on arrival the letters start upright and slowly give way */
+.fx--sink.fx--live .fx__ch {
+  animation: fx-sag 1100ms var(--ease) both;
+  animation-delay: calc(380ms + var(--k) * 320ms);
+}
+
+@keyframes fx-sag {
+  from {
+    transform: none;
+  }
 }
 
 /* ---------- games ---------- */
@@ -3825,9 +4179,13 @@ form {
 }
 
 .row.tappable:active,
-.minirow.tappable:active,
-.highlight.tappable:active {
+.minirow.tappable:active {
   background: var(--surface-2);
+}
+
+/* just the color, so a highlight card keeps its glow */
+.highlight.tappable:active {
+  background-color: var(--surface-2);
 }
 
 .podium__spot.tappable:active {

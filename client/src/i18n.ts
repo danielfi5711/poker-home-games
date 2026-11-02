@@ -219,6 +219,12 @@ const en = {
     winsInARow: (n: number) => `${n} wins in a row`,
     coldStreak: 'Cold streak',
     lossesInARow: (n: number) => `${n} losses in a row`,
+    /** caption under the big streak number on a highlight card */
+    winsUnit: (n: number): string => (n === 1 ? 'win in a row' : 'wins in a row'),
+    lossesUnit: (n: number): string => (n === 1 ? 'loss in a row' : 'losses in a row'),
+    /** the streak badge on a leaderboard row: "Hot 3" / "Cold 3" */
+    streakHot: 'Hot',
+    streakCold: 'Cold',
     biggestWin: 'Biggest win',
     biggestLoss: 'Biggest loss',
   },
@@ -517,6 +523,10 @@ const he: Strings = {
     winsInARow: (n) => `${n} ניצחונות ברצף`,
     coldStreak: 'רצף קר',
     lossesInARow: (n) => `${n} הפסדים ברצף`,
+    winsUnit: (n) => (n === 1 ? 'ניצחון ברצף' : 'ניצחונות ברצף'),
+    lossesUnit: (n) => (n === 1 ? 'הפסד ברצף' : 'הפסדים ברצף'),
+    streakHot: 'חם',
+    streakCold: 'קר',
     biggestWin: 'הניצחון הגדול',
     biggestLoss: 'ההפסד הגדול',
   },

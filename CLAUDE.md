@@ -183,6 +183,14 @@ just ASCII, via a Unicode-aware regex.
     switching back to a tab shows it at once and refreshes quietly — the
     skeleton-rows `Spinner` only appears on a tab's first load, and only after
     250ms. No spinners or card animations for loading — the user rejected both.
+  - `FxText` in `client/src/ui.tsx` — "mood lettering" used instead of emoji
+    for the Leaderboard highlights and streak badges (the user asked for no
+    emoji there): `fire` (Barlow Condensed italic / Karantina, flame gradient,
+    flicker), `ice` (Josefin Sans / Heebo thin caps, frost gradient, glint),
+    `gold` (Playfair Display / Frank Ruhl Libre, metallic gold, shine) and
+    `sink` (Rubik, each letter sags a bit more than the last). Fonts come from
+    the Google Fonts link in `client/index.html`; the second family in each
+    pair is the Hebrew one. Motion is transform/opacity only.
   - `client/src/push.ts` — `ensurePushSubscription()`, called after
     login/boot: requests Notification permission, subscribes via the service
     worker's `PushManager`, and registers the subscription with the server.
