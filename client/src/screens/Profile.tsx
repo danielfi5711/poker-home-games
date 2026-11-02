@@ -179,41 +179,108 @@ function Stat({ label, children }: { label: string; children: preact.ComponentCh
 }
 
 // Chart geometry, in viewBox units. The SVG stretches to the card's width;
-// strokes keep their width via `vector-effect`.
+// strokes keep their width via `vector-effect`. PAD_Y keeps the highest and
+// lowest games (and the dot's halo on them) clear of the plot's edges.
 const W = 320;
 const H = 120;
-const PAD = 12;
+const PAD_Y = 16;
+
+/**
+ * A smooth curve through the points that never overshoots them (monotone
+ * cubic, as d3's curveMonotoneX): between two games the line only ever runs
+ * from one balance to the next, so a bump in the curve is always a real game,
+ * never a balance nobody had.
+ */
+function monotonePath(pts: readonly (readonly [number, number])[]): string {
+  const n = pts.length;
+  const f = (v: number) => v.toFixed(2);
+  if (n < 3) return pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)},${f(y)}`).join('');
+  const sign = (v: number) => (v < 0 ? -1 : v > 0 ? 1 : 0);
+  const h = pts.map((p, i) => (i < n - 1 ? pts[i + 1]![0] - p[0] : 0));
+  const s = pts.map((p, i) => (i < n - 1 ? (pts[i + 1]![1] - p[1]) / h[i]! : 0));
+  const m = new Array<number>(n).fill(0);
+  for (let i = 1; i < n - 1; i++) {
+    const p = (s[i - 1]! * h[i]! + s[i]! * h[i - 1]!) / (h[i - 1]! + h[i]!);
+    m[i] = (sign(s[i - 1]!) + sign(s[i]!)) * Math.min(Math.abs(s[i - 1]!), Math.abs(s[i]!), 0.5 * Math.abs(p));
+  }
+  m[0] = (3 * s[0]! - m[1]!) / 2;
+  m[n - 1] = (3 * s[n - 2]! - m[n - 2]!) / 2;
+  let d = `M${f(pts[0]![0])},${f(pts[0]![1])}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = pts[i]!;
+    const [x1, y1] = pts[i + 1]!;
+    const dx = h[i]! / 3;
+    d += `C${f(x0 + dx)},${f(y0 + m[i]! * dx)},${f(x1 - dx)},${f(y1 - m[i + 1]! * dx)},${f(x1)},${f(y1)}`;
+  }
+  return d;
+}
+
+/**
+ * A light tap of the taptic engine as the scrub crosses into another game.
+ * Android has `navigator.vibrate`; iOS Safari (17.4+) has no API, but toggling
+ * a hidden `<input switch>` plays the system haptic, so that stands in for it.
+ */
+let hapticLabel: HTMLLabelElement | null = null;
+function haptic() {
+  if (typeof navigator.vibrate === 'function') {
+    navigator.vibrate(6);
+    return;
+  }
+  if (!hapticLabel) {
+    hapticLabel = document.createElement('label');
+    hapticLabel.setAttribute('aria-hidden', 'true');
+    hapticLabel.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    input.tabIndex = -1;
+    hapticLabel.appendChild(input);
+    document.body.appendChild(hapticLabel);
+  }
+  hapticLabel.click();
+}
 
 /**
  * Balance after every game, starting from ₪0 before the first one. Drag (or
- * hover) across it to read any game: the dot rides the line under the finger,
- * the line past it dims, and the headline shows the nearest game.
+ * hover) across it to read any game: the dot snaps from game to game under
+ * the finger (with a haptic tick), the line past it dims, and the headline
+ * shows that game's balance.
  */
 function BalanceChart({ profile }: { profile: PlayerProfile }) {
   const [active, setActive] = useState<number | null>(null);
   const rect = useRef<DOMRect | null>(null);
   const frame = useRef(0);
+  const placed = useRef(-1);
 
   // Everything that depends only on the data, worked out once per profile —
   // not on every finger movement.
   const chart = useMemo(() => {
     const values = [0, ...profile.balanceHistory.map((h) => h.balanceCents)];
     const chronological = [...profile.matches].reverse();
-    const labels = [tr.profile.start, ...chronological.map((m) => `${m.name} · ${shortDate(m.settledAt)}`)];
-    const min = Math.min(0, ...values);
-    const max = Math.max(0, ...values);
-    const span = max - min || 1;
+    // The table's name in a bidi isolate (FSI…PDI), so a Latin name in Hebrew (or the reverse) doesn't swap places with the date.
+    const labels = [tr.profile.start, ...chronological.map((m) => `⁨${m.name}⁩ · ${shortDate(m.settledAt)}`)];
+    let min = Math.min(0, ...values);
+    let max = Math.max(0, ...values);
+    // Only breakeven games: nothing to scale by, so ₪0 runs through the middle.
+    if (max === min) {
+      min -= 1;
+      max += 1;
+    }
     const x = (i: number) => (i / (values.length - 1)) * W;
-    const y = (v: number) => PAD + ((max - v) / span) * (H - PAD * 2);
-    const line = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    const y = (v: number) => PAD_Y + ((max - v) / (max - min)) * (H - PAD_Y * 2);
+    const pts = values.map((v, i) => [x(i), y(v)] as const);
+    const line = monotonePath(pts);
+    const zero = y(0);
     return {
       values,
       labels,
       line,
-      area: `${line}L${W},${y(0)}L0,${y(0)}Z`,
-      zero: y(0),
+      area: `${line}L${W},${zero}L0,${zero}Z`,
+      zero,
+      top: y(max),
+      bottom: y(min),
       // Each point as a fraction of the plot's width/height, for positioning the dot.
-      points: values.map((v, i) => [x(i) / W, y(v) / H] as const),
+      points: pts.map(([px, py]) => [px / W, py / H] as const),
     };
   }, [profile]);
 
@@ -221,82 +288,75 @@ function BalanceChart({ profile }: { profile: PlayerProfile }) {
   const dot = useRef<HTMLSpanElement>(null);
   const cross = useRef<HTMLSpanElement>(null);
   const lit = useRef<HTMLDivElement>(null);
-  const settle = useRef(0);
+  const litArt = useRef<HTMLDivElement>(null);
 
-  const { values, labels, points, zero } = chart;
+  const { values, labels, points } = chart;
   const n = values.length;
   const shown = active ?? n - 1;
 
   /**
-   * Puts the dot exactly on the line at `t` (0–1 across the plot), the
-   * crosshair under it, and lights the line up to it. Written straight to the
-   * DOM — no re-render per frame. The points are evenly spaced and joined by
-   * straight segments, so interpolating between neighbours lands on the line.
+   * Puts the dot on game `i`, the crosshair under it, and lights the line up
+   * to it. Written straight to the DOM — no re-render per frame — and only
+   * transforms, so the CSS transitions between games run on the compositor.
+   * The lit line is "clipped" by sliding a window (overflow: hidden) left
+   * while sliding the art inside it right by the same amount.
    */
-  function place(t: number) {
-    const seg = t * (n - 1);
-    const i = Math.min(n - 2, Math.floor(seg));
-    const [, y0] = points[i]!;
-    const [, y1] = points[i + 1]!;
-    const fy = y0 + (y1 - y0) * (seg - i);
-    dot.current!.style.transform = `translate(${t * 100}%, ${fy * 100}%)`;
-    dot.current!.classList.toggle('pfchart__layer--down', fy * H > zero + 0.5);
-    cross.current!.style.transform = `translateX(${t * 100}%)`;
-    lit.current!.style.clipPath = `inset(-12px ${(1 - t) * 100}% -12px -12px)`;
+  function place(i: number) {
+    placed.current = i;
+    const [fx, fy] = points[i]!;
+    dot.current!.style.transform = `translate(${fx * 100}%, ${fy * 100}%)`;
+    dot.current!.classList.toggle('pfchart__layer--down', values[i]! < 0);
+    cross.current!.style.transform = `translateX(${fx * 100}%)`;
+    lit.current!.style.transform = `translateX(${(fx - 1) * 100}%)`;
+    litArt.current!.style.transform = `translateX(${(1 - fx) * 100}%)`;
   }
 
   // At rest the dot sits on the latest balance.
-  useLayoutEffect(() => place(1), [chart]);
-  useEffect(
-    () => () => {
-      cancelAnimationFrame(frame.current);
-      clearTimeout(settle.current);
-    },
-    [],
-  );
+  useLayoutEffect(() => place(n - 1), [chart]);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
-  /** idle → glides home slowly; grab → a quick glide to the finger; track → follows it 1:1. */
-  const setMode = (mode: 'idle' | 'grab' | 'track') => (plot.current!.dataset.mode = mode);
+  /** idle → glides home slowly; scrub → snaps quickly from game to game. */
+  const setMode = (mode: 'idle' | 'scrub') => (plot.current!.dataset.mode = mode);
 
   function follow(e: PointerEvent) {
     if (!rect.current) {
-      // A new touch: measure once, glide to the finger, then track it exactly.
+      // A new touch: measure once (no layout reads while the finger moves).
       rect.current = plot.current!.getBoundingClientRect();
-      setMode('grab');
-      clearTimeout(settle.current);
-      settle.current = window.setTimeout(() => rect.current && setMode('track'), 180);
+      placed.current = -1;
+      setMode('scrub');
     }
     const clientX = e.clientX;
+    const touch = e.pointerType !== 'mouse';
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
       const r = rect.current;
       if (!r) return;
       const t = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-      place(t);
-      // Same index → no re-render; the headline only changes when the nearest game does.
-      setActive(Math.round(t * (n - 1)));
+      const i = Math.round(t * (n - 1));
+      if (i === placed.current) return;
+      if (placed.current !== -1 && touch) haptic();
+      place(i);
+      setActive(i);
     });
   }
 
   function release() {
     cancelAnimationFrame(frame.current);
-    clearTimeout(settle.current);
     if (!rect.current) return;
     rect.current = null;
     setMode('idle');
-    place(1);
+    place(n - 1);
     setActive(null);
   }
+
+  const first = profile.balanceHistory[0]!;
+  const last = profile.balanceHistory[profile.balanceHistory.length - 1]!;
 
   return (
     <section class="surface surface--pad pfchart">
       <div class="pfchart__head">
-        <span class="label" key={`l${shown}${active === null}`}>
-          {active === null ? tr.profile.balance : labels[shown]}
-        </span>
-        <span class="pfchart__value" key={`v${shown}`}>
-          <Money cents={values[shown]!} signed size="xl" />
-        </span>
+        <span class="label">{active === null ? tr.profile.balance : labels[shown]}</span>
+        <Money cents={values[shown]!} signed size="xl" class="pfchart__value" />
       </div>
       <div
         ref={plot}
@@ -309,12 +369,14 @@ function BalanceChart({ profile }: { profile: PlayerProfile }) {
         onPointerUp={(e) => e.pointerType !== 'mouse' && release()}
         onPointerCancel={release}
       >
-        {/* The line twice: a dim copy underneath, and a lit copy clipped at the finger. */}
+        {/* The line twice: a dim copy underneath, and a lit copy cut off at the finger. */}
         <div class="pfchart__art pfchart__art--dim">
           <ChartArt chart={chart} />
         </div>
-        <div ref={lit} class="pfchart__art pfchart__art--lit">
-          <ChartArt chart={chart} />
+        <div ref={lit} class="pfchart__lit">
+          <div ref={litArt} class="pfchart__art">
+            <ChartArt chart={chart} />
+          </div>
         </div>
         {/* Full-size layers moved with transforms (percentages of their own size = the plot's size),
             so following a finger never triggers layout — only compositing. */}
@@ -323,29 +385,31 @@ function BalanceChart({ profile }: { profile: PlayerProfile }) {
           <span class="pfchart__dot" />
         </span>
       </div>
+      {/* Dates under the first and the latest game (the line starts at ₪0, one step before the first game). */}
       <div class="pfchart__axis" dir="ltr">
-        <span>{shortDate(profile.balanceHistory[0]!.at)}</span>
-        <span>{shortDate(profile.balanceHistory[profile.balanceHistory.length - 1]!.at)}</span>
+        {n > 2 && <span style={{ left: `max(0px, calc(${points[1]![0] * 100}% - 22px))` }}>{shortDate(first.at)}</span>}
+        <span class="pfchart__axis-end">{shortDate(last.at)}</span>
       </div>
     </section>
   );
 }
 
-type ChartGeometry = { line: string; area: string; zero: number };
+type ChartGeometry = { line: string; area: string; zero: number; top: number; bottom: number };
 
 /** The static line and fills. Memoized, so scrubbing only ever touches the dot and crosshair. */
 const ChartArt = memo(function ChartArt({ chart }: { chart: ChartGeometry }) {
-  const { line, area, zero } = chart;
+  const { line, area, zero, top, bottom } = chart;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
       <defs>
-        <linearGradient id="pfUp" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="var(--gold)" stop-opacity="0.3" />
-          <stop offset="1" stop-color="var(--gold)" stop-opacity="0.02" />
+        {/* Fills fade out toward ₪0, from the highest (or lowest) balance. */}
+        <linearGradient id="pfUp" gradientUnits="userSpaceOnUse" x1="0" y1={top} x2="0" y2={zero}>
+          <stop offset="0" stop-color="var(--gold)" stop-opacity="0.22" />
+          <stop offset="1" stop-color="var(--gold)" stop-opacity="0" />
         </linearGradient>
-        <linearGradient id="pfDown" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stop-color="var(--down)" stop-opacity="0.26" />
-          <stop offset="1" stop-color="var(--down)" stop-opacity="0.02" />
+        <linearGradient id="pfDown" gradientUnits="userSpaceOnUse" x1="0" y1={bottom} x2="0" y2={zero}>
+          <stop offset="0" stop-color="var(--down)" stop-opacity="0.2" />
+          <stop offset="1" stop-color="var(--down)" stop-opacity="0" />
         </linearGradient>
         {/* Above ₪0 is gold, below is red — the same line, split at the zero line. */}
         <clipPath id="pfAbove">
@@ -363,3 +427,4 @@ const ChartArt = memo(function ChartArt({ chart }: { chart: ChartGeometry }) {
     </svg>
   );
 });
+
