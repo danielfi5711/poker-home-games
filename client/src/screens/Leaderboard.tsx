@@ -2,16 +2,46 @@ import { useState } from 'preact/hooks';
 import type { HistoryResponse, LeaderboardEntry } from '../../../src/shared/types.js';
 import { api, useCachedLoad } from '../api.js';
 import { CrownIcon, TrophyIcon } from '../icons.js';
-import { Avatar, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
+import { Avatar, Empty, FxText, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
+import { formatCents } from '../money.js';
 import { tr } from '../i18n.js';
 import { profileTap } from '../profileNav.js';
 
 function streakBadge(type: 'win' | 'loss' | null, count: number) {
   if (!type || count < 2) return null;
   return (
-    <span class={`pill streak ${type === 'win' ? 'pill--up' : 'pill--info'}`}>
-      {type === 'win' ? '🔥' : '🧊'} {count}
+    <span class={`pill streak streak--${type}`}>
+      <FxText kind={type === 'win' ? 'fire' : 'ice'} text={`${type === 'win' ? tr.leaderboard.streakHot : tr.leaderboard.streakCold} ${count}`} />
     </span>
+  );
+}
+
+/**
+ * One highlight card. No emoji: the lettering itself carries the mood — the label
+ * and the big value share the kind's typeface and finish (see `FxText`).
+ */
+function Highlight({ kind, accountId, name, label, value, unit, amount }: {
+  kind: 'fire' | 'ice' | 'gold' | 'sink';
+  accountId: string;
+  name: string;
+  label: string;
+  value: string;
+  unit?: string;
+  /** the value is a ₪ amount (kept left-to-right in Hebrew) */
+  amount?: boolean;
+}) {
+  return (
+    <div class={`highlight highlight--${kind} tappable`} {...profileTap(accountId)}>
+      <FxText kind={kind} text={label} live class="highlight__label" />
+      <span class="highlight__value">
+        <FxText kind={kind} text={value} live ltr={amount} class="highlight__num" />
+        {unit && <span class="highlight__unit">{unit}</span>}
+      </span>
+      <span class="highlight__who">
+        <Avatar id={accountId} name={name} size="xs" />
+        <span class="highlight__name">{name}</span>
+      </span>
+    </div>
   );
 }
 
@@ -174,36 +204,20 @@ export function LeaderboardScreen({ myAccountId }: { myAccountId: string }) {
           <SectionLabel>{tr.leaderboard.highlights}</SectionLabel>
           <div class="highlights">
             {h.hottest && (
-              <div class="highlight tappable" {...profileTap(h.hottest.accountId)}>
-                <span class="highlight__icon">🔥</span>
-                <span class="highlight__label">{tr.leaderboard.hotStreak}</span>
-                <span class="highlight__who">{h.hottest.name}</span>
-                <span class="muted">{tr.leaderboard.winsInARow(h.hottest.streakCount)}</span>
-              </div>
+              <Highlight kind="fire" accountId={h.hottest.accountId} name={h.hottest.name} label={tr.leaderboard.hotStreak}
+                value={String(h.hottest.streakCount)} unit={tr.leaderboard.winsUnit(h.hottest.streakCount)} />
             )}
             {h.coldest && (
-              <div class="highlight tappable" {...profileTap(h.coldest.accountId)}>
-                <span class="highlight__icon">🧊</span>
-                <span class="highlight__label">{tr.leaderboard.coldStreak}</span>
-                <span class="highlight__who">{h.coldest.name}</span>
-                <span class="muted">{tr.leaderboard.lossesInARow(h.coldest.streakCount)}</span>
-              </div>
+              <Highlight kind="ice" accountId={h.coldest.accountId} name={h.coldest.name} label={tr.leaderboard.coldStreak}
+                value={String(h.coldest.streakCount)} unit={tr.leaderboard.lossesUnit(h.coldest.streakCount)} />
             )}
             {h.biggestWin && (
-              <div class="highlight tappable" {...profileTap(h.biggestWin.accountId)}>
-                <span class="highlight__icon">💰</span>
-                <span class="highlight__label">{tr.leaderboard.biggestWin}</span>
-                <span class="highlight__who">{h.biggestWin.name}</span>
-                <Money cents={h.biggestWin.amountCents} signed size="sm" />
-              </div>
+              <Highlight kind="gold" accountId={h.biggestWin.accountId} name={h.biggestWin.name} label={tr.leaderboard.biggestWin}
+                value={formatCents(h.biggestWin.amountCents)} unit={h.biggestWin.matchName} amount />
             )}
             {h.biggestLoss && (
-              <div class="highlight tappable" {...profileTap(h.biggestLoss.accountId)}>
-                <span class="highlight__icon">📉</span>
-                <span class="highlight__label">{tr.leaderboard.biggestLoss}</span>
-                <span class="highlight__who">{h.biggestLoss.name}</span>
-                <Money cents={h.biggestLoss.amountCents} signed size="sm" />
-              </div>
+              <Highlight kind="sink" accountId={h.biggestLoss.accountId} name={h.biggestLoss.name} label={tr.leaderboard.biggestLoss}
+                value={formatCents(h.biggestLoss.amountCents).replace('-', '−')} unit={h.biggestLoss.matchName} amount />
             )}
           </div>
         </>

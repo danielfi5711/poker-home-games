@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/ho
 import type { PlayerProfile } from '../../../src/shared/types.js';
 import { api } from '../api.js';
 import { ArrowLeftIcon, ReceiptIcon } from '../icons.js';
-import { Avatar, Empty, Money, SectionLabel, Spinner } from '../ui.js';
+import { Avatar, Empty, FxText, Money, SectionLabel, Spinner } from '../ui.js';
 import { profileTap } from '../profileNav.js';
 import { locale, tr } from '../i18n.js';
 
@@ -70,8 +70,12 @@ export function ProfileScreen({ accountId, myAccountId, onBack }: Props) {
           <span class="pfhero__pills">
             {p.rank !== null && <span class={`pill ${p.rank <= 3 ? 'pill--gold' : ''}`}>{tr.profile.rank(p.rank, p.rankedPlayers)}</span>}
             {s && s.currentStreakCount >= 2 && (
-              <span class={`pill ${s.currentStreakType === 'win' ? 'pill--up' : 'pill--info'}`}>
-                {s.currentStreakType === 'win' ? `🔥 ${tr.leaderboard.winsInARow(s.currentStreakCount)}` : `🧊 ${tr.leaderboard.lossesInARow(s.currentStreakCount)}`}
+              <span class={`pill streak streak--${s.currentStreakType}`}>
+                {s.currentStreakType === 'win' ? (
+                  <FxText kind="fire" text={tr.leaderboard.winsInARow(s.currentStreakCount)} />
+                ) : (
+                  <FxText kind="ice" text={tr.leaderboard.lossesInARow(s.currentStreakCount)} />
+                )}
               </span>
             )}
           </span>

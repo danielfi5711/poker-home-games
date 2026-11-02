@@ -53,6 +53,70 @@ export function Money({ cents, signed, size, class: cls = '' }: { cents: number;
   );
 }
 
+/**
+ * Lettering that carries a mood instead of an emoji: `fire` (hot streak), `ice`
+ * (cold streak), `gold` (biggest win), `sink` (biggest loss — the letters sag).
+ * `live` adds the motion: a flicker for fire, a glint sweeping across ice and
+ * gold, a one-time droop for sink. All of it is transform/opacity on copies of
+ * the text, so the GPU runs it without repainting. `ltr` keeps an amount's
+ * characters in order inside right-to-left text.
+ */
+export function FxText({ kind, text, live, ltr, class: cls = '' }: { kind: 'fire' | 'ice' | 'gold' | 'sink'; text: string; live?: boolean; ltr?: boolean; class?: string }) {
+  const dir = ltr ? 'ltr' : undefined;
+  if (kind === 'sink') {
+    // One inline-block per letter so each can droop a little more than the last;
+    // words stay separate so a long label can still wrap between them.
+    const total = Array.from(text.replace(/\s+/g, '')).length;
+    let k = 0;
+    return (
+      <span class={`fx fx--sink ${live ? 'fx--live' : ''} ${cls}`} dir={dir}>
+        <span class="sr-only">{text}</span>
+        <span aria-hidden="true">
+          {text.split(/(\s+)/).map((word, w) =>
+            /^\s+$/.test(word) || !word ? (
+              word
+            ) : (
+              <span key={w} class="fx__word">
+                {Array.from(word).map((ch) => {
+                  const t = total > 1 ? k++ / (total - 1) : 0;
+                  return (
+                    <span class="fx__ch" style={{ '--k': t.toFixed(3) }}>
+                      {ch}
+                    </span>
+                  );
+                })}
+              </span>
+            ),
+          )}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span class={`fx fx--${kind} ${live ? 'fx--live' : ''} ${cls}`} dir={dir} data-text={text}>
+      {withCurrency(text)}
+      {live && kind !== 'fire' && (
+        <span class="fx__shine" aria-hidden="true">
+          <span class="fx__copy">{withCurrency(text)}</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** The ₪ sign in its own span, so a style can set it like a price tag's small raised currency. */
+function withCurrency(text: string) {
+  const i = text.indexOf('₪');
+  if (i < 0) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <span class="fx__cur">₪</span>
+      {text.slice(i + 1)}
+    </>
+  );
+}
+
 export function ScreenHead({ title, sub, action }: { title: string; sub?: ComponentChildren; action?: ComponentChildren }) {
   return (
     <header class="shead">
