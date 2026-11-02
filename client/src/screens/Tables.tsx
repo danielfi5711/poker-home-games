@@ -3,7 +3,8 @@ import type { Session } from '../../../src/shared/types.js';
 import { api, useCachedLoad } from '../api.js';
 import { autoSessionName } from '../sessionName.js';
 import { tr } from '../i18n.js';
-import { CardsIcon, ChevronRightIcon, ChipStackArt, PlusIcon } from '../icons.js';
+import { HeroArt } from '../HeroArt.js';
+import { CardsIcon, ChevronRightIcon, PlusIcon } from '../icons.js';
 import { AvatarStack, Empty, Money, ScreenHead, SectionLabel, Spinner } from '../ui.js';
 
 interface Props {
@@ -58,11 +59,11 @@ export function TablesScreen({ onEnterSession }: Props) {
       <ScreenHead title={tr.tables.title} sub={tr.tables.sub} />
 
       <section class="hero">
-        <span class="hero__chips">
-          <ChipStackArt size={140} />
-        </span>
-        <span class="hero__eyebrow">{tr.tables.newGame}</span>
-        <h2 class="hero__title">{autoSessionName()}</h2>
+        <div class="hero__head">
+          <span class="hero__eyebrow">{tr.tables.newGame}</span>
+          <h2 class="hero__title">{autoSessionName()}</h2>
+        </div>
+        <HeroArt />
         <p class="hero__sub">{tr.tables.heroSub}</p>
         <button class="btn btn--primary btn--lg btn--block" onClick={createTable} disabled={busy}>
           <PlusIcon size={18} />
