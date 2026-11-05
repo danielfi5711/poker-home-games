@@ -2,7 +2,20 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { config } from '../config.js';
-import { AuthError, accountForToken, changeUsername, login, logout, register, setLang } from '../lib/accounts.js';
+import {
+  AuthError,
+  accountForToken,
+  changePassword,
+  changeUsername,
+  login,
+  logout,
+  register,
+  requestPasswordReset,
+  resetPassword,
+  setLang,
+  setPhone,
+} from '../lib/accounts.js';
+import { SmsError, smsEnabled } from '../lib/sms.js';
 import { translateError } from '../lib/i18n.js';
 import {
   SessionError,
@@ -27,7 +40,7 @@ import {
 import { subscribe, vapidPublicKey } from '../lib/push.js';
 import { avatarImage, avatarVersions, removeAvatar, setAvatar } from '../lib/avatars.js';
 import { libsqlEnabled } from '../lib/libsql.js';
-import { isLang, type Account, type Lang } from '../shared/types.js';
+import { isLang, type Account, type AuthOptions, type Lang } from '../shared/types.js';
 
 const PUBLIC_DIR = join(process.cwd(), 'dist', 'public');
 /** Photos are compressed client-side before upload, but allow headroom. */
@@ -147,8 +160,59 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     // POST /api/auth/register
     if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'register') {
       const body = await readJsonBody(req);
-      const result = register(str(body, 'username'), str(body, 'password'), requestLang(req));
-      return sendJson(res, 201, result);
+      const result = await register(
+        str(body, 'username'),
+        str(body, 'password'),
+        requestLang(req),
+        str(body, 'phone'),
+        str(body, 'code'),
+      );
+      return sendJson(res, 'codeSent' in result ? 200 : 201, result);
+    }
+
+    // GET /api/auth/options — what the login screen offers (no auth)
+    if (req.method === 'GET' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'options') {
+      const options: AuthOptions = { phoneRecovery: smsEnabled() };
+      return sendJson(res, 200, options);
+    }
+
+    // POST /api/auth/forgot — text a reset code to a recovery phone (same answer whether or not it has an account)
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'forgot') {
+      const body = await readJsonBody(req);
+      return sendJson(res, 200, await requestPasswordReset(str(body, 'phone'), requestLang(req)));
+    }
+
+    // POST /api/auth/reset — code + new password: sets it, logs out everywhere, logs this device in
+    if (req.method === 'POST' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'reset') {
+      const body = await readJsonBody(req);
+      return sendJson(res, 200, await resetPassword(str(body, 'phone'), str(body, 'code'), str(body, 'newPassword')));
+    }
+
+    // PUT /api/auth/password — change password while logged in (other devices are logged out)
+    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'password') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const updated = changePassword(
+        account.id,
+        str(body, 'currentPassword'),
+        str(body, 'newPassword'),
+        bearerToken(req) ?? undefined,
+      );
+      return sendJson(res, 200, { account: updated });
+    }
+
+    // PUT /api/auth/phone — add/change the recovery phone: without "code" texts one, with it saves the number
+    if (req.method === 'PUT' && parts.length === 3 && parts[1] === 'auth' && parts[2] === 'phone') {
+      const account = requireAuth(req);
+      const body = await readJsonBody(req);
+      const result = await setPhone(
+        account.id,
+        str(body, 'phone'),
+        str(body, 'code'),
+        str(body, 'currentPassword'),
+        requestLang(req),
+      );
+      return sendJson(res, 200, result);
     }
 
     // POST /api/auth/login
@@ -368,7 +432,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       }
     }
   } catch (err) {
-    if (err instanceof SessionError || err instanceof AuthError) {
+    if (err instanceof SessionError || err instanceof AuthError || err instanceof SmsError) {
       return sendJson(res, err.status, { error: translateError(err.message, requestLang(req)) });
     }
     console.error(err);

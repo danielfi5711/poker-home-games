@@ -9,7 +9,14 @@ import { USERNAME_FORMAT_MESSAGE } from './accounts.js';
  */
 
 const HE_ERRORS: Record<string, string> = {
-  'Enter a valid Israeli mobile number, like 050-123-4567.': 'יש להזין מספר נייד ישראלי תקין, למשל 050-123-4567.',
+  'Enter a valid mobile number, like 050-123-4567 or +1 555 123 4567.': 'יש להזין מספר נייד תקין, למשל 050-123-4567 או +1 555 123 4567.',
+  'That phone number is already used by another account.': 'מספר הטלפון הזה כבר משויך לחשבון אחר.',
+  'That code is wrong or has expired.': 'הקוד שגוי או שפג תוקפו.',
+  'Too many codes sent. Try again later.': 'נשלחו יותר מדי קודים. אפשר לנסות שוב מאוחר יותר.',
+  'Too many attempts. Try again later.': 'יותר מדי ניסיונות. אפשר לנסות שוב מאוחר יותר.',
+  "Couldn't send the code. Try again in a minute.": 'לא הצלחנו לשלוח את הקוד. אפשר לנסות שוב בעוד דקה.',
+  "Couldn't check the code. Try again in a minute.": 'לא הצלחנו לבדוק את הקוד. אפשר לנסות שוב בעוד דקה.',
+  'Phone verification is not available.': 'אימות בטלפון לא זמין כרגע.',
   'Password must be at least 6 characters.': 'הסיסמה צריכה להכיל לפחות 6 תווים.',
   'That username is already taken.': 'שם המשתמש הזה כבר תפוס.',
   'Incorrect username or password.': 'שם משתמש או סיסמה שגויים.',

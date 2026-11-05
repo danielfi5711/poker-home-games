@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
 import type { Account } from '../../../src/shared/types.js';
-import { api } from '../api.js';
+import { api, useAuthOptions } from '../api.js';
 import { ConfirmModal } from './ConfirmModal.js';
+import { SecuritySection } from './Security.js';
 import { ArrowLeftIcon, CameraIcon, LogoutIcon, UserIcon } from '../icons.js';
 import { photoToJpeg, setAvatarVersions, useAvatarUrl } from '../avatars.js';
 import { Avatar, LangSwitch, ScreenHead, SectionLabel } from '../ui.js';
@@ -12,9 +13,12 @@ interface Props {
   onAccountChanged: (account: Account) => void;
   onLogout: () => void;
   onBack: () => void;
+  /** Open the recovery-phone editor right away (from the "add a recovery phone" prompt). */
+  openPhone?: boolean;
 }
 
-export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: Props) {
+export function SettingsScreen({ account, onAccountChanged, onLogout, onBack, openPhone }: Props) {
+  const phoneRecovery = useAuthOptions()?.phoneRecovery ?? false;
   const [editing, setEditing] = useState<'name' | null>(null);
   const [newUsername, setNewUsername] = useState(account.username);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -182,6 +186,14 @@ export function SettingsScreen({ account, onAccountChanged, onLogout, onBack }: 
         )}
 
       </div>
+
+      <SecuritySection
+        account={account}
+        phoneRecovery={phoneRecovery}
+        openPhone={openPhone}
+        onAccountChanged={onAccountChanged}
+        flash={flash}
+      />
 
       <SectionLabel>{tr.settings.language}</SectionLabel>
       <LangSwitch />

@@ -125,7 +125,7 @@ just ASCII, via a Unicode-aware regex.
   buy-in or cash-out doesn't add up — surfaced as a warning, not an error.
 - `src/web/server.ts` — plain `node:http`, no framework: a handful of REST
   routes under `/api/*` plus static-serving the built client with a
-  SPA-style fallback to `index.html`. Every route except register/login
+  SPA-style fallback to `index.html`. Every route except register/login/options/forgot/reset
   calls `requireAuth()` (resolves the bearer token to an `Account`), and
   any logged-in account may see or join any table. No WebSocket — the client just polls
   `GET /api/sessions/:id` every few seconds, which is plenty for a buy-in
@@ -148,10 +148,24 @@ just ASCII, via a Unicode-aware regex.
   time, even on an `unpaid` payment (cash, forgot to tap). The app doesn't
   link to any payment app — players pay however they like (there used to be
   an "Open Bit" flow; it was removed on purpose).
-  There are **no phone numbers** in the app (removed on purpose 2026-11-02 —
-  don't bring them back): sign-up is username + password only, and
-  `initAccounts()`'s `stripPhones()` deletes any leftover stored `phone` field
-  from accounts on startup (nothing else on the account is touched).
+  Phone numbers: the old payment phone (shown to payers) was removed on
+  2026-11-02 and its stored numbers deleted. On 2026-11-05 a **recovery phone**
+  came back, for password recovery only, so strangers can get back into their
+  account if the app is ever released: it is private (only `Account.phoneHint`,
+  masked to the last 4 digits, ever reaches the client, and only the account's
+  own client) and never shown to other players or used for payments. Stored as
+  E.164 on `StoredAccount.phone` with a `phoneIndex` (one account per number).
+  SMS codes go through `src/lib/sms.ts`: Twilio Verify in production
+  (`TWILIO_*` env), a console printer in dev/tests, and **off** in production
+  without the keys. When off, `GET /api/auth/options` says
+  `phoneRecovery: false` and the client hides all phone UI, so sign-up stays
+  username + password. When on: sign-up is two calls to `POST /api/auth/register`
+  (without `code` → texts one; with it → creates), `POST /api/auth/forgot` +
+  `POST /api/auth/reset` (code + new password → logs out every device, logs
+  this one in), `PUT /api/auth/phone` (add needs only the login; replacing one
+  needs the current password), `PUT /api/auth/password` (change password, logs
+  out other devices). Accounts without a phone get a one-time prompt per device
+  (`App`). Tests make accounts with `createAccount()` to skip the SMS step.
 - `client/` — Preact + Vite, built as a PWA via `vite-plugin-pwa`
   (`vite.config.ts`), using the `injectManifest` strategy (not the default
   `generateSW`) because `client/src/sw.ts` needs its own `push` /
@@ -203,7 +217,7 @@ just ASCII, via a Unicode-aware regex.
     (e.g. "Thursday Evening"), never typed — there's no name field in the
     create-table UI at all.
   - `client/src/screens/` — `Login` (log in / sign up — no separate display
-    name field), `Settings` (change name, log out — behind a confirm
+    name field), `Settings` (change name, Security — recovery phone + change password in `Security.tsx`, log out — behind a confirm
     dialog), the bottom-nav tabs shown right after login — `Tables`
     (start/rejoin a table), `Leaderboard` (all-time standings with streak
     badges/highlights), `Games` (recent settled games, each expandable to

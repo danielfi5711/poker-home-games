@@ -106,6 +106,22 @@ export interface Account {
   /** UI language — also the language of this account's push notifications. */
   lang: Lang;
   createdAt: number;
+  /**
+   * The recovery phone, masked to its last digits (e.g. "•••• 4567"), or null if none is set. Only ever sent to
+   * the account itself — the full number never leaves the server.
+   */
+  phoneHint: string | null;
+}
+
+/** What the login screen needs to know before anyone is logged in. */
+export interface AuthOptions {
+  /** SMS verification is set up: sign-up asks for a phone, and "Forgot password" is offered. */
+  phoneRecovery: boolean;
+}
+
+/** POST /api/auth/register and the phone/password-reset steps answer this when a code was just texted. */
+export interface CodeSentResponse {
+  codeSent: true;
 }
 
 export type Lang = 'en' | 'he';

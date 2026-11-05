@@ -20,11 +20,11 @@ Object.assign(process.env, {
 const { libsqlEnabled } = await import('./libsql.js');
 const accounts = await import('./accounts.js');
 const sessions = await import('./sessions.js');
-type Account = ReturnType<typeof accounts.register>['account'];
+type Account = ReturnType<typeof accounts.createAccount>['account'];
 
 let seq = 0;
 function newAccount(name: string): Account {
-  return accounts.register(`${name}${seq++}`, 'secret123').account;
+  return accounts.createAccount(`${name}${seq++}`, 'secret123').account;
 }
 
 before(async () => {

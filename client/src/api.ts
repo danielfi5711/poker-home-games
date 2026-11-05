@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type {
   Account,
+  AuthOptions,
   AuthResponse,
+  CodeSentResponse,
   HistoryResponse,
   Lang,
   Payment,
@@ -83,9 +85,46 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return data as T;
 }
 
+let authOptionsCache: AuthOptions | null = null;
+
+/** Whether phone recovery is on (null while loading). Fetched once per page load. */
+export function useAuthOptions(): AuthOptions | null {
+  const [options, setOptions] = useState<AuthOptions | null>(authOptionsCache);
+  useEffect(() => {
+    if (authOptionsCache) return;
+    let alive = true;
+    const load = (attempt: number): void => {
+      api
+        .authOptions()
+        .then((o) => {
+          authOptionsCache = o;
+          if (alive) setOptions(o);
+        })
+        .catch(() => {
+          if (alive) setTimeout(() => load(attempt + 1), Math.min(1000 * 2 ** attempt, 5000));
+        });
+    };
+    load(0);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return options;
+}
+
 export const api = {
-  register: (username: string, password: string) =>
-    req<AuthResponse>('POST', '/auth/register', { username, password }),
+  authOptions: () => req<AuthOptions>('GET', '/auth/options'),
+  /** Without `code` (and when phone recovery is on): checks everything and texts a code. With it: creates the account. */
+  register: (username: string, password: string, phone = '', code = '') =>
+    req<AuthResponse | CodeSentResponse>('POST', '/auth/register', { username, password, phone, code }),
+  forgotPassword: (phone: string) => req<CodeSentResponse>('POST', '/auth/forgot', { phone }),
+  resetPassword: (phone: string, code: string, newPassword: string) =>
+    req<AuthResponse>('POST', '/auth/reset', { phone, code, newPassword }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    req<{ account: Account }>('PUT', '/auth/password', { currentPassword, newPassword }),
+  /** Without `code`: texts one. With it: saves the number. `currentPassword` is needed to replace an existing one. */
+  setPhone: (phone: string, code = '', currentPassword = '') =>
+    req<{ account: Account } | CodeSentResponse>('PUT', '/auth/phone', { phone, code, currentPassword }),
   setLang: (lang: Lang) => req<{ account: Account }>('PUT', '/auth/lang', { lang }),
   login: (username: string, password: string) => req<AuthResponse>('POST', '/auth/login', { username, password }),
   logout: () => req<{ ok: true }>('POST', '/auth/logout'),

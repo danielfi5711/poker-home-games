@@ -56,6 +56,15 @@ export const config = {
   vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? '',
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? '',
   vapidSubject: process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
+
+  /**
+   * Twilio Verify, for the recovery phone (SMS codes at sign-up and for "Forgot password").
+   * All three blank in production = phone features are hidden and sign-up is username + password only.
+   * Blank in development = codes are printed to the server console instead of sent (src/lib/sms.ts).
+   */
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? '',
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? '',
+  twilioVerifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID ?? '',
 } as const;
 
 // --- Production safety checks -------------------------------------------------
@@ -63,6 +72,12 @@ if (config.isProd && !config.tursoUrl) {
   console.warn(
     '[config] NODE_ENV=production but TURSO_DATABASE_URL is not set — session data will ' +
       'NOT survive a redeploy on an ephemeral host.',
+  );
+}
+if (config.isProd && !(config.twilioAccountSid && config.twilioAuthToken && config.twilioVerifyServiceSid)) {
+  console.warn(
+    '[config] TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_VERIFY_SERVICE_SID are not set — recovery phone and ' +
+      '"Forgot password" are hidden; sign-up is username + password only.',
   );
 }
 if (config.isProd && !(config.vapidPublicKey && config.vapidPrivateKey)) {

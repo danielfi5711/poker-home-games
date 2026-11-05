@@ -8,6 +8,7 @@ import {
   saveIdentity,
   requestPersistentStorage,
   saveToken,
+  useAuthOptions,
   usePolledSession,
 } from './api.js';
 import { Login } from './screens/Login.js';
@@ -19,6 +20,7 @@ import { PaymentsScreen, paymentsNeedingAction } from './screens/Payments.js';
 import { TableScreen } from './screens/Table.js';
 import { SettlementScreen } from './screens/Settlement.js';
 import { SettingsScreen } from './screens/Settings.js';
+import { ConfirmModal } from './screens/ConfirmModal.js';
 import { ProfileScreen } from './screens/Profile.js';
 import { onOpenProfile } from './profileNav.js';
 import { ChipIcon, GearIcon, CardsIcon, TrophyIcon, ReceiptIcon, WalletIcon, PercentIcon } from './icons.js';
@@ -226,7 +228,35 @@ export function App() {
   }
 
   function closeSettings() {
+    setSettingsOpenPhone(false);
     setView(returnView);
+  }
+
+  // Accounts without a recovery phone are asked once (per device) to add one, as soon as SMS is set up.
+  const authOptions = useAuthOptions();
+  const [settingsOpenPhone, setSettingsOpenPhone] = useState(false);
+  const [phonePromptSeen, setPhonePromptSeen] = useState(false);
+  const phonePromptKey = account ? `poker.phonePromptSeen.${account.id}` : null;
+  const showPhonePrompt =
+    !!account &&
+    view === 'home' &&
+    !!authOptions?.phoneRecovery &&
+    account.phoneHint === null &&
+    !phonePromptSeen &&
+    !promptAlreadySeen(phonePromptKey);
+
+  function dismissPhonePrompt(addNow: boolean) {
+    setPhonePromptSeen(true);
+    try {
+      if (phonePromptKey) localStorage.setItem(phonePromptKey, '1');
+    } catch {
+      /* no storage — it may ask again next visit */
+    }
+    if (addNow) {
+      setSettingsOpenPhone(true);
+      setReturnView(view);
+      setView('settings');
+    }
   }
 
   async function logout() {
@@ -347,7 +377,24 @@ export function App() {
           )}
 
           {view === "settings" && account && (
-            <SettingsScreen account={account} onAccountChanged={setAccount} onLogout={logout} onBack={closeSettings} />
+            <SettingsScreen
+              account={account}
+              onAccountChanged={setAccount}
+              onLogout={logout}
+              onBack={closeSettings}
+              openPhone={settingsOpenPhone}
+            />
+          )}
+
+          {showPhonePrompt && (
+            <ConfirmModal
+              title={tr.security.promptTitle}
+              body={tr.security.promptBody}
+              confirmLabel={tr.security.promptAdd}
+              cancelLabel={tr.security.promptLater}
+              onCancel={() => dismissPhonePrompt(false)}
+              onConfirm={() => dismissPhonePrompt(true)}
+            />
           )}
         </main>
 
@@ -381,4 +428,13 @@ export function App() {
       </div>
     </>
   );
+}
+
+function promptAlreadySeen(key: string | null): boolean {
+  if (!key) return true;
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
 }

@@ -300,6 +300,24 @@ export function CloseIcon({ size = 18 }: IconProps) {
   );
 }
 
+export function PhoneIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </Stroke>
+  );
+}
+
+export function LockIcon({ size = 18 }: IconProps) {
+  return (
+    <Stroke size={size}>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </Stroke>
+  );
+}
+
 export function UserIcon({ size = 18 }: IconProps) {
   return (
     <Stroke size={size}>

@@ -82,6 +82,14 @@ This runs on Render's free web-service tier:
    the Render dashboard — use the **same pair** in every environment.
    Without them, the app still works; payment updates just show up the next
    time someone opens it.
+   For password recovery by SMS, create a [Twilio](https://www.twilio.com)
+   account, make a **Verify** service (Console → Verify → Services), and set
+   `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_VERIFY_SERVICE_SID`.
+   Once they're set, sign-up asks for a mobile number (confirmed by SMS code),
+   the login screen offers "Forgot password?", and existing players are asked
+   once to add a number. Without them, none of that shows and sign-up is
+   username + password only. Locally (not production) codes are printed to
+   the server console instead of texted.
 5. Open the deployed URL on your phone and use the browser's "Add to Home
    Screen" (Safari) / "Install app" (Chrome) prompt to install it — that's
    the whole app-store-free "app" install. An Android user who wants a real
