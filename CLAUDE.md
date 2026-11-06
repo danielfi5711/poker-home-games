@@ -174,6 +174,15 @@ just ASCII, via a Unicode-aware regex.
   `../../src/shared/*.js` (same convention as `discord-gambling`'s client —
   note the `.js` extension on a `.ts`/`.tsx` import target; that's the
   ESM/Bundler-resolution convention this repo follows, not a typo).
+  - `client/src/UpdateGate.tsx` — sits inside `InstallGate` and blocks the app
+    with an "Update required / Restart app" card once the server serves a newer
+    build than the one running. Every `vite build` gets a random id, baked in as
+    `__BUILD_ID__` and written to `/version.json` (not precached, served
+    `no-store`; `dev` under `vite`, which skips the check). Checked on open and on
+    every return to the foreground; offline = let them in. Restart asks the
+    service worker to update, waits for it to activate, reloads; a second
+    restart in the same session also clears the caches (never unregisters the
+    worker — that would drop push subscriptions).
   - `client/src/Splash.tsx` — the opening screen while `App` boots: a drawn
     (inline SVG) royal-flush/table scene, the app name, and a loading line
     with a percentage. Boot has no real progress to measure, so the bar eases

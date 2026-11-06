@@ -1,11 +1,33 @@
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import type { Plugin } from 'vite';
 
-export default defineConfig({
+// Every build gets its own id. It's baked into the client (__BUILD_ID__) and
+// written to /version.json, which is never precached — so an installed app
+// running an old build sees the server has a newer one and makes the player
+// restart (client/src/UpdateGate.tsx).
+const BUILD_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+function versionFile(): Plugin {
+  return {
+    name: 'poker-version-file',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD_ID }) });
+    },
+  };
+}
+
+export default defineConfig(({ command }) => ({
   root: 'client',
+  define: {
+    // 'dev' under `vite` (no version.json there), so the dev server never shows the gate.
+    __BUILD_ID__: JSON.stringify(command === 'build' ? BUILD_ID : 'dev'),
+  },
   plugins: [
     preact(),
+    versionFile(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
@@ -48,4 +70,4 @@ export default defineConfig({
     outDir: '../dist/public',
     emptyOutDir: true,
   },
-});
+}));

@@ -75,7 +75,9 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse): Promise<v
     const body = await readFile(filePath);
     res.writeHead(200, {
       'content-type': CONTENT_TYPES[extname(filePath)] ?? 'application/octet-stream',
-      'cache-control': pathname === '/index.html' ? 'no-cache' : 'public, max-age=86400',
+      // version.json is how an open app learns a newer build is out, so never cache it.
+      'cache-control':
+        pathname === '/version.json' ? 'no-store' : pathname === '/index.html' ? 'no-cache' : 'public, max-age=86400',
     });
     res.end(body);
   } catch {

@@ -30,6 +30,12 @@ const en = {
     players: (n: number) => plural(n, 'player', 'players'),
     networkError: 'Could not reach the server.',
   },
+  update: {
+    title: 'Update required',
+    body: 'A new version of the app is out. Restart it to keep playing.',
+    restart: 'Restart app',
+    restarting: 'Restarting…',
+  },
   install: {
     body: 'This only runs as an installed app — add it to your home screen to open it.',
     installing: 'Installing…',
@@ -372,6 +378,12 @@ const he: Strings = {
     backToTables: 'חזרה לשולחנות',
     players: (n) => (n === 1 ? 'שחקן אחד' : `${n} שחקנים`),
     networkError: 'אין חיבור לשרת.',
+  },
+  update: {
+    title: 'נדרש עדכון',
+    body: 'יצאה גרסה חדשה של האפליקציה. יש להפעיל אותה מחדש כדי להמשיך.',
+    restart: 'הפעלה מחדש',
+    restarting: 'מפעיל מחדש…',
   },
   install: {
     body: 'האפליקציה עובדת רק כשהיא מותקנת — יש להוסיף אותה למסך הבית כדי לפתוח אותה.',

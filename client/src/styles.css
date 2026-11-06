@@ -3872,6 +3872,14 @@ form {
   color: var(--info);
 }
 
+/* ---------- update gate (reuses the install gate card) ---------- */
+
+.updategate__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 750;
+}
+
 /* ---------- motion preferences ---------- */
 
 /* The opening screen is exempt: it's a short intro that's nothing without its motion. */
